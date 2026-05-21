@@ -1,0 +1,1 @@
+﻿# Supabase — Configuración y migraciones
