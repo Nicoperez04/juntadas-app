@@ -31,6 +31,15 @@
 - **02** · Revisión, comentarios profesionales y sistema de diseño (theme.ts) → [`prompts/bloque-1/cursor-02-auth-revision-comentarios.md`](prompts/bloque-1/cursor-02-auth-revision-comentarios.md)
 - **03** · Documentación y cierre del Bloque 1 → [`prompts/bloque-1/cursor-03-documentar-bloque-1.md`](prompts/bloque-1/cursor-03-documentar-bloque-1.md)
 
+### Bloque 2 — Juntadas (23/05/2026)
+
+- **13** · Implementación del módulo de juntadas (meetups) → [`conversaciones/bloque-2/cursor-bloque-2-chat-1.md`](conversaciones/bloque-2/cursor-bloque-2-chat-1.md) · [`prompts/bloque-2/cursor-01-meetups-implementacion.md`](prompts/bloque-2/cursor-01-meetups-implementacion.md)
+- **14** · Fix de RLS circular en meetup_participants → [`conversaciones/bloque-2/cursor-bloque-2-chat-1.md`](conversaciones/bloque-2/cursor-bloque-2-chat-1.md)
+- **15** · Fix de formato de fecha para PostgreSQL → [`conversaciones/bloque-2/cursor-bloque-2-chat-1.md`](conversaciones/bloque-2/cursor-bloque-2-chat-1.md) · [`prompts/bloque-2/cursor-02-meetups-fixes-previos-test.md`](prompts/bloque-2/cursor-02-meetups-fixes-previos-test.md)
+- **16** · Implementación de selectores nativos de fecha y hora → [`conversaciones/bloque-2/cursor-bloque-2-chat-2.md`](conversaciones/bloque-2/cursor-bloque-2-chat-2.md) · [`prompts/bloque-2/cursor-03-datetime-picker.md`](prompts/bloque-2/cursor-03-datetime-picker.md) · [`prompts/bloque-2/cursor-04-datetime-picker-fix.md`](prompts/bloque-2/cursor-04-datetime-picker-fix.md)
+- **17** · Fix de refresh de lista al volver al home → [`conversaciones/bloque-2/cursor-bloque-2-chat-1.md`](conversaciones/bloque-2/cursor-bloque-2-chat-1.md) · [`prompts/bloque-2/cursor-05-meetups-refresh.md`](prompts/bloque-2/cursor-05-meetups-refresh.md)
+- **Documentación** · Cierre del Bloque 2 → [`prompts/bloque-2/cursor-06-documentar-bloque-2.md`](prompts/bloque-2/cursor-06-documentar-bloque-2.md)
+
 ### Sesiones numeradas (desde el próximo chat)
 
 La numeración (`01-`, `02-`, …) empieza en el **siguiente chat nuevo**, no en el de corrección de exports.

@@ -228,5 +228,4 @@ Restricciones: no tocar archivos de código, no commits, solo archivos dentro de
 | `indice_ia.md` | Agregada sección "Bloque 1 — Autenticación" con 3 links a prompts y conversación |
 
 **Inconsistencias encontradas:**
-- Las exportaciones automáticas de SpecStory (`2026-05-23_13-07-43Z-...md`, `2026-05-23_13-40-29Z-...md`) están sueltas en `conversaciones/` sin subdirectorio — son los exports brutos del Bloque 1 y pueden moverse a `conversaciones/bloque-1/` si se quiere consolidar todo.
-- El subdirectorio `bloque-1/` no sigue el patrón previo de sesiones de prueba (que estaban directamente en `conversaciones/` y `prompts/`), pero es intencional según la estructura pedida.
+- Los exports crudos de SpecStory con timestamp fueron eliminados; la evidencia queda en los archivos consolidados de `conversaciones/bloque-1/` y `conversaciones/bloque-2/`.
