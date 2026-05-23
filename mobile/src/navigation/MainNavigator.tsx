@@ -1,6 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Routes } from './routes';
+import { CompleteProfileScreen } from '@/features/auth/screens/CompleteProfileScreen';
 
 // Pantallas placeholder — se reemplazan cuando se implementa cada feature
 const MeetupHomeScreen = () => null;
@@ -13,7 +14,6 @@ const ImpostorStartScreen = () => null;
 const ImpostorRoleScreen = () => null;
 const MemoriesGalleryScreen = () => null;
 const MeetupHistoryScreen = () => null;
-const CompleteProfileScreen = () => null;
 const ProfileScreen = () => null;
 
 const Stack = createNativeStackNavigator();

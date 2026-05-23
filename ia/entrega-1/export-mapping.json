@@ -1,0 +1,25 @@
+{
+  "trial": [
+    {
+      "title": "Diagnóstico Expo Router y renombrado a src/navigation",
+      "source": "2026-05-21_22-32-35Z-expo-router-and-react-navigation-configuration-analysis.md",
+      "slug": "expo-router-navigation"
+    },
+    {
+      "title": "Instalación de agent skills",
+      "source": "2026-05-23_03-56-22Z-instalación-de-skills-para-desarrollo-móvil.md",
+      "slug": "instalacion-skills"
+    },
+    {
+      "title": "Exportación de conversaciones con SpecStory",
+      "source": "2026-05-23_13-07-43Z-exportación-de-conversaciones.md",
+      "slug": "exportacion-conversaciones"
+    },
+    {
+      "title": "Cursor Rules, migración Supabase e índice IA",
+      "source": "2026-05-23_03-49-50Z-project-folder-structure-and-rules.md",
+      "slug": "cursor-rules-migracion-indice"
+    }
+  ],
+  "numbered": []
+}
