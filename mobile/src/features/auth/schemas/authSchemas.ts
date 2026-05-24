@@ -42,3 +42,16 @@ export const completeProfileSchema = z.object({
     .max(20, 'El usuario no puede tener más de 20 caracteres')
     .regex(/^[a-z0-9_]+$/, 'Solo se permiten letras minúsculas, números y guión bajo'),
 });
+
+/**
+ * Valida nombre y username en el modo edición de ProfileScreen.
+ * Reutiliza las mismas reglas de username que el onboarding para consistencia.
+ */
+export const profileEditSchema = z.object({
+  fullName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
+  username: z
+    .string()
+    .min(3, 'El usuario debe tener al menos 3 caracteres')
+    .max(20, 'El usuario no puede tener más de 20 caracteres')
+    .regex(/^[a-z0-9_]+$/, 'Solo se permiten letras minúsculas, números y guión bajo'),
+});

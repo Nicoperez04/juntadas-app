@@ -35,6 +35,33 @@ export interface CompleteProfileFormData {
 }
 
 /**
+ * Campos editables desde ProfileScreen.
+ * Todos son opcionales para permitir actualizaciones parciales desde el servicio.
+ */
+export interface UpdateProfileData {
+  fullName?: string;
+  username?: string;
+  avatarUrl?: string;
+}
+
+/** Datos del formulario inline de edición de perfil en ProfileScreen */
+export interface ProfileEditFormData {
+  fullName: string;
+  username: string;
+}
+
+/**
+ * Estadísticas de participación del usuario en juntadas.
+ * Se muestran como cards en la pantalla de perfil.
+ */
+export interface UserStats {
+  /** Cantidad de juntadas creadas por el usuario */
+  organizedCount: number;
+  /** Cantidad de juntadas donde participa como invitado (no organizador) */
+  participantCount: number;
+}
+
+/**
  * Representación del usuario autenticado dentro de la app.
  * Se construye a partir de la sesión de Supabase y la tabla `profiles`.
  */

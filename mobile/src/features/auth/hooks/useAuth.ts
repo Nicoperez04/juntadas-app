@@ -12,17 +12,37 @@
  */
 import { useState, useCallback } from 'react';
 import { authService } from '../services/authService';
-import { LoginFormData, RegisterFormData, CompleteProfileFormData } from '../types';
+import {
+  AuthUser,
+  LoginFormData,
+  RegisterFormData,
+  CompleteProfileFormData,
+  ProfileEditFormData,
+  UserStats,
+} from '../types';
 
 /** Resultado inmediato de cada acción para evitar dependencias del ciclo de render */
 interface ActionResult {
   error: string | null;
 }
 
+/** Estado inicial de estadísticas — evita null checks en la UI */
+const EMPTY_STATS: UserStats = {
+  organizedCount: 0,
+  participantCount: 0,
+};
+
 export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   /** Error del último intento; se limpia al inicio de cada nueva acción */
   const [error, setError] = useState<string | null>(null);
+
+  /** Perfil del usuario autenticado — se carga bajo demanda desde ProfileScreen */
+  const [profile, setProfile] = useState<AuthUser | null>(null);
+  /** Estadísticas de juntadas del usuario actual */
+  const [stats, setStats] = useState<UserStats>(EMPTY_STATS);
+  /** Indica carga inicial o refresh del perfil y estadísticas */
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
   /**
    * Inicia sesión con las credenciales del formulario.
@@ -56,6 +76,8 @@ export const useAuth = () => {
     setError(null);
     const { error: err } = await authService.signOut();
     if (err) setError(err);
+    setProfile(null);
+    setStats(EMPTY_STATS);
     setIsLoading(false);
     return { error: err };
   }, []);
@@ -95,5 +117,132 @@ export const useAuth = () => {
     return { error: err };
   }, []);
 
-  return { login, register, logout, resetPassword, completeProfile, isLoading, error };
+  /**
+   * Carga el perfil y las estadísticas del usuario autenticado.
+   * Se invoca al entrar a ProfileScreen o tras guardar cambios.
+   */
+  const loadProfile = useCallback(async (): Promise<ActionResult> => {
+    setIsLoadingProfile(true);
+    setError(null);
+
+    const { data: user, error: userError } = await authService.getCurrentUser();
+    if (userError || !user) {
+      const msg = userError ?? 'No hay usuario autenticado';
+      setError(msg);
+      setIsLoadingProfile(false);
+      return { error: msg };
+    }
+
+    const [profileResult, statsResult] = await Promise.all([
+      authService.getProfile(user.id),
+      authService.getUserStats(user.id),
+    ]);
+
+    if (profileResult.error) {
+      setError(profileResult.error);
+      setIsLoadingProfile(false);
+      return { error: profileResult.error };
+    }
+
+    if (statsResult.error) {
+      setError(statsResult.error);
+      setIsLoadingProfile(false);
+      return { error: statsResult.error };
+    }
+
+    setProfile(profileResult.data);
+    setStats(statsResult.data ?? EMPTY_STATS);
+    setIsLoadingProfile(false);
+    return { error: null };
+  }, []);
+
+  /**
+   * Actualiza nombre y/o username desde ProfileScreen.
+   * Refresca el estado local con el perfil devuelto por el servicio.
+   */
+  const updateProfile = useCallback(async (data: ProfileEditFormData): Promise<ActionResult> => {
+    setIsLoading(true);
+    setError(null);
+
+    const { data: user, error: userError } = await authService.getCurrentUser();
+    if (userError || !user) {
+      const msg = userError ?? 'No hay usuario autenticado';
+      setError(msg);
+      setIsLoading(false);
+      return { error: msg };
+    }
+
+    const { data: updatedProfile, error: err } = await authService.updateProfile(user.id, {
+      fullName: data.fullName,
+      username: data.username,
+    });
+
+    if (err) {
+      setError(err);
+      setIsLoading(false);
+      return { error: err };
+    }
+
+    setProfile(updatedProfile);
+    setIsLoading(false);
+    return { error: null };
+  }, []);
+
+  /**
+   * Sube una nueva foto de perfil y persiste la URL en la tabla `profiles`.
+   * Actualiza `profile.avatarUrl` en el estado local al finalizar.
+   */
+  const uploadAvatar = useCallback(async (imageUri: string): Promise<ActionResult> => {
+    setIsLoading(true);
+    setError(null);
+
+    const { data: user, error: userError } = await authService.getCurrentUser();
+    if (userError || !user) {
+      const msg = userError ?? 'No hay usuario autenticado';
+      setError(msg);
+      setIsLoading(false);
+      return { error: msg };
+    }
+
+    const { data: avatarUrl, error: uploadError } = await authService.uploadAvatar(
+      user.id,
+      imageUri,
+    );
+
+    if (uploadError || !avatarUrl) {
+      setError(uploadError ?? 'Error al subir la foto');
+      setIsLoading(false);
+      return { error: uploadError ?? 'Error al subir la foto' };
+    }
+
+    const { data: updatedProfile, error: updateError } = await authService.updateProfile(user.id, {
+      avatarUrl,
+    });
+
+    if (updateError) {
+      setError(updateError);
+      setIsLoading(false);
+      return { error: updateError };
+    }
+
+    setProfile(updatedProfile);
+    setIsLoading(false);
+    return { error: null };
+  }, []);
+
+  return {
+    login,
+    register,
+    logout,
+    resetPassword,
+    completeProfile,
+    loadProfile,
+    updateProfile,
+    uploadAvatar,
+    profile,
+    stats,
+    isLoading,
+    isLoadingProfile,
+    error,
+  };
 };

@@ -43,6 +43,8 @@ export const colors = {
   successLight: '#D1FAE5',
   /** Estado de advertencia */
   warning: '#F59E0B',
+  /** Fondo suave de advertencia — banners de perfil incompleto */
+  warningLight: '#FEF3C7',
 } as const;
 
 /**

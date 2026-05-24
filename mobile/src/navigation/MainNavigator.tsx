@@ -29,9 +29,11 @@ import { GamesScreen } from '@/features/impostor/screens/GamesScreen';
 import { ImpostorStartScreen } from '@/features/impostor/screens/ImpostorStartScreen';
 import { ImpostorRoleScreen } from '@/features/impostor/screens/ImpostorRoleScreen';
 
+// Pantallas implementadas — bloque 6 (perfil)
+import { ProfileScreen } from '@/features/auth/screens/ProfileScreen';
+
 // Placeholders para bloques futuros — se reemplazarán cuando se implementen
 const MemoriesGalleryScreen = () => null;
-const ProfileScreen = () => null;
 
 const Stack = createNativeStackNavigator();
 
@@ -60,7 +62,7 @@ export const MainNavigator = () => {
       {/* Bloque futuro — memorias */}
       <Stack.Screen name={Routes.MemoriesGallery} component={MemoriesGalleryScreen} />
 
-      {/* Bloque futuro — historial y perfil */}
+      {/* Bloque 6 — perfil de usuario */}
       <Stack.Screen name={Routes.Profile} component={ProfileScreen} />
 
       {/* Bloque 1 — completar perfil post-registro */}

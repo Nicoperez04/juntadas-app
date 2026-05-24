@@ -55,11 +55,16 @@
 - **24** · Rediseño y correcciones del Impostor (palabra aleatoria, diseño integrado, standalone) → [`conversaciones/bloque-4/cursor-bloque-4-completo.md`](conversaciones/bloque-4/cursor-bloque-4-completo.md) · [`prompts/bloque-4/cursor-03-impostor-redesign.md`](prompts/bloque-4/cursor-03-impostor-redesign.md)
 - **25** · Guía de onboarding para el equipo (ONBOARDING.md) → [`conversaciones/bloque-4/cursor-bloque-4-completo.md`](conversaciones/bloque-4/cursor-bloque-4-completo.md)
 
+### Bloque 6 — Perfil de usuario (24/05/2026)
+
+- **26** · Implementación del perfil de usuario (ProfileScreen, avatar, estadísticas, logout) → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/cursor-01-perfil-implementacion.md`](prompts/bloque-6/cursor-01-perfil-implementacion.md)
+- **Documentación** · Cierre del Bloque 6 → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/cursor-02-documentar-bloque-6.md`](prompts/bloque-6/cursor-02-documentar-bloque-6.md)
+
 ---
 
 ## Cómo mantener actualizado
 
-### Bloques 1–4 (conversaciones completas desde Cursor)
+### Bloques 1–6 (conversaciones completas desde Cursor)
 
 Regenerar prompts + respuestas finales completas desde los agent transcripts:
 
@@ -74,6 +79,7 @@ El script lee los JSONL en `.cursor/projects/.../agent-transcripts/` y actualiza
 - `conversaciones/bloque-2/cursor-bloque-2-chat-2.md`
 - `conversaciones/bloque-3/cursor-bloque-3-completo.md`
 - `conversaciones/bloque-4/cursor-bloque-4-completo.md`
+- `conversaciones/bloque-6/cursor-bloque-6-completo.md` *(pendiente de agregar al script)*
 
 Cada sesión incluye el **prompt completo** (archivo guardado + mensaje enviado en chat) y la **respuesta final completa** del agente (sin tool calls).
 

@@ -7,7 +7,14 @@
  * como strings en español para que la UI los muestre sin transformación adicional.
  */
 import { supabase } from '@/lib/supabase/client';
-import { LoginFormData, RegisterFormData, CompleteProfileFormData } from '../types';
+import {
+  AuthUser,
+  LoginFormData,
+  RegisterFormData,
+  CompleteProfileFormData,
+  UpdateProfileData,
+  UserStats,
+} from '../types';
 
 /**
  * Contrato de retorno uniforme de todas las operaciones del servicio.
@@ -16,6 +23,40 @@ import { LoginFormData, RegisterFormData, CompleteProfileFormData } from '../typ
 interface ServiceResult<T> {
   data: T | null;
   error: string | null;
+}
+
+/** Nombre del bucket de Storage donde se guardan las fotos de perfil */
+const AVATARS_BUCKET = 'avatars';
+
+/**
+ * SQL para crear el bucket y políticas RLS — ejecutar en Supabase SQL Editor
+ * si no se aplicó la migración 003_avatars_storage.sql via CLI:
+ *
+ * INSERT INTO storage.buckets (id, name, public)
+ * VALUES ('avatars', 'avatars', true)
+ * ON CONFLICT (id) DO UPDATE SET public = true;
+ *
+ * CREATE POLICY "avatars: upload own" ON storage.objects FOR INSERT
+ *   WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
+ *
+ * CREATE POLICY "avatars: update own" ON storage.objects FOR UPDATE
+ *   USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
+ *
+ * CREATE POLICY "avatars: select public" ON storage.objects FOR SELECT
+ *   USING (bucket_id = 'avatars' AND auth.uid() IS NOT NULL);
+ */
+
+/** Ruta fija del avatar dentro del bucket — siempre se reemplaza con upsert */
+const getAvatarPath = (userId: string): string => `${userId}/avatar.jpg`;
+
+/**
+ * Fila de la tabla `profiles` tal como la devuelve Supabase (snake_case).
+ */
+interface ProfileRow {
+  id: string;
+  full_name: string;
+  username: string;
+  avatar_url: string | null;
 }
 
 /**
@@ -35,6 +76,17 @@ const mapAuthError = (message: string): string => {
   // Si no matchea ningún caso conocido, devuelve el mensaje original para no perder contexto
   return message;
 };
+
+/**
+ * Mapea una fila de `profiles` más el email de Auth al modelo de dominio AuthUser.
+ */
+const mapProfileRow = (row: ProfileRow, email: string): AuthUser => ({
+  id: row.id,
+  email,
+  fullName: row.full_name,
+  username: row.username,
+  avatarUrl: row.avatar_url,
+});
 
 export const authService = {
   /**
@@ -144,27 +196,183 @@ export const authService = {
   },
 
   /**
-   * Actualiza la fila del usuario en la tabla `profiles`.
-   * Se usa únicamente en el flujo de `CompleteProfileScreen` para asignar el username.
-   * Si el username ya existe, Supabase retorna un error de UNIQUE constraint
+   * Obtiene el perfil completo del usuario desde la tabla `profiles`.
+   * El email se toma de la sesión activa porque no vive en `profiles`.
+   *
+   * @param userId - UUID del usuario autenticado
+   * @returns Perfil mapeado a AuthUser o error descriptivo
+   */
+  async getProfile(userId: string): Promise<ServiceResult<AuthUser>> {
+    try {
+      const { data: currentUser, error: userError } = await this.getCurrentUser();
+      if (userError) return { data: null, error: userError };
+      if (!currentUser) return { data: null, error: 'No hay usuario autenticado' };
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .eq('id', userId)
+        .single();
+
+      if (error) return { data: null, error: 'Error al cargar el perfil' };
+
+      return {
+        data: mapProfileRow(data as ProfileRow, currentUser.email),
+        error: null,
+      };
+    } catch {
+      return { data: null, error: 'Error al cargar el perfil' };
+    }
+  },
+
+  /**
+   * Verifica si un username ya está en uso por otro usuario distinto al actual.
+   * Se consulta antes de actualizar para dar feedback inline sin depender del UNIQUE de la DB.
+   *
+   * @param username - Username a validar
+   * @param excludeUserId - ID del usuario actual para excluirlo de la búsqueda
+   */
+  async isUsernameTaken(username: string, excludeUserId: string): Promise<ServiceResult<boolean>> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .neq('id', excludeUserId)
+        .maybeSingle();
+
+      if (error) return { data: null, error: 'Error al verificar el username' };
+      return { data: data !== null, error: null };
+    } catch {
+      return { data: null, error: 'Error al verificar el username' };
+    }
+  },
+
+  /**
+   * Actualiza campos del perfil en la tabla `profiles`.
+   * Usado tanto en CompleteProfileScreen (solo username) como en ProfileScreen (nombre, username, avatar).
+   *
+   * Antes de cambiar el username verifica que no esté en uso por otro usuario.
+   * Si el username ya existe, Supabase también retorna error de UNIQUE constraint
    * que se mapea a un mensaje amigable via `mapAuthError`.
    *
    * @param userId - UUID del usuario autenticado (proveniente de la sesión)
-   * @param data - Campos a actualizar; actualmente solo `username`
+   * @param data - Campos a actualizar: fullName, username y/o avatarUrl
    */
   async updateProfile(
     userId: string,
-    data: Partial<CompleteProfileFormData>,
-  ): Promise<ServiceResult<null>> {
+    data: Partial<CompleteProfileFormData> | UpdateProfileData,
+  ): Promise<ServiceResult<AuthUser>> {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ username: data.username })
-        .eq('id', userId);
+      const updates: Record<string, string> = {};
+
+      if ('fullName' in data && data.fullName !== undefined) {
+        updates.full_name = data.fullName;
+      }
+
+      if (data.username !== undefined) {
+        const { data: isTaken, error: checkError } = await this.isUsernameTaken(
+          data.username,
+          userId,
+        );
+        if (checkError) return { data: null, error: checkError };
+        if (isTaken) {
+          return { data: null, error: 'Ese nombre de usuario ya está en uso' };
+        }
+        updates.username = data.username;
+      }
+
+      if ('avatarUrl' in data && data.avatarUrl !== undefined) {
+        updates.avatar_url = data.avatarUrl;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return this.getProfile(userId);
+      }
+
+      const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
       if (error) return { data: null, error: mapAuthError(error.message) };
-      return { data: null, error: null };
+
+      return this.getProfile(userId);
     } catch {
       return { data: null, error: 'Error al actualizar el perfil' };
+    }
+  },
+
+  /**
+   * Sube o reemplaza la foto de perfil en Supabase Storage.
+   * Usa upsert para sobrescribir el archivo previo en la misma ruta fija.
+   *
+   * @param userId - UUID del usuario — define la carpeta en el bucket
+   * @param imageUri - URI local de la imagen (cámara o galería via expo-image-picker)
+   * @returns URL pública del avatar con cache-bust para refrescar la UI
+   */
+  async uploadAvatar(userId: string, imageUri: string): Promise<ServiceResult<string>> {
+    try {
+      const response = await fetch(imageUri);
+      const arrayBuffer = await response.arrayBuffer();
+      const path = getAvatarPath(userId);
+
+      const { error: uploadError } = await supabase.storage
+        .from(AVATARS_BUCKET)
+        .upload(path, arrayBuffer, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        return { data: null, error: 'Error al subir la foto de perfil' };
+      }
+
+      const { data: publicUrlData } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(path);
+
+      // Cache-bust para que React Native recargue la imagen tras reemplazar el archivo
+      const publicUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+
+      return { data: publicUrl, error: null };
+    } catch {
+      return { data: null, error: 'Error al subir la foto de perfil' };
+    }
+  },
+
+  /**
+   * Calcula estadísticas de participación del usuario en juntadas.
+   * - organizedCount: juntadas creadas por el usuario
+   * - participantCount: juntadas activas donde participa como invitado (no organizador)
+   *
+   * @param userId - UUID del usuario autenticado
+   */
+  async getUserStats(userId: string): Promise<ServiceResult<UserStats>> {
+    try {
+      const { count: organizedCount, error: organizedError } = await supabase
+        .from('meetups')
+        .select('*', { count: 'exact', head: true })
+        .eq('created_by', userId);
+
+      if (organizedError) {
+        return { data: null, error: 'Error al cargar las estadísticas' };
+      }
+
+      const { count: participantCount, error: participantError } = await supabase
+        .from('meetup_participants')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('role', 'participant')
+        .is('left_at', null);
+
+      if (participantError) {
+        return { data: null, error: 'Error al cargar las estadísticas' };
+      }
+
+      return {
+        data: {
+          organizedCount: organizedCount ?? 0,
+          participantCount: participantCount ?? 0,
+        },
+        error: null,
+      };
+    } catch {
+      return { data: null, error: 'Error al cargar las estadísticas' };
     }
   },
 };
