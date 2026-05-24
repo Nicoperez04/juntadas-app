@@ -472,7 +472,7 @@ To-do's from the plan have already been created. Do not create them again. Mark 
 
 ### Respuesta
 
-_(El agente ejecutó la implementación del plan en esta sesión; el transcript no conserva texto final porque el contenido quedó redactado. Continuación en **Sesión 4**.)_
+_(Sin respuesta final detectada en el transcript)_
 
 <details>
 <summary>Metadatos del intercambio</summary>

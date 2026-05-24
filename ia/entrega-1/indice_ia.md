@@ -49,11 +49,17 @@
 - **22** · Fixes finales: juntadas finalizadas bloqueadas para edición → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/cursor-05-fixes-finales-bloque-3.md`](prompts/bloque-3/cursor-05-fixes-finales-bloque-3.md)
 - **Documentación** · Cierre del Bloque 3 → [`prompts/bloque-3/cursor-06-documentar-bloque-3.md`](prompts/bloque-3/cursor-06-documentar-bloque-3.md)
 
+### Bloque 4 — Juego Impostor
+
+- **23** · Implementación del juego Impostor (GamesScreen, ImpostorStartScreen, ImpostorRoleScreen) → [`conversaciones/bloque-4/cursor-bloque-4-completo.md`](conversaciones/bloque-4/cursor-bloque-4-completo.md) · [`prompts/bloque-4/cursor-01-impostor-implementacion.md`](prompts/bloque-4/cursor-01-impostor-implementacion.md)
+- **24** · Rediseño y correcciones del Impostor (palabra aleatoria, diseño integrado, standalone) → [`conversaciones/bloque-4/cursor-bloque-4-completo.md`](conversaciones/bloque-4/cursor-bloque-4-completo.md) · [`prompts/bloque-4/cursor-03-impostor-redesign.md`](prompts/bloque-4/cursor-03-impostor-redesign.md)
+- **25** · Guía de onboarding para el equipo (ONBOARDING.md) → [`conversaciones/bloque-4/cursor-bloque-4-completo.md`](conversaciones/bloque-4/cursor-bloque-4-completo.md)
+
 ---
 
 ## Cómo mantener actualizado
 
-### Bloques 1–3 (conversaciones completas desde Cursor)
+### Bloques 1–4 (conversaciones completas desde Cursor)
 
 Regenerar prompts + respuestas finales completas desde los agent transcripts:
 
@@ -67,6 +73,7 @@ El script lee los JSONL en `.cursor/projects/.../agent-transcripts/` y actualiza
 - `conversaciones/bloque-2/cursor-bloque-2-chat-1.md`
 - `conversaciones/bloque-2/cursor-bloque-2-chat-2.md`
 - `conversaciones/bloque-3/cursor-bloque-3-completo.md`
+- `conversaciones/bloque-4/cursor-bloque-4-completo.md`
 
 Cada sesión incluye el **prompt completo** (archivo guardado + mensaje enviado en chat) y la **respuesta final completa** del agente (sin tool calls).
 

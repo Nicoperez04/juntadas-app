@@ -623,6 +623,65 @@ Fix del selector de fecha y hora, refresh del home, documentación y limpieza de
       },
     ],
   },
+  {
+    output: join(CONVERSACIONES_DIR, 'bloque-4', 'cursor-bloque-4-completo.md'),
+    header: `# Conversación Bloque 4 — Juego Impostor
+
+**Herramienta:** Cursor Agent
+**Rama:** feature/bloque-4-impostor`,
+    summary: `## Lo que se implementó
+
+- GamesScreen independiente accesible desde el tab bar
+- ImpostorStartScreen con meetupId opcional
+- ImpostorRoleScreen con flip animado, dots de progreso y contador
+- Dataset de 600 palabras en 20 categorías
+- Dos modos de palabra: todas las categorías o categoría específica
+- La palabra siempre es aleatoria — el organizador nunca la ve
+- Historial de palabras usadas para evitar repetición en la sesión
+- Rediseño integrado al sistema de diseño de la app
+- impostorTheme.ts para tokens específicos del juego
+
+## Decisiones tomadas
+
+- Modo un solo celular — se pasa de mano en mano
+- meetupId opcional para jugar sin juntada creada
+- Fondo claro en GamesScreen e ImpostorStartScreen, fondo oscuro solo en revelación
+- Zustand para compartir estado de sesión entre pantallas`,
+    transcriptIds: [
+      '2628f302-44de-49ef-a3b5-60118adcc749',
+      '05ad3d82-072a-4b3c-8188-47b0166ba77a',
+    ],
+    transcriptConfigs: [
+      {
+        id: '2628f302-44de-49ef-a3b5-60118adcc749',
+        matchers: [
+          {
+            test: /Implementación — Bloque 4: Juego Impostor/i,
+            file: 'prompts/bloque-4/cursor-01-impostor-implementacion.md',
+            title: 'Implementación del juego Impostor',
+          },
+          {
+            test: /Rediseño y correcciones — Bloque 4/i,
+            file: 'prompts/bloque-4/cursor-03-impostor-redesign.md',
+            title: 'Rediseño y correcciones del Impostor',
+          },
+          {
+            test: /categoria especifica|categoría específica|pista para el impostor/i,
+            title: 'Fix categoría específica y selector de pista',
+          },
+        ],
+      },
+      {
+        id: '05ad3d82-072a-4b3c-8188-47b0166ba77a',
+        matchers: [
+          {
+            test: /guía completa para el resto de mis compañeros/i,
+            title: 'Guía de onboarding para el equipo (ONBOARDING.md)',
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 const main = () => {
