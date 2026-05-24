@@ -2,9 +2,8 @@
  * Navegador principal de la app (usuario autenticado).
  *
  * Gestiona el stack de todas las pantallas disponibles post-login.
- * MeetupHomeScreen es la ruta inicial. Las pantallas de otros bloques
- * (impostor, memorias, historial, perfil) mantienen placeholders hasta
- * que se implementen en sus bloques correspondientes.
+ * MeetupHomeScreen es la ruta inicial. Las pantallas de impostor, memorias
+ * y perfil mantienen placeholders hasta que se implementen en sus bloques.
  *
  * El header nativo está oculto en todas las pantallas porque cada una
  * implementa su propio header con diseño consistente al sistema de diseño.
@@ -21,14 +20,14 @@ import { MeetupHomeScreen } from '@/features/meetups/screens/MeetupHomeScreen';
 import { CreateMeetupScreen } from '@/features/meetups/screens/CreateMeetupScreen';
 import { JoinMeetupScreen } from '@/features/meetups/screens/JoinMeetupScreen';
 import { MeetupDetailScreen } from '@/features/meetups/screens/MeetupDetailScreen';
+import { EditMeetupScreen } from '@/features/meetups/screens/EditMeetupScreen';
+import { MeetupHistoryScreen } from '@/features/meetups/screens/MeetupHistoryScreen';
+import { ParticipantListScreen } from '@/features/participants/screens/ParticipantListScreen';
 
 // Placeholders para bloques futuros — se reemplazarán cuando se implementen
-const EditMeetupScreen = () => null;
-const ParticipantListScreen = () => null;
 const ImpostorStartScreen = () => null;
 const ImpostorRoleScreen = () => null;
 const MemoriesGalleryScreen = () => null;
-const MeetupHistoryScreen = () => null;
 const ProfileScreen = () => null;
 
 const Stack = createNativeStackNavigator();
@@ -45,9 +44,10 @@ export const MainNavigator = () => {
       <Stack.Screen name={Routes.JoinMeetup} component={JoinMeetupScreen} />
       <Stack.Screen name={Routes.MeetupDetail} component={MeetupDetailScreen} />
 
-      {/* Bloque futuro — edición y participantes */}
+      {/* Bloque 3 — edición, participantes e historial */}
       <Stack.Screen name={Routes.EditMeetup} component={EditMeetupScreen} />
       <Stack.Screen name={Routes.ParticipantList} component={ParticipantListScreen} />
+      <Stack.Screen name={Routes.MeetupHistory} component={MeetupHistoryScreen} />
 
       {/* Bloque futuro — impostor */}
       <Stack.Screen name={Routes.ImpostorStart} component={ImpostorStartScreen} />
@@ -57,7 +57,6 @@ export const MainNavigator = () => {
       <Stack.Screen name={Routes.MemoriesGallery} component={MemoriesGalleryScreen} />
 
       {/* Bloque futuro — historial y perfil */}
-      <Stack.Screen name={Routes.MeetupHistory} component={MeetupHistoryScreen} />
       <Stack.Screen name={Routes.Profile} component={ProfileScreen} />
 
       {/* Bloque 1 — completar perfil post-registro */}

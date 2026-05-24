@@ -462,6 +462,7 @@ export const MeetupHomeScreen = () => {
             <TouchableOpacity
               style={styles.historyLink}
               activeOpacity={0.7}
+              onPress={() => navigation.navigate(Routes.MeetupHistory)}
             >
               <Text style={styles.historyLinkText}>Ver historial</Text>
               <Ionicons

@@ -40,13 +40,37 @@
 - **17** · Fix de refresh de lista al volver al home → [`conversaciones/bloque-2/cursor-bloque-2-chat-1.md`](conversaciones/bloque-2/cursor-bloque-2-chat-1.md) · [`prompts/bloque-2/cursor-05-meetups-refresh.md`](prompts/bloque-2/cursor-05-meetups-refresh.md)
 - **Documentación** · Cierre del Bloque 2 → [`prompts/bloque-2/cursor-06-documentar-bloque-2.md`](prompts/bloque-2/cursor-06-documentar-bloque-2.md)
 
-### Sesiones numeradas (desde el próximo chat)
+### Bloque 3 — Participantes y acciones (23–24/05/2026)
 
-La numeración (`01-`, `02-`, …) empieza en el **siguiente chat nuevo**, no en el de corrección de exports.
+- **18** · Implementación del módulo de participantes → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/cursor-01-participantes-implementacion.md`](prompts/bloque-3/cursor-01-participantes-implementacion.md)
+- **19** · Fix de RLS circular en meetup_participants → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/cursor-02-fixes-bloque-3.md`](prompts/bloque-3/cursor-02-fixes-bloque-3.md)
+- **20** · Fix UX: Toast centrado, modal asistencia, nombres de participantes → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/cursor-03-ux-fixes.md`](prompts/bloque-3/cursor-03-ux-fixes.md)
+- **21** · Revisión completa del Bloque 3 → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/cursor-04-revision-bloque-3.md`](prompts/bloque-3/cursor-04-revision-bloque-3.md)
+- **22** · Fixes finales: juntadas finalizadas bloqueadas para edición → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/cursor-05-fixes-finales-bloque-3.md`](prompts/bloque-3/cursor-05-fixes-finales-bloque-3.md)
+- **Documentación** · Cierre del Bloque 3 → [`prompts/bloque-3/cursor-06-documentar-bloque-3.md`](prompts/bloque-3/cursor-06-documentar-bloque-3.md)
 
 ---
 
 ## Cómo mantener actualizado
+
+### Bloques 1–3 (conversaciones completas desde Cursor)
+
+Regenerar prompts + respuestas finales completas desde los agent transcripts:
+
+```bash
+node juntadas-app/ia/entrega-1/scripts/build-block-conversations.mjs
+```
+
+El script lee los JSONL en `.cursor/projects/.../agent-transcripts/` y actualiza:
+
+- `conversaciones/bloque-1/cursor-bloque-1-completo.md`
+- `conversaciones/bloque-2/cursor-bloque-2-chat-1.md`
+- `conversaciones/bloque-2/cursor-bloque-2-chat-2.md`
+- `conversaciones/bloque-3/cursor-bloque-3-completo.md`
+
+Cada sesión incluye el **prompt completo** (archivo guardado + mensaje enviado en chat) y la **respuesta final completa** del agente (sin tool calls).
+
+### Sesiones de prueba (SpecStory — opcional)
 
 1. SpecStory guarda el export crudo (con timestamp) en `.specstory/history/`.
 2. Para sesiones **numeradas** (desde el próximo chat):

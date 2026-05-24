@@ -59,21 +59,11 @@ export interface MeetupWithRole extends Meetup {
 }
 
 /**
- * Datos del formulario de creación de juntada.
- * Todos los campos son strings porque provienen de TextInput;
- * el servicio convierte los tipos antes de persistir en Supabase.
+ * Datos del formulario de creación/edición de juntada.
+ * Inferido desde createMeetupSchema para que Zod sea la única fuente de verdad
+ * del tipado; description y estimatedCost son opcionales en el schema.
  */
-export interface CreateMeetupFormData {
-  title: string;
-  description: string;
-  /** Fecha en formato DD/MM/YYYY ingresada por el usuario */
-  date: string;
-  /** Hora en formato HH:MM ingresada por el usuario */
-  time: string;
-  location: string;
-  /** Costo como string; se convierte a número en el servicio */
-  estimatedCost: string;
-}
+export type { CreateMeetupSchema as CreateMeetupFormData } from './schemas/meetupSchemas';
 
 /** Datos del formulario para unirse a una juntada por código */
 export interface JoinMeetupFormData {

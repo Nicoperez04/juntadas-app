@@ -19,8 +19,6 @@ import type {
   CreateMeetupFormData,
   Meetup,
 } from '../types';
-
-/** Resultado inmediato de operaciones que retornan datos para el caller */
 interface OperationResult<T> {
   data: T | null;
   error: string | null;
@@ -172,6 +170,65 @@ export const useMeetups = () => {
     [],
   );
 
+  /**
+   * Cancela una juntada activa. Solo el organizador puede ejecutar esta acción.
+   *
+   * @param meetupId - UUID de la juntada a cancelar
+   * @returns La juntada cancelada o mensaje de error
+   */
+  const cancelMeetup = useCallback(
+    async (meetupId: string): Promise<OperationResult<Meetup>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      const result = await meetupService.cancelMeetup(meetupId, userId);
+      if (!result.error) {
+        await loadMeetups(userId);
+      }
+      return result;
+    },
+    [userId, loadMeetups],
+  );
+
+  /**
+   * Edita los campos de una juntada activa. Solo el organizador puede editar.
+   *
+   * @param meetupId - UUID de la juntada
+   * @param formData - Datos validados del formulario
+   * @returns La juntada actualizada o mensaje de error
+   */
+  const editMeetup = useCallback(
+    async (
+      meetupId: string,
+      formData: CreateMeetupFormData,
+    ): Promise<OperationResult<Meetup>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      const result = await meetupService.editMeetup(meetupId, userId, formData);
+      if (!result.error) {
+        await loadMeetups(userId);
+      }
+      return result;
+    },
+    [userId, loadMeetups],
+  );
+
+  /**
+   * Obtiene juntadas finalizadas o canceladas del historial del usuario.
+   * No modifica el estado del hook; la pantalla de historial maneja su loading.
+   *
+   * @returns Lista de juntadas históricas o mensaje de error
+   */
+  const getFinishedMeetups = useCallback(async (): Promise<
+    OperationResult<MeetupWithRole[]>
+  > => {
+    if (!userId) {
+      return { data: null, error: 'No hay usuario autenticado' };
+    }
+    return meetupService.getFinishedMeetups(userId);
+  }, [userId]);
+
   return {
     meetups,
     isLoading,
@@ -180,6 +237,9 @@ export const useMeetups = () => {
     joinMeetup,
     getMeetupById,
     getMeetupParticipants,
+    cancelMeetup,
+    editMeetup,
+    getFinishedMeetups,
     refresh,
   };
 };

@@ -492,6 +492,7 @@ export const meetupService = {
         `,
         )
         .eq('meetup_id', meetupId)
+        .is('left_at', null)
         .order('role', { ascending: true });
 
       if (error) throw error;
@@ -522,6 +523,220 @@ export const meetupService = {
       return { data: participants, error: null };
     } catch {
       return { data: null, error: 'Error al obtener los participantes' };
+    }
+  },
+
+  /**
+   * Cancela una juntada activa. Solo el organizador puede ejecutar esta acción.
+   * Setea status = 'cancelled' y cancelled_at = NOW().
+   *
+   * @param meetupId - UUID de la juntada
+   * @param userId - UUID del usuario que intenta cancelar
+   * @returns La juntada cancelada o mensaje de error
+   */
+  async cancelMeetup(
+    meetupId: string,
+    userId: string,
+  ): Promise<ServiceResult<Meetup>> {
+    try {
+      const { data: meetup, error: fetchError } = await supabase
+        .from('meetups')
+        .select('*')
+        .eq('id', meetupId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!meetup) {
+        return { data: null, error: 'Juntada no encontrada' };
+      }
+      if (meetup.created_by !== userId) {
+        return {
+          data: null,
+          error: 'Solo el organizador puede cancelar la juntada',
+        };
+      }
+      if (meetup.status === 'cancelled') {
+        return { data: null, error: 'La juntada ya está cancelada' };
+      }
+      if (meetup.status === 'finished') {
+        return { data: null, error: 'No se puede cancelar una juntada finalizada' };
+      }
+
+      const { data: updated, error: updateError } = await supabase
+        .from('meetups')
+        .update({
+          status: 'cancelled',
+          cancelled_at: new Date().toISOString(),
+        })
+        .eq('id', meetupId)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      return { data: mapMeetupRow(updated as MeetupRow), error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return {
+        data: null,
+        error: translateError(message) || 'Error al cancelar la juntada',
+      };
+    }
+  },
+
+  /**
+   * Edita los campos modificables de una juntada activa.
+   * Solo el organizador puede editar y una juntada cancelada no es editable.
+   *
+   * @param meetupId - UUID de la juntada
+   * @param userId - UUID del usuario que intenta editar
+   * @param formData - Datos del formulario de edición
+   * @returns La juntada actualizada o mensaje de error
+   */
+  async editMeetup(
+    meetupId: string,
+    userId: string,
+    formData: CreateMeetupFormData,
+  ): Promise<ServiceResult<Meetup>> {
+    try {
+      const { data: meetup, error: fetchError } = await supabase
+        .from('meetups')
+        .select('created_by, status')
+        .eq('id', meetupId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!meetup) {
+        return { data: null, error: 'Juntada no encontrada' };
+      }
+      if (meetup.created_by !== userId) {
+        return {
+          data: null,
+          error: 'Solo el organizador puede editar la juntada',
+        };
+      }
+      if (meetup.status === 'cancelled') {
+        return {
+          data: null,
+          error: 'Una juntada cancelada no puede editarse',
+        };
+      }
+      if (meetup.status === 'finished') {
+        return {
+          data: null,
+          error: 'Una juntada finalizada no puede editarse',
+        };
+      }
+
+      const { data: updated, error: updateError } = await supabase
+        .from('meetups')
+        .update({
+          title: formData.title,
+          description: formData.description || null,
+          date: formatDateForDB(formData.date),
+          time: formData.time,
+          location: formData.location,
+          estimated_cost:
+            formData.estimatedCost && formData.estimatedCost.trim() !== ''
+              ? parseFloat(formData.estimatedCost)
+              : null,
+        })
+        .eq('id', meetupId)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      return { data: mapMeetupRow(updated as MeetupRow), error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return {
+        data: null,
+        error: translateError(message) || 'Error al editar la juntada',
+      };
+    }
+  },
+
+  /**
+   * Obtiene juntadas finalizadas o canceladas en las que el usuario participó,
+   * ya sea como organizador o como participante.
+   * Ordena por fecha descendente (más recientes primero).
+   *
+   * @param userId - UUID del usuario autenticado
+   * @returns Lista de juntadas históricas con rol del usuario
+   */
+  async getFinishedMeetups(
+    userId: string,
+  ): Promise<ServiceResult<MeetupWithRole[]>> {
+    try {
+      const { data: myParticipations, error: parError } = await supabase
+        .from('meetup_participants')
+        .select('meetup_id, role, attendance_status')
+        .eq('user_id', userId);
+
+      if (parError) throw parError;
+      if (!myParticipations || myParticipations.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const meetupIds = (myParticipations as UserParticipationRow[]).map(
+        (p) => p.meetup_id,
+      );
+
+      const { data: meetupsData, error: meetupsError } = await supabase
+        .from('meetups')
+        .select('*')
+        .in('id', meetupIds)
+        .in('status', ['finished', 'cancelled'])
+        .order('date', { ascending: false });
+
+      if (meetupsError) throw meetupsError;
+      if (!meetupsData || meetupsData.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const historyMeetupIds = (meetupsData as MeetupRow[]).map((m) => m.id);
+
+      const { data: allParticipants, error: countError } = await supabase
+        .from('meetup_participants')
+        .select('meetup_id, attendance_status')
+        .in('meetup_id', historyMeetupIds)
+        .is('left_at', null);
+
+      if (countError) throw countError;
+
+      const safeParticipants = (allParticipants ?? []) as AttendanceCountRow[];
+      const safeMyParticipations = myParticipations as UserParticipationRow[];
+
+      const result: MeetupWithRole[] = (meetupsData as MeetupRow[]).map(
+        (meetupRow) => {
+          const myParticipation = safeMyParticipations.find(
+            (p) => p.meetup_id === meetupRow.id,
+          );
+          const participantsForMeetup = safeParticipants.filter(
+            (p) => p.meetup_id === meetupRow.id,
+          );
+
+          return {
+            ...mapMeetupRow(meetupRow),
+            userRole: (myParticipation?.role ?? 'participant') as ParticipantRole,
+            attendanceStatus: (myParticipation?.attendance_status ??
+              'pending') as AttendanceStatus,
+            participantCount: participantsForMeetup.length,
+            confirmedCount: participantsForMeetup.filter(
+              (p) => p.attendance_status === 'confirmed',
+            ).length,
+          };
+        },
+      );
+
+      return { data: result, error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return {
+        data: null,
+        error: translateError(message) || 'Error al obtener el historial',
+      };
     }
   },
 };
