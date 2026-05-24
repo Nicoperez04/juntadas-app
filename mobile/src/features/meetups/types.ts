@@ -104,8 +104,9 @@ export type MainStackParamList = {
   MeetupDetail: { meetupId: string };
   EditMeetup: { meetupId: string };
   ParticipantList: { meetupId: string };
-  ImpostorStart: { meetupId: string };
-  ImpostorRole: { meetupId: string };
+  Games: undefined;
+  ImpostorStart: { meetupId?: string };
+  ImpostorRole: { meetupId?: string };
   MemoriesGallery: { meetupId: string };
   MeetupHistory: undefined;
   CompleteProfile: undefined;

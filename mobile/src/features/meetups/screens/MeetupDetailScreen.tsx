@@ -571,17 +571,19 @@ export const MeetupDetailScreen = () => {
           </View>
         </View>
 
-        {/* Botones de acción: Jugar y Recuerdos — ocultos si está cancelada */}
+        {/* Botones de acción: Jugar (solo activa) y Recuerdos (no cancelada) */}
         {!isCancelled && (
           <View style={styles.actionsRow}>
-            <ActionCard
-              icon="game-controller"
-              label="Jugar"
-              color={theme.colors.primary}
-              onPress={() => {
-                /* Placeholder — se implementa en el bloque de Impostor */
-              }}
-            />
+            {isActive && (
+              <ActionCard
+                icon="game-controller"
+                label="Jugar"
+                color={theme.colors.primary}
+                onPress={() =>
+                  navigation.navigate(Routes.ImpostorStart, { meetupId })
+                }
+              />
+            )}
             <ActionCard
               icon="images"
               label="Recuerdos"

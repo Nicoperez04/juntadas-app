@@ -24,9 +24,12 @@ import { EditMeetupScreen } from '@/features/meetups/screens/EditMeetupScreen';
 import { MeetupHistoryScreen } from '@/features/meetups/screens/MeetupHistoryScreen';
 import { ParticipantListScreen } from '@/features/participants/screens/ParticipantListScreen';
 
+// Pantallas implementadas — bloque 4 (impostor)
+import { GamesScreen } from '@/features/impostor/screens/GamesScreen';
+import { ImpostorStartScreen } from '@/features/impostor/screens/ImpostorStartScreen';
+import { ImpostorRoleScreen } from '@/features/impostor/screens/ImpostorRoleScreen';
+
 // Placeholders para bloques futuros — se reemplazarán cuando se implementen
-const ImpostorStartScreen = () => null;
-const ImpostorRoleScreen = () => null;
 const MemoriesGalleryScreen = () => null;
 const ProfileScreen = () => null;
 
@@ -49,7 +52,8 @@ export const MainNavigator = () => {
       <Stack.Screen name={Routes.ParticipantList} component={ParticipantListScreen} />
       <Stack.Screen name={Routes.MeetupHistory} component={MeetupHistoryScreen} />
 
-      {/* Bloque futuro — impostor */}
+      {/* Bloque 4 — impostor */}
+      <Stack.Screen name={Routes.Games} component={GamesScreen} />
       <Stack.Screen name={Routes.ImpostorStart} component={ImpostorStartScreen} />
       <Stack.Screen name={Routes.ImpostorRole} component={ImpostorRoleScreen} />
 
