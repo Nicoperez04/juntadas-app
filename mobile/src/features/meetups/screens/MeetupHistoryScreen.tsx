@@ -21,6 +21,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
+import { AppTabBar } from '@/shared/components/AppTabBar';
 import { useMeetups } from '../hooks/useMeetups';
 import type { MeetupWithRole, MeetupStatus, MainStackParamList } from '../types';
 
@@ -165,7 +166,8 @@ export const MeetupHistoryScreen = () => {
   }, [loadHistory]);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safeAreaTop} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -181,6 +183,7 @@ export const MeetupHistoryScreen = () => {
         <Text style={styles.headerTitle}>Historial</Text>
         <View style={styles.headerPlaceholder} />
       </View>
+      </SafeAreaView>
 
       {isLoading ? (
         <View style={styles.centered}>
@@ -235,14 +238,19 @@ export const MeetupHistoryScreen = () => {
           <View style={styles.bottomSpace} />
         </ScrollView>
       )}
-    </SafeAreaView>
+
+      <AppTabBar activeTab="home" />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  safeAreaTop: {
+    backgroundColor: theme.colors.surface,
   },
   header: {
     flexDirection: 'row',
@@ -296,6 +304,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl * 2,
   },
   card: {
     backgroundColor: theme.colors.surface,

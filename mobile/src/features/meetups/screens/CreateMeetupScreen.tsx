@@ -28,6 +28,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
+import { AppTabBar } from '@/shared/components/AppTabBar';
 import { useMeetups } from '../hooks/useMeetups';
 import { createMeetupSchema } from '../schemas/meetupSchemas';
 import type { CreateMeetupFormData, MainStackParamList } from '../types';
@@ -184,7 +185,8 @@ export const CreateMeetupScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -197,6 +199,7 @@ export const CreateMeetupScreen = () => {
         <Text style={styles.headerTitle}>Nueva juntada</Text>
         <View style={styles.headerPlaceholder} />
       </View>
+      </SafeAreaView>
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -375,7 +378,9 @@ export const CreateMeetupScreen = () => {
           <View style={styles.bottomSpace} />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+
+      <AppTabBar activeTab="create" />
+    </View>
   );
 };
 
@@ -438,9 +443,12 @@ const fieldStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  safeArea: {
+    backgroundColor: theme.colors.surface,
   },
   flex: {
     flex: 1,
@@ -476,6 +484,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl * 2,
   },
   intro: {
     fontSize: theme.typography.sizes.sm,
