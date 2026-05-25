@@ -30,6 +30,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
+import { AppTabBar } from '@/shared/components/AppTabBar';
 import { useMeetups } from '../hooks/useMeetups';
 import { joinMeetupSchema } from '../schemas/meetupSchemas';
 import type { JoinMeetupFormData, MainStackParamList } from '../types';
@@ -40,6 +41,8 @@ export const JoinMeetupScreen = () => {
   const navigation = useNavigation<NavProp>();
   const { joinMeetup } = useMeetups();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const inputRef = useRef<TextInput>(null);
 
   /** Animación de shake para el campo de código cuando hay error */
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -107,7 +110,8 @@ export const JoinMeetupScreen = () => {
   const hasError = !!submitError || !!errors.joinCode;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -124,6 +128,7 @@ export const JoinMeetupScreen = () => {
         <Text style={styles.headerTitle}>Unirse a juntada</Text>
         <View style={styles.headerPlaceholder} />
       </View>
+      </SafeAreaView>
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -150,55 +155,63 @@ export const JoinMeetupScreen = () => {
             caracteres para que puedas unirte.
           </Text>
 
-          {/* Campo de código con tipografía monospace */}
+          {/* Campo de código estilo OTP */}
           <Controller
             control={control}
             name="joinCode"
             render={({ field: { onChange, onBlur, value } }) => (
               <View style={styles.codeFieldWrapper}>
-                <Animated.View
-                  style={[
-                    styles.codeInputContainer,
-                    hasError && styles.codeInputError,
-                    { transform: [{ translateX: shakeAnim }] },
-                  ]}
-                >
-                  <TextInput
-                    style={styles.codeInput}
-                    placeholder="ABC123"
-                    placeholderTextColor={theme.colors.textDisabled}
-                    value={value}
-                    onChangeText={(text) => {
-                      // Forzar mayúsculas y limitar a 6 caracteres
-                      const sanitized = text
-                        .toUpperCase()
-                        .replace(/[^A-Z0-9]/g, '')
-                        .slice(0, 6);
-                      onChange(sanitized);
-                      // Limpiar error previo al modificar el campo
-                      if (submitError) setSubmitError(null);
-                    }}
-                    onBlur={onBlur}
-                    autoCapitalize="characters"
-                    maxLength={6}
-                    autoCorrect={false}
-                    keyboardType="default"
-                    textAlign="center"
-                  />
-                </Animated.View>
+                {/* Input oculto que captura el teclado */}
+                <TextInput
+                  ref={inputRef}
+                  style={styles.hiddenInput}
+                  value={value}
+                  onChangeText={(text) => {
+                    const sanitized = text
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9]/g, '')
+                      .slice(0, 6);
+                    onChange(sanitized);
+                    if (submitError) setSubmitError(null);
+                  }}
+                  onFocus={() => setIsInputFocused(true)}
+                  onBlur={() => { onBlur(); setIsInputFocused(false); }}
+                  autoCapitalize="characters"
+                  maxLength={6}
+                  autoCorrect={false}
+                  keyboardType="default"
+                  caretHidden
+                />
 
-                {/* Indicador de progreso del código */}
-                <View style={styles.codeProgress}>
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <View
-                      key={i}
-                      style={[
-                        styles.progressDot,
-                        i < (value?.length ?? 0) && styles.progressDotFilled,
-                      ]}
-                    />
-                  ))}
-                </View>
+                {/* Cajas visuales OTP */}
+                <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+                  <TouchableOpacity
+                    onPress={() => inputRef.current?.focus()}
+                    activeOpacity={1}
+                    style={styles.otpRow}
+                  >
+                    {Array.from({ length: 6 }).map((_, i) => {
+                      const char = value?.[i] ?? '';
+                      const isActive = isInputFocused && i === (value?.length ?? 0);
+                      return (
+                        <View
+                          key={i}
+                          style={[
+                            styles.otpBox,
+                            isActive && styles.otpBoxActive,
+                            hasError && styles.otpBoxError,
+                          ]}
+                        >
+                          {char ? (
+                            <Text style={styles.otpChar}>{char}</Text>
+                          ) : isActive ? (
+                            <View style={styles.otpCursor} />
+                          ) : null}
+                        </View>
+                      );
+                    })}
+                  </TouchableOpacity>
+                </Animated.View>
 
                 {/* Mensaje de error del schema */}
                 {errors.joinCode?.message && (
@@ -244,14 +257,19 @@ export const JoinMeetupScreen = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+
+      <AppTabBar activeTab="join" />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  safeArea: {
+    backgroundColor: theme.colors.surface,
   },
   flex: {
     flex: 1,
@@ -284,6 +302,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl * 2,
     alignItems: 'center',
   },
   illustrationWrapper: {
@@ -342,39 +361,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
   },
-  codeInputContainer: {
-    width: '100%',
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surface,
-    ...theme.shadows.sm,
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
   },
-  codeInputError: {
-    borderColor: theme.colors.error,
-  },
-  codeInput: {
-    height: 68,
-    fontSize: 28,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.textPrimary,
-    letterSpacing: 8,
-    paddingHorizontal: theme.spacing.md,
-    /* Simula tipografía monospace con letter-spacing ampliado */
-  },
-  codeProgress: {
+  otpRow: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
+    justifyContent: 'center',
   },
-  progressDot: {
-    width: 8,
-    height: 8,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.border,
+  otpBox: {
+    width: 48,
+    height: 60,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...theme.shadows.sm,
   },
-  progressDotFilled: {
+  otpBoxActive: {
+    borderColor: theme.colors.primary,
+  },
+  otpBoxError: {
+    borderColor: theme.colors.error,
+  },
+  otpChar: {
+    fontSize: 24,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.textPrimary,
+  },
+  otpCursor: {
+    width: 2,
+    height: 28,
     backgroundColor: theme.colors.primary,
+    borderRadius: 1,
   },
   fieldError: {
     marginTop: theme.spacing.sm,
