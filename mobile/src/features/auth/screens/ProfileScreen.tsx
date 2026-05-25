@@ -17,7 +17,7 @@ import {
   Image,
   Modal,
   ActivityIndicator,
-  Alert,
+  Pressable,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -31,7 +31,7 @@ import { theme } from '@/shared/constants/theme';
 import { AppInput } from '@/shared/components/AppInput';
 import { AppButton } from '@/shared/components/AppButton';
 import { Toast } from '@/shared/components/Toast';
-import { ImpostorTabBar } from '@/features/impostor/components/ImpostorTabBar';
+import { AppTabBar } from '@/shared/components/AppTabBar';
 import { profileEditSchema } from '../schemas/authSchemas';
 import { useAuth } from '../hooks/useAuth';
 import { ProfileEditFormData } from '../types';
@@ -190,6 +190,8 @@ export const ProfileScreen = () => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  /** Controla la visibilidad del modal de selección de fuente de foto */
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [usernameServerError, setUsernameServerError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
     null,
@@ -313,13 +315,9 @@ export const ProfileScreen = () => {
     setToast({ message: 'Foto actualizada', type: 'success' });
   };
 
-  /** Muestra opciones de cámara o galería al tocar el overlay del avatar */
+  /** Abre el modal custom de selección de fuente de foto */
   const handleAvatarPress = () => {
-    Alert.alert('Cambiar foto de perfil', 'Elegí una opción', [
-      { text: 'Cámara', onPress: () => void handlePickImage('camera') },
-      { text: 'Galería', onPress: () => void handlePickImage('gallery') },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+    setShowAvatarModal(true);
   };
 
   /** Confirma y ejecuta el cierre de sesión */
@@ -566,7 +564,70 @@ export const ProfileScreen = () => {
 
       {renderContent()}
 
-      <ImpostorTabBar activeTabId="profile" />
+      <AppTabBar activeTab="profile" />
+
+      {/* Modal de selección de fuente de foto de perfil */}
+      <Modal
+        transparent
+        animationType="slide"
+        visible={showAvatarModal}
+        onRequestClose={() => setShowAvatarModal(false)}
+        statusBarTranslucent
+      >
+        <View style={styles.avatarModalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setShowAvatarModal(false)}
+          />
+          <View style={styles.avatarModalSheet}>
+            {/* Handle decorativo */}
+            <View style={styles.avatarModalHandle} />
+
+            <Text style={styles.avatarModalTitle}>Cambiar foto de perfil</Text>
+
+            {/* Opción Cámara */}
+            <TouchableOpacity
+              style={styles.avatarModalOption}
+              onPress={() => {
+                setShowAvatarModal(false);
+                void handlePickImage('camera');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.avatarModalOptionIcon}>
+                <Ionicons name="camera-outline" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.avatarModalOptionLabel}>Cámara</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+
+            {/* Opción Galería */}
+            <TouchableOpacity
+              style={styles.avatarModalOption}
+              onPress={() => {
+                setShowAvatarModal(false);
+                void handlePickImage('gallery');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.avatarModalOptionIcon}>
+                <Ionicons name="images-outline" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.avatarModalOptionLabel}>Galería de fotos</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+
+            {/* Botón cancelar */}
+            <TouchableOpacity
+              style={styles.avatarModalCancel}
+              onPress={() => setShowAvatarModal(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.avatarModalCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal de confirmación de cierre de sesión */}
       <Modal
@@ -885,5 +946,66 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.surface,
+  },
+  avatarModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  avatarModalSheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    paddingTop: theme.spacing.sm,
+    ...theme.shadows.md,
+  },
+  avatarModalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.radius.full,
+    alignSelf: 'center',
+    marginVertical: theme.spacing.sm,
+  },
+  avatarModalTitle: {
+    fontSize: theme.typography.sizes.lg,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+    marginTop: theme.spacing.xs,
+  },
+  avatarModalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  avatarModalOptionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarModalOptionLabel: {
+    flex: 1,
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.textPrimary,
+  },
+  avatarModalCancel: {
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  avatarModalCancelText: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textSecondary,
   },
 });
