@@ -5,7 +5,7 @@
  * Los participantes pueden modificar su asistencia; el organizador puede editar
  * la asistencia de cualquier invitado tocando su fila.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -119,8 +120,12 @@ const ParticipantRow = ({
 
   const content = (
     <>
-      <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-        <Text style={styles.avatarText}>{initials}</Text>
+      <View style={[styles.avatar, { backgroundColor: participant.avatarUrl ? 'transparent' : avatarColor }]}>
+        {participant.avatarUrl ? (
+          <Image source={{ uri: participant.avatarUrl }} style={styles.avatarImage} />
+        ) : (
+          <Text style={styles.avatarText}>{initials}</Text>
+        )}
       </View>
 
       <View style={styles.participantInfo}>
@@ -188,6 +193,13 @@ export const ParticipantListScreen = () => {
     message: string;
     type: 'success' | 'error';
   } | null>(null);
+
+  /**
+   * Transporta el mensaje de Toast entre onSave y onClose del modal de
+   * asistencia. Evita que el Toast se monte durante la animación de cierre
+   * del bottom sheet, lo que generaba el efecto visual duplicado.
+   */
+  const pendingToastRef = useRef<string | null>(null);
 
   const {
     participants,
@@ -362,7 +374,15 @@ export const ParticipantListScreen = () => {
         visible={attendanceModalTarget !== null}
         currentStatus={modalCurrentStatus}
         participantName={modalParticipantName}
-        onClose={() => setAttendanceModalTarget(null)}
+        onClose={() => {
+          setAttendanceModalTarget(null);
+          // Recargar datos después del cierre para no bloquear la animación
+          void refresh();
+          if (pendingToastRef.current) {
+            setToast({ message: pendingToastRef.current, type: 'success' });
+            pendingToastRef.current = null;
+          }
+        }}
         onSave={async (status) => {
           if (attendanceModalTarget?.mode === 'organizer') {
             const result = await updateParticipantAttendance(
@@ -370,16 +390,13 @@ export const ParticipantListScreen = () => {
               status,
             );
             if (result.error) throw new Error(result.error);
-            setToast({
-              message: '✓ Asistencia actualizada',
-              type: 'success',
-            });
+            pendingToastRef.current = '✓ Asistencia actualizada';
             return;
           }
 
           const result = await updateAttendance(status);
           if (result.error) throw new Error(result.error);
-          setToast({ message: '✓ Asistencia actualizada', type: 'success' });
+          pendingToastRef.current = '✓ Asistencia actualizada';
         }}
       />
 
@@ -470,6 +487,11 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.surface,
+  },
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.radius.full,
   },
   participantInfo: {
     flex: 1,

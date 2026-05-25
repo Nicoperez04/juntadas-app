@@ -9,7 +9,7 @@
  * lista de participantes. El código se copia al clipboard vía expo-clipboard
  * y se comparte vía la API nativa de Share.
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import {
   ActivityIndicator,
   Pressable,
   Modal,
+  Image,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,6 +32,7 @@ import { supabase } from '@/lib/supabase/client';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
+import { AppTabBar } from '@/shared/components/AppTabBar';
 import { ModifyAttendanceLink } from '@/shared/components/ModifyAttendanceLink';
 import { Toast } from '@/shared/components/Toast';
 import { useMeetups } from '../hooks/useMeetups';
@@ -180,9 +182,13 @@ const ParticipantItem = ({
   const content = (
     <>
       <View
-        style={[styles.participantAvatar, { backgroundColor: avatarColor }]}
+        style={[styles.participantAvatar, { backgroundColor: participant.avatarUrl ? 'transparent' : avatarColor }]}
       >
-        <Text style={styles.participantAvatarText}>{initials}</Text>
+        {participant.avatarUrl ? (
+          <Image source={{ uri: participant.avatarUrl }} style={styles.participantAvatarImage} />
+        ) : (
+          <Text style={styles.participantAvatarText}>{initials}</Text>
+        )}
       </View>
       <View style={styles.participantInfo}>
         <Text style={styles.participantName} numberOfLines={1}>
@@ -261,6 +267,13 @@ export const MeetupDetailScreen = () => {
     message: string;
     type: 'success' | 'error';
   } | null>(null);
+
+  /**
+   * Transporta el mensaje de Toast entre onSave y onClose del modal de
+   * asistencia. Se usa ref en lugar de estado para no generar re-renders
+   * intermedios durante la animación de cierre del bottom sheet.
+   */
+  const pendingToastRef = useRef<string | null>(null);
 
   const {
     participants,
@@ -399,7 +412,8 @@ export const MeetupDetailScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -466,6 +480,7 @@ export const MeetupDetailScreen = () => {
           </View>
         )}
       </View>
+      </SafeAreaView>
 
       <ScrollView
         style={styles.scroll}
@@ -745,7 +760,16 @@ export const MeetupDetailScreen = () => {
         visible={attendanceModalTarget !== null}
         currentStatus={modalCurrentStatus}
         participantName={modalParticipantName}
-        onClose={() => setAttendanceModalTarget(null)}
+        onClose={() => {
+          setAttendanceModalTarget(null);
+          // Recargar datos después del cierre para no bloquear la animación
+          void loadData();
+          void refreshParticipants();
+          if (pendingToastRef.current) {
+            setToast({ message: pendingToastRef.current, type: 'success' });
+            pendingToastRef.current = null;
+          }
+        }}
         onSave={async (status) => {
           if (attendanceModalTarget?.mode === 'organizer') {
             const result = await updateParticipantAttendance(
@@ -753,16 +777,13 @@ export const MeetupDetailScreen = () => {
               status,
             );
             if (result.error) throw new Error(result.error);
-            await loadData();
-            setToast({ message: '✓ Asistencia actualizada', type: 'success' });
+            pendingToastRef.current = '✓ Asistencia actualizada';
             return;
           }
 
           const result = await updateAttendance(status);
           if (result.error) throw new Error(result.error);
-          await loadData();
-          await refreshParticipants();
-          setToast({ message: '✓ Asistencia actualizada', type: 'success' });
+          pendingToastRef.current = '✓ Asistencia actualizada';
         }}
       />
 
@@ -816,20 +837,25 @@ export const MeetupDetailScreen = () => {
         </View>
       </Modal>
 
+      <AppTabBar activeTab="home" />
+
       <Toast
         message={toast?.message ?? ''}
         type={toast?.type ?? 'success'}
         visible={!!toast}
         onHide={() => setToast(null)}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  safeArea: {
+    backgroundColor: theme.colors.surface,
   },
   loadingContainer: {
     flex: 1,
@@ -930,6 +956,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl * 2,
   },
   statusBanner: {
     flexDirection: 'row',
@@ -1107,6 +1134,11 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.sm,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.surface,
+  },
+  participantAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.full,
   },
   participantInfo: {
     flex: 1,
