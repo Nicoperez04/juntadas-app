@@ -9,7 +9,7 @@
  * El skeleton de carga evita la pantalla en blanco mientras se obtienen
  * los datos del servidor.
  */
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,14 +18,15 @@ import {
   StyleSheet,
   Animated,
   Pressable,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { supabase } from '@/lib/supabase/client';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useMeetups } from '../hooks/useMeetups';
 import type { MeetupWithRole, MainStackParamList } from '../types';
 
@@ -262,7 +263,11 @@ const TABS: TabDefinition[] = [
 export const MeetupHomeScreen = () => {
   const navigation = useNavigation<NavProp>();
   const { meetups, isLoading, error, refresh } = useMeetups();
-  const [userName, setUserName] = useState('');
+  const { profile, loadProfile } = useAuth();
+
+  // Nombre para el avatar — prioriza el perfil de la tabla profiles
+  // sobre los metadatos de Auth para reflejar cambios del ProfileScreen
+  const userName = profile?.fullName ?? profile?.username ?? '';
 
   /**
    * Recarga la lista cada vez que el home recibe foco (montaje o vuelta desde
@@ -272,20 +277,9 @@ export const MeetupHomeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh]),
+      void loadProfile();
+    }, [refresh, loadProfile]),
   );
-
-  // Obtener el nombre del usuario para el avatar del header
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const metadata = session?.user?.user_metadata;
-      const name =
-        (metadata?.full_name as string | undefined) ??
-        session?.user?.email ??
-        '';
-      setUserName(name);
-    });
-  }, []);
 
   const handleTabPress = useCallback(
     (tabId: string) => {
@@ -368,11 +362,22 @@ export const MeetupHomeScreen = () => {
                 color={theme.colors.textPrimary}
               />
             </TouchableOpacity>
-            <View
-              style={[styles.headerAvatar, { backgroundColor: avatarBgColor }]}
+            <TouchableOpacity
+              style={[styles.headerAvatar, { backgroundColor: profile?.avatarUrl ? 'transparent' : avatarBgColor }]}
+              onPress={() => navigation.navigate(Routes.Profile)}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Ver mi perfil"
             >
-              <Text style={styles.headerAvatarText}>{initials}</Text>
-            </View>
+              {profile?.avatarUrl ? (
+                <Image
+                  source={{ uri: profile.avatarUrl }}
+                  style={styles.headerAvatarImage}
+                />
+              ) : (
+                <Text style={styles.headerAvatarText}>{initials}</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       </SafeAreaView>
@@ -572,6 +577,11 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.sm,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.surface,
+  },
+  headerAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: theme.radius.full,
   },
   scroll: {
     flex: 1,
