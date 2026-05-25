@@ -365,9 +365,16 @@ export const ParticipantListScreen = () => {
             activeOpacity={0.8}
           >
             {isLeaving ? (
-              <ActivityIndicator color={theme.colors.surface} />
+              <ActivityIndicator color={theme.colors.error} />
             ) : (
-              <Text style={styles.leaveBtnText}>Abandonar juntada</Text>
+              <>
+                <Ionicons
+                  name="exit-outline"
+                  size={20}
+                  color={theme.colors.error}
+                />
+                <Text style={styles.leaveBtnText}>Abandonar juntada</Text>
+              </>
             )}
           </TouchableOpacity>
         </View>
@@ -572,11 +579,15 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   leaveBtn: {
-    height: theme.components.buttonHeight,
-    borderRadius: theme.radius.lg,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.error,
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.errorLight,
+    borderRadius: theme.radius.lg,
+    paddingVertical: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.error,
   },
   leaveBtnDisabled: {
     opacity: 0.6,
@@ -584,6 +595,6 @@ const styles = StyleSheet.create({
   leaveBtnText: {
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.surface,
+    color: theme.colors.error,
   },
 });

@@ -56,6 +56,8 @@ export interface MeetupWithRole extends Meetup {
   participantCount: number;
   /** Cantidad de participantes que confirmaron asistencia */
   confirmedCount: number;
+  /** Fecha en que el usuario abandonó la juntada; null si sigue activo */
+  leftAt: string | null;
 }
 
 /**

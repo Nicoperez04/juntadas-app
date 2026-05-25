@@ -71,6 +71,7 @@ interface HistoryCardProps {
 const HistoryCard = ({ meetup, onPress }: HistoryCardProps) => {
   const statusConfig = STATUS_CONFIG[meetup.status];
   const isOrganizer = meetup.userRole === 'organizer';
+  const hasAbandoned = meetup.leftAt != null;
 
   return (
     <Pressable
@@ -81,12 +82,19 @@ const HistoryCard = ({ meetup, onPress }: HistoryCardProps) => {
         <Text style={styles.cardTitle} numberOfLines={1}>
           {meetup.title}
         </Text>
-        <View
-          style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}
-        >
-          <Text style={[styles.statusText, { color: statusConfig.textColor }]}>
-            {statusConfig.label}
-          </Text>
+        <View style={styles.cardBadges}>
+          {hasAbandoned && (
+            <View style={styles.abandonedBadge}>
+              <Text style={styles.abandonedBadgeText}>Abandonada</Text>
+            </View>
+          )}
+          <View
+            style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}
+          >
+            <Text style={[styles.statusText, { color: statusConfig.textColor }]}>
+              {statusConfig.label}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -324,6 +332,12 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
     gap: theme.spacing.sm,
   },
+  cardBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    flexShrink: 0,
+  },
   cardTitle: {
     flex: 1,
     fontSize: theme.typography.sizes.md,
@@ -338,6 +352,17 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: theme.typography.sizes.xs,
     fontWeight: theme.typography.weights.semibold,
+  },
+  abandonedBadge: {
+    borderRadius: theme.radius.full,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 3,
+    backgroundColor: theme.colors.border,
+  },
+  abandonedBadgeText: {
+    fontSize: theme.typography.sizes.xs,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textSecondary,
   },
   cardInfoRow: {
     flexDirection: 'row',

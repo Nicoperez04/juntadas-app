@@ -351,4 +351,49 @@ export const participantService = {
       return { data: null, error: 'Error al obtener los participantes' };
     }
   },
+
+  /**
+   * Obtiene la participación del usuario en una juntada, incluyendo si abandonó.
+   * Necesario en detalle/historial cuando el usuario ya no está en la lista activa.
+   *
+   * @param meetupId - UUID de la juntada
+   * @param userId - UUID del usuario autenticado
+   * @returns Rol, asistencia y left_at del usuario, o null si nunca participó
+   */
+  async getUserParticipation(
+    meetupId: string,
+    userId: string,
+  ): Promise<
+    ServiceResult<{
+      role: ParticipantRole;
+      attendanceStatus: AttendanceStatus;
+      leftAt: string | null;
+    } | null>
+  > {
+    try {
+      const { data, error } = await supabase
+        .from('meetup_participants')
+        .select('role, attendance_status, left_at')
+        .eq('meetup_id', meetupId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) {
+        return { data: null, error: null };
+      }
+
+      return {
+        data: {
+          role: data.role as ParticipantRole,
+          attendanceStatus: data.attendance_status as AttendanceStatus,
+          leftAt: data.left_at,
+        },
+        error: null,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return { data: null, error: translateError(message) };
+    }
+  },
 };

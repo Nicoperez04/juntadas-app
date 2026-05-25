@@ -37,6 +37,7 @@ import { ModifyAttendanceLink } from '@/shared/components/ModifyAttendanceLink';
 import { Toast } from '@/shared/components/Toast';
 import { useMeetups } from '../hooks/useMeetups';
 import { useParticipants } from '@/features/participants/hooks/useParticipants';
+import { participantService } from '@/features/participants/services/participantService';
 import { ModifyAttendanceScreen } from '@/features/participants/screens/ModifyAttendanceScreen';
 import { getParticipantDisplayName } from '@/features/participants/utils/participantDisplay';
 import type {
@@ -267,6 +268,12 @@ export const MeetupDetailScreen = () => {
     useState<AttendanceModalTarget | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [userParticipation, setUserParticipation] = useState<{
+    role: ParticipantRole;
+    leftAt: string | null;
+  } | null>(null);
   const [toast, setToast] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -284,6 +291,7 @@ export const MeetupDetailScreen = () => {
     isLoading: isLoadingParticipants,
     updateAttendance,
     updateParticipantAttendance,
+    leaveMeetup,
     refresh: refreshParticipants,
   } = useParticipants(meetupId, currentUserId);
 
@@ -313,12 +321,34 @@ export const MeetupDetailScreen = () => {
     loadData();
   }, [loadData]);
 
+  /**
+   * Carga la participación del usuario aunque haya abandonado la juntada,
+   * porque la lista activa de participantes no incluye registros con left_at.
+   */
+  useEffect(() => {
+    if (!currentUserId) {
+      setUserParticipation(null);
+      return;
+    }
+
+    void participantService
+      .getUserParticipation(meetupId, currentUserId)
+      .then(({ data }) => {
+        if (data) {
+          setUserParticipation({ role: data.role, leftAt: data.leftAt });
+        } else {
+          setUserParticipation(null);
+        }
+      });
+  }, [meetupId, currentUserId]);
+
   /** Rol del usuario actual determinado desde la lista de participantes */
   const currentUserParticipant = participants.find(
     (p) => p.userId === currentUserId,
   );
   const userRole: ParticipantRole =
-    currentUserParticipant?.role ?? 'participant';
+    currentUserParticipant?.role ?? userParticipation?.role ?? 'participant';
+  const hasAbandoned = userParticipation?.leftAt != null;
 
   const confirmedCount = participants.filter(
     (p) => p.attendanceStatus === 'confirmed',
@@ -391,7 +421,7 @@ export const MeetupDetailScreen = () => {
   }
 
   const isOrganizer = userRole === 'organizer';
-  const isParticipant = !!currentUserParticipant && !isOrganizer;
+  const isParticipant = userRole === 'participant' && !hasAbandoned;
   const isCancelled = meetup.status === 'cancelled';
   const isFinished = meetup.status === 'finished';
   const isActive = meetup.status === 'active';
@@ -426,6 +456,23 @@ export const MeetupDetailScreen = () => {
     await loadData();
     await refreshParticipants();
     setToast({ message: 'Juntada cancelada', type: 'success' });
+  };
+
+  /**
+   * Confirma el abandono de la juntada como participante invitado.
+   */
+  const confirmLeaveMeetup = async () => {
+    setIsLeaving(true);
+    const result = await leaveMeetup();
+    setIsLeaving(false);
+    setShowLeaveModal(false);
+
+    if (result.error) {
+      setToast({ message: result.error, type: 'error' });
+      return;
+    }
+
+    navigation.navigate(Routes.MeetupHome);
   };
 
   return (
@@ -532,6 +579,20 @@ export const MeetupDetailScreen = () => {
           </View>
         )}
 
+        {/* Banner para usuarios que abandonaron la juntada */}
+        {hasAbandoned && (
+          <View style={styles.abandonedBanner}>
+            <Ionicons
+              name="exit-outline"
+              size={20}
+              color={theme.colors.textSecondary}
+            />
+            <Text style={styles.abandonedBannerText}>
+              Abandonaste esta juntada. Podés volver a unirte con el código.
+            </Text>
+          </View>
+        )}
+
         {/* Card principal con datos de la juntada */}
         <View style={styles.mainCard}>
           <Text style={styles.meetupTitle}>{meetup.title}</Text>
@@ -589,22 +650,24 @@ export const MeetupDetailScreen = () => {
             </View>
           )}
 
-          {/* Contador de participantes */}
-          <View style={styles.participantCounter}>
-            <Ionicons
-              name="people"
-              size={16}
-              color={theme.colors.textSecondary}
-            />
-            <Text style={styles.participantCounterText}>
-              {participants.length} participantes · {confirmedCount}{' '}
-              confirmados
-            </Text>
-          </View>
+          {/* Contador de participantes — oculto si el usuario abandonó */}
+          {!hasAbandoned && (
+            <View style={styles.participantCounter}>
+              <Ionicons
+                name="people"
+                size={16}
+                color={theme.colors.textSecondary}
+              />
+              <Text style={styles.participantCounterText}>
+                {participants.length} participantes · {confirmedCount}{' '}
+                confirmados
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* Botones de acción: Jugar (solo activa) y Recuerdos (no cancelada) */}
-        {!isCancelled && (
+        {/* Botones de acción: Jugar y Recuerdos — ocultos si abandonó */}
+        {!isCancelled && !hasAbandoned && (
           <View style={styles.actionsRow}>
             {isActive && (
               <ActionCard
@@ -627,7 +690,8 @@ export const MeetupDetailScreen = () => {
           </View>
         )}
 
-        {/* Sección de participantes */}
+        {/* Sección de participantes — oculta si el usuario abandonó */}
+        {!hasAbandoned && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
@@ -692,6 +756,17 @@ export const MeetupDetailScreen = () => {
             />
           )}
         </View>
+        )}
+
+        {/* Volver a unirse — solo si abandonó y la juntada sigue activa */}
+        {hasAbandoned && isActive && (
+          <View style={styles.rejoinSection}>
+            <AppButton
+              label="Volver a unirme"
+              onPress={() => navigation.navigate(Routes.JoinMeetup)}
+            />
+          </View>
+        )}
 
         {/* Sección de compartir — solo en juntadas activas */}
         {isActive && (
@@ -770,6 +845,31 @@ export const MeetupDetailScreen = () => {
           </View>
         )}
 
+        {/* Abandonar juntada — solo participantes activos en juntadas activas */}
+        {userRole === 'participant' && isActive && !hasAbandoned && (
+          <View style={styles.cancelSection}>
+            <TouchableOpacity
+              style={[styles.cancelBtn, isLeaving && styles.cancelBtnDisabled]}
+              onPress={() => setShowLeaveModal(true)}
+              disabled={isLeaving}
+              activeOpacity={0.8}
+            >
+              {isLeaving ? (
+                <ActivityIndicator color={theme.colors.error} />
+              ) : (
+                <>
+                  <Ionicons
+                    name="exit-outline"
+                    size={20}
+                    color={theme.colors.error}
+                  />
+                  <Text style={styles.cancelBtnText}>Abandonar juntada</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.bottomSpace} />
       </ScrollView>
 
@@ -839,6 +939,56 @@ export const MeetupDetailScreen = () => {
                 ) : (
                   <Text style={styles.modalDestructiveBtnText}>
                     Sí, cancelar
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de confirmación para abandonar juntada */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showLeaveModal}
+        onRequestClose={() => !isLeaving && setShowLeaveModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconBox}>
+              <Ionicons
+                name="exit-outline"
+                size={32}
+                color={theme.colors.error}
+              />
+            </View>
+            <Text style={styles.modalTitle}>Abandonar juntada</Text>
+            <Text style={styles.modalSubtitle}>
+              ¿Estás seguro? Podés volver a unirte con el código si cambiás de
+              opinión.
+            </Text>
+            <View style={styles.modalActions}>
+              <AppButton
+                label="No, volver"
+                variant="ghost"
+                onPress={() => setShowLeaveModal(false)}
+                disabled={isLeaving}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.modalDestructiveBtn,
+                  isLeaving && styles.modalDestructiveBtnDisabled,
+                ]}
+                onPress={confirmLeaveMeetup}
+                disabled={isLeaving}
+                activeOpacity={0.8}
+              >
+                {isLeaving ? (
+                  <ActivityIndicator color={theme.colors.surface} />
+                ) : (
+                  <Text style={styles.modalDestructiveBtnText}>
+                    Sí, abandonar
                   </Text>
                 )}
               </TouchableOpacity>
@@ -996,6 +1146,24 @@ const styles = StyleSheet.create({
     color: theme.colors.error,
   },
   statusBannerTextFinished: {
+    color: theme.colors.textSecondary,
+  },
+  abandonedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    borderRadius: theme.radius.lg,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.border,
+    borderWidth: 1,
+    borderColor: theme.colors.textDisabled,
+  },
+  abandonedBannerText: {
+    flex: 1,
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.semibold,
     color: theme.colors.textSecondary,
   },
   mainCard: {
@@ -1182,6 +1350,9 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   cancelSection: {
+    marginBottom: theme.spacing.md,
+  },
+  rejoinSection: {
     marginBottom: theme.spacing.md,
   },
   cancelBtn: {

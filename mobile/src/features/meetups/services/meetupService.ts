@@ -75,6 +75,7 @@ interface UserParticipationRow {
   meetup_id: string;
   role: string;
   attendance_status: string;
+  left_at: string | null;
 }
 
 /** Fila de conteo de asistencia por juntada */
@@ -263,11 +264,12 @@ export const meetupService = {
    */
   async getUserMeetups(userId: string): Promise<ServiceResult<MeetupWithRole[]>> {
     try {
-      // Paso 1: obtener las participaciones del usuario para conocer su rol
+      // Paso 1: obtener las participaciones activas del usuario para conocer su rol
       const { data: myParticipations, error: parError } = await supabase
         .from('meetup_participants')
-        .select('meetup_id, role, attendance_status')
-        .eq('user_id', userId);
+        .select('meetup_id, role, attendance_status, left_at')
+        .eq('user_id', userId)
+        .is('left_at', null);
 
       if (parError) throw parError;
       if (!myParticipations || myParticipations.length === 0) {
@@ -323,6 +325,7 @@ export const meetupService = {
             confirmedCount: participantsForMeetup.filter(
               (p) => p.attendance_status === 'confirmed',
             ).length,
+            leftAt: myParticipation?.left_at ?? null,
           };
         },
       );
@@ -415,23 +418,42 @@ export const meetupService = {
         };
       }
 
-      // Verificar que el usuario no sea ya participante
+      // Verificar participación existente: activa o abandonada (left_at)
       const { data: existing, error: existingError } = await supabase
         .from('meetup_participants')
-        .select('id')
+        .select('id, left_at')
         .eq('meetup_id', meetup.id)
         .eq('user_id', userId)
         .maybeSingle();
 
       if (existingError) throw existingError;
+
       if (existing) {
-        return {
-          data: null,
-          error: 'El usuario ya es participante de esta juntada',
-        };
+        if (existing.left_at === null) {
+          return {
+            data: null,
+            error: 'Ya sos participante de esta juntada',
+          };
+        }
+
+        // Usuario que abandonó — reactivar participación
+        const { error: rejoinError } = await supabase
+          .from('meetup_participants')
+          .update({
+            left_at: null,
+            attendance_status: 'pending',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+
+        if (rejoinError) {
+          return { data: null, error: 'No se pudo volver a unirte' };
+        }
+
+        return { data: mapMeetupRow(meetup as MeetupRow), error: null };
       }
 
-      // Insertar el nuevo participante con estado pendiente
+      // No existe registro — INSERT normal
       const { error: insertError } = await supabase
         .from('meetup_participants')
         .insert({
@@ -671,7 +693,7 @@ export const meetupService = {
     try {
       const { data: myParticipations, error: parError } = await supabase
         .from('meetup_participants')
-        .select('meetup_id, role, attendance_status')
+        .select('meetup_id, role, attendance_status, left_at')
         .eq('user_id', userId);
 
       if (parError) throw parError;
@@ -726,6 +748,7 @@ export const meetupService = {
             confirmedCount: participantsForMeetup.filter(
               (p) => p.attendance_status === 'confirmed',
             ).length,
+            leftAt: myParticipation?.left_at ?? null,
           };
         },
       );
