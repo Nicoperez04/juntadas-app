@@ -185,3 +185,147 @@ npx skills check
 
 - Catálogo general: https://skills.sh/
 - Documentación del CLI: https://skills.sh/docs
+
+# Skills instaladas — Claude Code CLI
+
+**Fecha:** 25 de mayo de 2026  
+**Alcance:** Claude Code CLI (instalación local del proyecto)  
+**Ubicación en disco:** `~/.claude/skills/` (gestionadas por Claude Code)  
+**Herramienta:** Claude Code CLI (`claude` en terminal)
+
+---
+
+## Resumen
+
+Se instalaron 2 skills nativas de Claude Code CLI orientadas a debugging estructurado y toma de decisiones técnicas. A diferencia de las skills de Cursor (que se instalan con `npx skills add`), las skills de Claude Code se activan automáticamente en cada sesión de terminal — no requieren instalación manual por proyecto.
+
+Complementan el archivo `mobile/CLAUDE.md`, que actúa como contexto permanente del proyecto para el agente (equivalente a las Cursor Rules pero para Claude Code CLI).
+
+> **Nota sobre compatibilidad:** Las skills de Cursor y las de Claude Code CLI son sistemas completamente independientes. Las de Cursor viven en `~/.agents/skills/` y se activan en el agente de Cursor. Las de Claude Code viven en el entorno de Claude Code CLI y se activan en cada sesión de terminal. No son intercambiables.
+
+---
+
+## 1. diagnose
+
+| Campo | Valor |
+|-------|-------|
+| **Activación** | Automática al iniciar sesión de Claude Code CLI, o explícita con `/diagnose` |
+| **Fuente** | Skill nativa de Claude Code — equipo de Anthropic |
+| **Tipo** | Debugging estructurado |
+| **Estado** | Instalada y activa |
+
+### Qué hace
+
+Implementa un loop disciplinado de debugging en 6 fases secuenciales que el agente debe completar antes de tocar código:
+
+1. **Construir un feedback loop** — reproductor determinístico del bug (test, script, harness, curl, etc.)
+2. **Reproducir** — confirmar que el bug se manifiesta exactamente como describe el usuario
+3. **Hipotizar** — generar 3-5 hipótesis falsificables rankeadas antes de probar ninguna
+4. **Instrumentar** — probar una variable a la vez con logs o debugger, nunca "log everything"
+5. **Fix + regression test** — escribir el test antes del fix cuando existe un seam correcto
+6. **Cleanup + post-mortem** — remover instrumentación, documentar causa raíz, recomendar mejoras
+
+Cada fase tiene criterios de salida obligatorios. El agente no puede pasar a la siguiente sin completar la anterior.
+
+### Por qué conviene instalarla
+
+- El proyecto tiene bugs de estado complejo (Zustand + useFocusEffect + React Navigation) donde los cambios ciegos generan regresiones — exactamente el patrón que esta skill previene.
+- Durante el debugging del B3 (impostor), la falta de un proceso estructurado llevó a múltiples intentos fallidos, un revert con `git checkout` y tiempo perdido. Con `/diagnose` ese ciclo se evita.
+- La fase de hipótesis rankeadas es especialmente valiosa para bugs de re-render y estado asíncrono, donde la causa no es obvia.
+- El post-mortem obliga a documentar la causa raíz — lo que encaja directamente con los requerimientos de documentación de la cátedra.
+
+### Cuándo se activa
+
+Al reportar cualquier bug, comportamiento inesperado, error en consola o regresión de navegación. Invocar explícitamente con `/diagnose` al inicio del prompt para forzar el proceso estructurado.
+
+### Ejemplo de uso para este proyecto
+
+```
+/diagnose
+
+Bug: al modificar asistencia, la animación de éxito aparece duplicada
+y vuelve al modal de asistencia en lugar de cerrar.
+
+Pantalla: ModifyAttendanceScreen o componente Modal relacionado.
+Plataforma: Android físico.
+Frecuencia: 100% reproducible.
+```
+
+---
+
+## 2. grill-me
+
+| Campo | Valor |
+|-------|-------|
+| **Activación** | Explícita con `/grill-me` al inicio del prompt |
+| **Fuente** | Skill nativa de Claude Code — equipo de Anthropic |
+| **Tipo** | Stress-testing de decisiones técnicas y de diseño |
+| **Estado** | Instalada y activa |
+
+### Qué hace
+
+Convierte al agente en un entrevistador técnico que hace preguntas una por una, recorre cada rama del árbol de decisiones y no da por cerrado un tema hasta que cada dependencia entre decisiones esté resuelta. Para cada pregunta que hace, también provee su respuesta recomendada como referencia.
+
+Si una pregunta puede responderse explorando el codebase, el agente lo explora en lugar de preguntar — lo que reduce el tiempo de sesión y evita preguntas sobre cosas que ya están decididas en el código.
+
+### Por qué conviene instalarla
+
+- Antes de implementar Memories (RF-13/14/15, el módulo más complejo que resta), hay decisiones de diseño abiertas: ¿galería con grid o lista? ¿upload optimístico o bloqueante? ¿cómo asociar fotos a juntadas si el usuario sale en medio del upload? ¿qué pasa si Supabase Storage falla?
+- En proyectos académicos, la cátedra evalúa que el equipo comprenda las decisiones — `/grill-me` fuerza esa reflexión antes de que el agente empiece a generar código.
+- Evita el patrón de "implementar y después descubrir que la arquitectura no encajaba", que genera deuda técnica y refactors costosos.
+- Es especialmente útil al inicio de un bloque nuevo o cuando hay ambigüedad entre varias opciones de implementación válidas.
+
+### Cuándo se activa
+
+Antes de implementar una feature nueva, al tomar decisiones de arquitectura de estado, al elegir entre varias estrategias de UX, o antes de cualquier cambio que afecte múltiples archivos o features. No se usa para bugs ni para cambios pequeños.
+
+### Ejemplo de uso para este proyecto
+
+```
+/grill-me
+
+Voy a implementar el módulo de Memories (fotos de juntadas).
+Necesito que me hagas preguntas sobre el diseño antes de empezar
+para asegurarme de que las decisiones son correctas.
+
+Contexto: RF-13, RF-14, RF-15 están en scope de E1.
+El módulo tiene pantalla de galería y upload de fotos a Supabase Storage.
+Ya existe src/features/memories/types.ts vacío.
+```
+
+---
+
+## Alineación con el stack del proyecto (Claude Code CLI)
+
+| Situación de uso | Skill recomendada |
+|-----------------|-------------------|
+| Bug de estado, re-render, navegación | `diagnose` (`/diagnose`) |
+| Antes de implementar Memories o cualquier feature nueva | `grill-me` (`/grill-me`) |
+| Debugging de Supabase RLS o Storage | `diagnose` + contexto del `CLAUDE.md` |
+| Decisión entre varias estrategias de UX o arquitectura | `grill-me` |
+
+---
+
+## CLAUDE.md — contexto permanente del proyecto
+
+Además de las skills, se creó el archivo `mobile/CLAUDE.md` que actúa como
+contexto permanente del proyecto para Claude Code CLI en cada sesión de terminal.
+
+Contiene: stack tecnológico, arquitectura modular, reglas de capas, sistema de diseño
+(`theme.ts`), decisiones de navegación (tab bar custom, sin BottomTabNavigator),
+decisiones del juego Impostor (estado en Zustand sin persistencia), reglas de Supabase,
+restricciones permanentes y formato del reporte final esperado.
+
+Este archivo cumple para Claude Code la misma función que las Cursor Rules del repo
+para el agente de Cursor — provee contexto sin necesidad de repetirlo en cada prompt.
+
+**Ubicación:** `mobile/CLAUDE.md`  
+**Mantenimiento:** actualizar si cambian decisiones arquitectónicas o se agregan features.
+
+---
+
+## Referencias (Claude Code CLI)
+
+- Documentación oficial: https://docs.anthropic.com/en/docs/claude-code/overview
+- Skills de Claude Code: disponibles automáticamente en cada sesión
+- Catálogo de skills públicas: accesible desde dentro de una sesión de Claude Code

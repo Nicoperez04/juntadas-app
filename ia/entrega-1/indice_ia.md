@@ -60,6 +60,15 @@
 - **26** · Implementación del perfil de usuario (ProfileScreen, avatar, estadísticas, logout) → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/cursor-01-perfil-implementacion.md`](prompts/bloque-6/cursor-01-perfil-implementacion.md)
 - **Documentación** · Cierre del Bloque 6 → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/cursor-02-documentar-bloque-6.md`](prompts/bloque-6/cursor-02-documentar-bloque-6.md)
 
+### Bloque Debugging — Fixes y pulido UX (Claude Code CLI) (25/05/2026)
+
+- **B1** · Footer tab bar faltante en pantallas principales (CreateMeetup, JoinMeetup, Profile, MeetupDetail, History) → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-01-B1-footer.md`](prompts/bloque-debugging/claude-01-B1-footer.md)
+- **B3** · Bug impostor: restauración no deseada de jugadores al vaciar la lista → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-02-B3-impostor.md`](prompts/bloque-debugging/claude-02-B3-impostor.md)
+- **B4** · Modal de asistencia no se cierra después de guardar (Toast superpuesto sobre sheet abierto) → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-03-B4-asistencia.md`](prompts/bloque-debugging/claude-03-B4-asistencia.md)
+- **B5** · Avatar del header no muestra foto de perfil y no navega al perfil → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-04-B5-avatar-header.md`](prompts/bloque-debugging/claude-04-B5-avatar-header.md)
+- **B9** · Cursor del input de código aparece al extremo derecho — input OTP con 6 cajas individuales → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md)
+- **B10** · Popup de foto de perfil reemplazado por modal custom con diseño de la app → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-05-B10-avatar-modal.md`](prompts/bloque-debugging/claude-05-B10-avatar-modal.md)
+
 ---
 
 ## Cómo mantener actualizado
