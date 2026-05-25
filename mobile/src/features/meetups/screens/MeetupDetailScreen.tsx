@@ -683,9 +683,12 @@ export const MeetupDetailScreen = () => {
               icon="images"
               label="Recuerdos"
               color={theme.colors.secondary}
-              onPress={() => {
-                /* Placeholder — se implementa en el bloque de Memorias */
-              }}
+              onPress={() =>
+                navigation.navigate(Routes.MemoriesGallery, {
+                  meetupId,
+                  isActive: meetup.status === 'active' || meetup.status === 'finished',
+                })
+              }
             />
           </View>
         )}

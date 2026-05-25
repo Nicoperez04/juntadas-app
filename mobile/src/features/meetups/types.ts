@@ -1,4 +1,6 @@
-﻿/**
+﻿import type { Memory } from '@/features/memories/types';
+
+/**
  * Tipos del módulo de juntadas.
  *
  * Define las entidades, roles y estados que circulan entre pantallas,
@@ -109,7 +111,8 @@ export type MainStackParamList = {
   Games: undefined;
   ImpostorStart: { meetupId?: string };
   ImpostorRole: { meetupId?: string };
-  MemoriesGallery: { meetupId: string };
+  MemoriesGallery: { meetupId: string; isActive: boolean };
+  MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string };
   MeetupHistory: undefined;
   CompleteProfile: undefined;
   Profile: undefined;

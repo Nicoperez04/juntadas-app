@@ -2,8 +2,8 @@
  * Navegador principal de la app (usuario autenticado).
  *
  * Gestiona el stack de todas las pantallas disponibles post-login.
- * MeetupHomeScreen es la ruta inicial. Las pantallas de impostor, memorias
- * y perfil mantienen placeholders hasta que se implementen en sus bloques.
+ * MeetupHomeScreen es la ruta inicial. Las pantallas de impostor y perfil
+ * mantienen placeholders hasta que se implementen en sus bloques.
  *
  * El header nativo está oculto en todas las pantallas porque cada una
  * implementa su propio header con diseño consistente al sistema de diseño.
@@ -29,11 +29,12 @@ import { GamesScreen } from '@/features/impostor/screens/GamesScreen';
 import { ImpostorStartScreen } from '@/features/impostor/screens/ImpostorStartScreen';
 import { ImpostorRoleScreen } from '@/features/impostor/screens/ImpostorRoleScreen';
 
+// Pantallas implementadas — bloque 5 (recuerdos)
+import { MemoriesGalleryScreen } from '@/features/memories/screens/MemoriesGalleryScreen';
+import { MemoryViewerScreen } from '@/features/memories/screens/MemoryViewerScreen';
+
 // Pantallas implementadas — bloque 6 (perfil)
 import { ProfileScreen } from '@/features/auth/screens/ProfileScreen';
-
-// Placeholders para bloques futuros — se reemplazarán cuando se implementen
-const MemoriesGalleryScreen = () => null;
 
 const Stack = createNativeStackNavigator();
 
@@ -64,8 +65,13 @@ export const MainNavigator = () => {
       <Stack.Screen name={Routes.ImpostorStart} component={ImpostorStartScreen} />
       <Stack.Screen name={Routes.ImpostorRole} component={ImpostorRoleScreen} />
 
-      {/* Bloque futuro — memorias */}
+      {/* Bloque 5 — recuerdos (galería de fotos) */}
       <Stack.Screen name={Routes.MemoriesGallery} component={MemoriesGalleryScreen} />
+      <Stack.Screen
+        name={Routes.MemoryViewer}
+        component={MemoryViewerScreen}
+        options={{ presentation: 'modal' }}
+      />
 
       {/* Bloque 6 — perfil de usuario */}
       <Stack.Screen name={Routes.Profile} component={ProfileScreen} />
