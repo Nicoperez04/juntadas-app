@@ -118,15 +118,18 @@ const ParticipantRow = ({
   const displayName = getParticipantDisplayName(participant);
   const initials = getInitials(displayName);
 
+  // Si tiene avatar en el perfil, mostrar foto; si no, iniciales con color determinístico
+  const avatarUrl = participant.profile.avatarUrl;
+
   const content = (
     <>
-      <View style={[styles.avatar, { backgroundColor: participant.avatarUrl ? 'transparent' : avatarColor }]}>
-        {participant.avatarUrl ? (
-          <Image source={{ uri: participant.avatarUrl }} style={styles.avatarImage} />
-        ) : (
+      {avatarUrl ? (
+        <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+      ) : (
+        <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
           <Text style={styles.avatarText}>{initials}</Text>
-        )}
-      </View>
+        </View>
+      )}
 
       <View style={styles.participantInfo}>
         <View style={styles.nameRow}>

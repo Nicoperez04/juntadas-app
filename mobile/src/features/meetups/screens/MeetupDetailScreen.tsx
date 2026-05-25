@@ -179,17 +179,21 @@ const ParticipantItem = ({
   const displayName = getParticipantDisplayName(participant);
   const initials = getInitials(displayName);
 
+  // Si tiene avatar en el perfil, mostrar foto; si no, iniciales con color determinístico
+  const avatarUrl = participant.profile.avatarUrl;
+
   const content = (
     <>
-      <View
-        style={[styles.participantAvatar, { backgroundColor: participant.avatarUrl ? 'transparent' : avatarColor }]}
-      >
-        {participant.avatarUrl ? (
-          <Image source={{ uri: participant.avatarUrl }} style={styles.participantAvatarImage} />
-        ) : (
+      {avatarUrl ? (
+        <Image
+          source={{ uri: avatarUrl }}
+          style={styles.participantAvatar}
+        />
+      ) : (
+        <View style={[styles.participantAvatar, { backgroundColor: avatarColor }]}>
           <Text style={styles.participantAvatarText}>{initials}</Text>
-        )}
-      </View>
+        </View>
+      )}
       <View style={styles.participantInfo}>
         <Text style={styles.participantName} numberOfLines={1}>
           {displayName}
@@ -319,6 +323,19 @@ export const MeetupDetailScreen = () => {
   const confirmedCount = participants.filter(
     (p) => p.attendanceStatus === 'confirmed',
   ).length;
+
+  /**
+   * Cierra el modal de asistencia y recarga datos en paralelo para evitar
+   * re-renders intermedios por llamadas secuenciales a loadData y refresh.
+   */
+  const handleAttendanceClose = useCallback(async () => {
+    setAttendanceModalTarget(null);
+    await Promise.all([loadData(), refreshParticipants()]);
+    if (pendingToastRef.current) {
+      setToast({ message: pendingToastRef.current, type: 'success' });
+      pendingToastRef.current = null;
+    }
+  }, [loadData, refreshParticipants]);
 
   /**
    * Comparte el código de la juntada usando la API nativa Share.
@@ -761,14 +778,7 @@ export const MeetupDetailScreen = () => {
         currentStatus={modalCurrentStatus}
         participantName={modalParticipantName}
         onClose={() => {
-          setAttendanceModalTarget(null);
-          // Recargar datos después del cierre para no bloquear la animación
-          void loadData();
-          void refreshParticipants();
-          if (pendingToastRef.current) {
-            setToast({ message: pendingToastRef.current, type: 'success' });
-            pendingToastRef.current = null;
-          }
+          void handleAttendanceClose();
         }}
         onSave={async (status) => {
           if (attendanceModalTarget?.mode === 'organizer') {
@@ -1134,11 +1144,6 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.sm,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.surface,
-  },
-  participantAvatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radius.full,
   },
   participantInfo: {
     flex: 1,

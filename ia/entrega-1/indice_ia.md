@@ -68,6 +68,8 @@
 - **B5** · Avatar del header no muestra foto de perfil y no navega al perfil → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-04-B5-avatar-header.md`](prompts/bloque-debugging/claude-04-B5-avatar-header.md)
 - **B9** · Cursor del input de código aparece al extremo derecho — input OTP con 6 cajas individuales → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md)
 - **B10** · Popup de foto de perfil reemplazado por modal custom con diseño de la app → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-05-B10-avatar-modal.md`](prompts/bloque-debugging/claude-05-B10-avatar-modal.md)
+- **cursor-01** · Fixes UX: footer parpadeante, avatares en MeetupDetailScreen y toast de asistencia → [`conversaciones/2026-05-25_21-19-18Z-ux-fixes-for-footer,-avatars,-and-attendance-toast.md`](conversaciones/2026-05-25_21-19-18Z-ux-fixes-for-footer,-avatars,-and-attendance-toast.md)
+- **cursor-02** · Fix avatar en ParticipantListScreen (`profile.avatarUrl`) → [`prompts/bloque-debugging/cursor-02-participant-list-avatar.md`](prompts/bloque-debugging/cursor-02-participant-list-avatar.md)
 
 ---
 

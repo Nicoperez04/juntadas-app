@@ -41,7 +41,12 @@ export const MainNavigator = () => {
   return (
     <Stack.Navigator
       initialRouteName={Routes.MeetupHome}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        // Sin animación de transición: el footer embebido en cada pantalla
+        // no debe moverse al cambiar de tab; solo cambia el ícono activo.
+        animation: 'none',
+      }}
     >
       {/* Bloque 2 — juntadas (implementadas) */}
       <Stack.Screen name={Routes.MeetupHome} component={MeetupHomeScreen} />

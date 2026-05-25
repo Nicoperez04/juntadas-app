@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { memo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,7 +49,17 @@ interface AppTabBarProps {
   activeTab?: 'home' | 'create' | 'join' | 'games' | 'profile';
 }
 
-export const AppTabBar = ({ activeTab = 'home' }: AppTabBarProps) => {
+/**
+ * Espacio vertical reservado por el tab bar fijo (position absolute).
+ * Usar como paddingBottom en ScrollViews para que el contenido no quede tapado.
+ */
+export const APP_TAB_BAR_OFFSET = 80;
+
+/**
+ * Barra de tabs fija en la parte inferior. Memoizada para evitar re-renders
+ * innecesarios del padre y sin animaciones de entrada que provoquen parpadeo.
+ */
+export const AppTabBar = memo(({ activeTab = 'home' }: AppTabBarProps) => {
   const navigation = useNavigation<NavProp>();
 
   const handleTabPress = useCallback(
@@ -91,10 +101,17 @@ export const AppTabBar = ({ activeTab = 'home' }: AppTabBarProps) => {
       </View>
     </SafeAreaView>
   );
-};
+});
+
+AppTabBar.displayName = 'AppTabBar';
 
 const styles = StyleSheet.create({
   tabSafe: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
     backgroundColor: theme.colors.surface,
   },
   tabBar: {

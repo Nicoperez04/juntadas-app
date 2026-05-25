@@ -31,7 +31,7 @@ import { theme } from '@/shared/constants/theme';
 import { AppInput } from '@/shared/components/AppInput';
 import { AppButton } from '@/shared/components/AppButton';
 import { Toast } from '@/shared/components/Toast';
-import { AppTabBar } from '@/shared/components/AppTabBar';
+import { AppTabBar, APP_TAB_BAR_OFFSET } from '@/shared/components/AppTabBar';
 import { profileEditSchema } from '../schemas/authSchemas';
 import { useAuth } from '../hooks/useAuth';
 import { ProfileEditFormData } from '../types';
@@ -514,6 +514,9 @@ export const ProfileScreen = () => {
               <Text style={styles.logoutBtnText}>Cerrar sesión</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Espacio para scrollear por encima del tab bar absoluto */}
+          <View style={styles.tabBarSpacer} />
         </ScrollView>
       </KeyboardAvoidingView>
     );
@@ -732,8 +735,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: theme.spacing.lg,
     gap: theme.spacing.lg,
+  },
+  tabBarSpacer: {
+    height: APP_TAB_BAR_OFFSET,
   },
   loadingContainer: {
     flex: 1,
