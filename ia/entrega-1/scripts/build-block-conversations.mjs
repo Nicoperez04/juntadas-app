@@ -682,6 +682,89 @@ Fix del selector de fecha y hora, refresh del home, documentación y limpieza de
       },
     ],
   },
+  {
+    output: join(CONVERSACIONES_DIR, 'bloque-5', 'cursor-bloque-5-completo.md'),
+    header: `# Conversación Bloque 5 — Recuerdos (Galería de fotos)
+
+**Herramienta:** Cursor Agent
+**Rama:** feature/bloque-5-recuerdos
+**Transcript ID:** \`88514432-4ce7-4010-a15b-d856d8c58521\``,
+    summary: `## Resumen
+
+### Lo que se implementó
+
+- Tipos, servicio (\`memoriesService\`) y hook (\`useMemories\`) del módulo \`memories\`
+- \`MemoriesGalleryScreen\` con grid 3 columnas, empty state, skeleton, subida múltiple y FAB
+- \`MemoryViewerScreen\` con vista ampliada, swipe horizontal y swipe down para cerrar
+- Eliminación desde galería (long press) y desde viewer (botón papelera + modal)
+- Sincronización galería ↔ viewer al eliminar (\`memoryGallerySync.ts\`)
+- Tooltip de primera visita + modal de ayuda (\`?\`) con instrucciones
+- Migración \`004_memories_storage.sql\` con políticas RLS de Storage
+- Skill propia \`.cursor/rules/photo-gallery-patterns.mdc\`
+
+### Decisiones tomadas
+
+- Subida solo en juntadas activas o finalizadas (\`isActive\` en navegación)
+- Selección múltiple con \`expo-image-picker\` (\`allowsMultipleSelection: true\`)
+- Sin caption; orden por \`created_at DESC\`
+- Path Storage: \`{meetupId}/{userId}/{timestamp}.jpg\` con \`upsert: false\`
+- \`AsyncStorage\` para tooltip de primera visita (\`memories_delete_tip_shown\`)
+- Sincronización post-delete vía \`memoryGallerySync\` (no callbacks en \`route.params\`)
+
+### Skills intentadas instalar
+
+- \`pbakaus/impeccable/delight\` — falló
+- \`emilkowalski/skill/emil-design-eng\` — falló
+- \`expo/skills/native-data-fetching\` — falló
+
+### Problemas encontrados y resueltos
+
+- Galería no se actualizaba al eliminar desde viewer — \`onDelete\` en params, luego \`memoryGallerySync\`
+- Warning \`Non-serializable values... onDelete (Function)\` — registro efímero fuera del navigation state
+- RLS de Storage para bucket \`memories\` — migración \`004_memories_storage.sql\`
+- Figma MCP no disponible — UI según \`theme.ts\` y pantallas existentes
+
+### Pendientes para validación
+
+- Ejecutar \`004_memories_storage.sql\` en Supabase si no se aplicó via CLI
+- Probar subida múltiple y eliminación en dispositivo real
+- Verificar tooltip de primera visita (borrar clave \`memories_delete_tip_shown\` para reprobar)`,
+    transcriptIds: ['88514432-4ce7-4010-a15b-d856d8c58521'],
+    transcriptConfigs: [
+      {
+        id: '88514432-4ce7-4010-a15b-d856d8c58521',
+        matchers: [
+          {
+            test: /Implementación — Bloque 5: Recuerdos/i,
+            file: 'prompts/bloque-5/cursor-01-recuerdos-implementacion.md',
+            title: 'Implementación del módulo de recuerdos',
+          },
+          {
+            test: /Guardaste el prompt\?/i,
+            title: 'Guardado del prompt de implementación',
+          },
+          {
+            test: /Fixes — Bloque 5: Recuerdos/i,
+            file: 'prompts/bloque-5/cursor-02-memories-fixes.md',
+            title: 'Fixes: refresh al eliminar y modal de ayuda',
+          },
+          {
+            test: /Non-serializable|onDelete \(Function\)|Revisemo el siguiente warning/i,
+            title: 'Fix warning React Navigation: memoryGallerySync',
+          },
+          {
+            test: /Documentación — Cierre del Bloque 5/i,
+            file: 'prompts/bloque-5/cursor-03-documentar-bloque-5.md',
+            title: 'Documentación y cierre del Bloque 5',
+          },
+          {
+            test: /script de export del bloque 5/i,
+            title: 'Actualización del script build-block-conversations',
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 const main = () => {

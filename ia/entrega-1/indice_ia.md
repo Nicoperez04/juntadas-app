@@ -66,6 +66,13 @@
 - **28** · Fixes participantes: abandonar desde detalle, volver a unirse, historial restringido → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-07-fixes-participantes.md`](prompts/bloque-debugging/cursor-07-fixes-participantes.md)
 - **Documentación** · Fixes participantes y UX → [`prompts/bloque-debugging/cursor-08-documentar-fixes.md`](prompts/bloque-debugging/cursor-08-documentar-fixes.md)
 
+### Bloque 5 — Recuerdos / Galería de fotos
+
+- **29** · Implementación del módulo de recuerdos (galería, viewer, subida múltiple, eliminación) → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/cursor-01-recuerdos-implementacion.md`](prompts/bloque-5/cursor-01-recuerdos-implementacion.md)
+- **30** · Fixes recuerdos: refresh al eliminar desde viewer, tooltip de primera visita y modal de ayuda → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/cursor-02-memories-fixes.md`](prompts/bloque-5/cursor-02-memories-fixes.md)
+- **31** · Skill propia: `photo-gallery-patterns.mdc` → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`.cursor/rules/photo-gallery-patterns.mdc`](../../../.cursor/rules/photo-gallery-patterns.mdc)
+- **Documentación** · Cierre del Bloque 5 → [`prompts/bloque-5/cursor-03-documentar-bloque-5.md`](prompts/bloque-5/cursor-03-documentar-bloque-5.md)
+
 ### Bloque Debugging — Fixes y pulido UX (Claude Code CLI) (25/05/2026)
 
 - **B1** · Footer tab bar faltante en pantallas principales (CreateMeetup, JoinMeetup, Profile, MeetupDetail, History) → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-01-B1-footer.md`](prompts/bloque-debugging/claude-01-B1-footer.md)
@@ -97,6 +104,7 @@ El script lee los JSONL en `.cursor/projects/.../agent-transcripts/` y actualiza
 - `conversaciones/bloque-2/cursor-bloque-2-chat-2.md`
 - `conversaciones/bloque-3/cursor-bloque-3-completo.md`
 - `conversaciones/bloque-4/cursor-bloque-4-completo.md`
+- `conversaciones/bloque-5/cursor-bloque-5-completo.md`
 - `conversaciones/bloque-6/cursor-bloque-6-completo.md` *(pendiente de agregar al script)*
 
 Cada sesión incluye el **prompt completo** (archivo guardado + mensaje enviado en chat) y la **respuesta final completa** del agente (sin tool calls).

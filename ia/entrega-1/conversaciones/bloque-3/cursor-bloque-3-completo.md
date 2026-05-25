@@ -2991,6 +2991,42 @@ Realiza el completado del archivo de la conversacion vos, al igual que hicimos c
 
 Voy a localizar los transcripts del Bloque 4 y completar `cursor-bloque-4-completo.md` con el mismo formato que los bloques anteriores.
 
+---
+
+Agregando Bloque 4 al script y regenerando la conversación completa.
+
+---
+
+Completé `cursor-bloque-4-completo.md` regenerándolo desde los agent transcripts, igual que los bloques anteriores.
+
+## Resultado — Bloque 4
+
+**4 sesiones** con prompt completo + respuesta completa:
+
+| Sesión | Tema | Prompt guardado |
+|--------|------|-----------------|
+| 1 | Implementación del juego Impostor | `cursor-01-impostor-implementacion.md` |
+| 2 | Rediseño y correcciones del Impostor | `cursor-03-impostor-redesign.md` |
+| 3 | Fix categoría específica y selector de pista | mensaje en chat |
+| 4 | Guía de onboarding (ONBOARDING.md) | mensaje en chat → creó `GUIA_EQUIPO.md` |
+
+El archivo quedó con ~1.200 líneas, incluyendo el resumen inicial que ya tenías.
+
+## Archivos modificados
+
+1. `ia/entrega-1/conversaciones/bloque-4/cursor-bloque-4-completo.md` — **regenerado completo**
+2. `ia/entrega-1/scripts/build-block-conversations.mjs` — agregado Bloque 4
+3. `ia/entrega-1/indice_ia.md` — script actualizado para incluir bloque-4
+
+## Nota
+
+Al correr el script también se regeneraron bloques 1–3. El Bloque 3 pasó a **19 sesiones** porque el mismo chat (`4b48349f`) incluye mensajes posteriores (documentación Bloque 4, SpecStory, etc.). Si querés limpiar esas sesiones meta del Bloque 3, decime y lo ajustamos en el script.
+
+**Para regenerar en el futuro:**
+```bash
+node juntadas-app/ia/entrega-1/scripts/build-block-conversations.mjs
+```
+
 <details>
 <summary>Metadatos del intercambio</summary>
 
