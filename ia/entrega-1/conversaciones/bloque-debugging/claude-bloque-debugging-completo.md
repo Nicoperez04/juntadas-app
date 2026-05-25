@@ -1057,3 +1057,16 @@ sistema de diseño.
 
 ### Pendientes
 Ninguno relacionado a este bug.
+
+---
+
+## Sesión adicional — Fixes participantes y UX (Nico)
+
+### Lo que se corrigió
+- Avatar de participantes en MeetupDetailScreen (leía participant.avatarUrl en lugar de participant.profile.avatarUrl)
+- Avatar en ParticipantListScreen con el mismo fix
+- Footer sin parpadeo: React.memo en AppTabBar + animation: 'none' en MainNavigator
+- Toast de asistencia duplicado: Promise.all en handleAttendanceClose
+- Botón "Abandonar juntada" agregado en MeetupDetailScreen para participantes
+- joinMeetup actualizado para permitir volver a unirse si left_at IS NOT NULL
+- Historial: badge "Abandonada" + acceso restringido en detalle si el usuario abandonó

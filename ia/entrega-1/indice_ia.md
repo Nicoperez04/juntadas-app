@@ -60,6 +60,12 @@
 - **26** · Implementación del perfil de usuario (ProfileScreen, avatar, estadísticas, logout) → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/cursor-01-perfil-implementacion.md`](prompts/bloque-6/cursor-01-perfil-implementacion.md)
 - **Documentación** · Cierre del Bloque 6 → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/cursor-02-documentar-bloque-6.md`](prompts/bloque-6/cursor-02-documentar-bloque-6.md)
 
+### Fixes participantes y UX — Cursor (25/05/2026)
+
+- **27** · Fixes UX: avatar participantes, footer, toast asistencia → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`conversaciones/2026-05-25_21-19-18Z-ux-fixes-for-footer,-avatars,-and-attendance-toast.md`](conversaciones/2026-05-25_21-19-18Z-ux-fixes-for-footer,-avatars,-and-attendance-toast.md) · [`prompts/bloque-debugging/cursor-02-participant-list-avatar.md`](prompts/bloque-debugging/cursor-02-participant-list-avatar.md)
+- **28** · Fixes participantes: abandonar desde detalle, volver a unirse, historial restringido → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-07-fixes-participantes.md`](prompts/bloque-debugging/cursor-07-fixes-participantes.md)
+- **Documentación** · Fixes participantes y UX → [`prompts/bloque-debugging/cursor-08-documentar-fixes.md`](prompts/bloque-debugging/cursor-08-documentar-fixes.md)
+
 ### Bloque Debugging — Fixes y pulido UX (Claude Code CLI) (25/05/2026)
 
 - **B1** · Footer tab bar faltante en pantallas principales (CreateMeetup, JoinMeetup, Profile, MeetupDetail, History) → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-01-B1-footer.md`](prompts/bloque-debugging/claude-01-B1-footer.md)
