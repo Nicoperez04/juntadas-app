@@ -95,6 +95,7 @@ export const ImpostorStartScreen = () => {
   const [includeImpostorHint, setIncludeImpostorHint] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
   const [showAddPlayer, setShowAddPlayer] = useState(false);
+  const [playersManuallyCleared, setPlayersManuallyCleared] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -122,53 +123,62 @@ export const ImpostorStartScreen = () => {
     [],
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      if (session?.phase !== 'playing') return;
+useFocusEffect(
+  useCallback(() => {
+    if (session?.phase !== 'playing' && session?.phase !== 'revealing') return;
+    
+    // Si el usuario vació la lista manualmente en una sesión anterior,
+    // no restaurar los jugadores de la sesión guardada
+    if (playersManuallyCleared) return;
 
-      setPlayers(session.players);
-      setShowSetup(true);
-      setWordMode(session.wordMode);
-      setIncludeImpostorHint(session.includeImpostorHint);
-      if (CATEGORIES.includes(session.topic)) {
-        setSelectedCategory(session.topic);
-      }
-      pickPendingWord(session.wordMode, session.topic);
-    }, [
-      session?.phase,
-      session?.players,
-      session?.wordMode,
-      session?.topic,
-      session?.includeImpostorHint,
-      pickPendingWord,
-    ]),
-  );
+    setPlayers(session.players);
+    setShowSetup(true);
+    setWordMode(session.wordMode);
+    setIncludeImpostorHint(session.includeImpostorHint);
+    if (CATEGORIES.includes(session.topic)) {
+      setSelectedCategory(session.topic);
+    }
+    pickPendingWord(session.wordMode, session.topic);
+  }, [
+    session?.phase,
+    session?.players,
+    session?.wordMode,
+    session?.topic,
+    session?.includeImpostorHint,
+    pickPendingWord,
+    playersManuallyCleared,
+  ]),
+);
 
   /** Pre-carga participantes confirmados solo si hay meetupId */
-  useEffect(() => {
-    if (!meetupId) {
-      setIsLoadingPlayers(false);
-      return;
-    }
-
-    const loadPlayers = async () => {
-      setIsLoadingPlayers(true);
-      const { data, error } = await impostorService.getParticipantsForGame(meetupId);
-
-      if (error) {
-        setToast({ message: error, type: 'error' });
-      } else if (data && players.length === 0 && !session?.players.length) {
-        setPlayers(data);
+  useFocusEffect(
+    useCallback(() => {
+      if (!meetupId) {
+        setIsLoadingPlayers(false);
+        return;
       }
 
-      setIsLoadingPlayers(false);
-    };
+      const loadPlayers = async () => {
+        setIsLoadingPlayers(true);
+        const { data, error } = await impostorService.getParticipantsForGame(meetupId);
 
-    void loadPlayers();
-  }, [meetupId]);
+        if (error) {
+          setToast({ message: error, type: 'error' });
+        } else if (data) {
+          // Siempre recargar desde Supabase al entrar a la pantalla
+          // para reflejar cambios en participantes desde la última vez
+          setPlayers(data);
+        }
+
+        setIsLoadingPlayers(false);
+      };
+
+      void loadPlayers();
+    }, [meetupId]),
+  );
 
   useEffect(() => {
-    if (session?.players.length && players.length === 0) {
+    if (session?.players.length && players.length === 0 && !playersManuallyCleared) {
       setPlayers(session.players);
       setShowSetup(true);
     }
@@ -211,8 +221,12 @@ export const ImpostorStartScreen = () => {
 
   const handleRemovePlayer = useCallback((playerId: string) => {
     void triggerSelectionHaptic();
-    setPlayers((prev) => prev.filter((p) => p.id !== playerId));
-  }, []);
+    setPlayers((prev) => {
+    const next = prev.filter((p) => p.id !== playerId);
+    if (next.length === 0) setPlayersManuallyCleared(true);
+    return next;
+  });
+}, []);
 
   const handleAddPlayer = useCallback(() => {
     const trimmed = newPlayerName.trim();
