@@ -24,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { appLogoSource } from '@/shared/assets/appAssets';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -43,8 +44,6 @@ const AVATAR_PALETTE = [
   '#059669',
   '#D97706',
 ];
-
-const appLogo = require('../../../../assets/logo-nobg.png');
 
 /**
  * Genera un índice de color determinístico a partir de un string.
@@ -353,7 +352,7 @@ export const MeetupHomeScreen = () => {
             <Text style={styles.headerSubtitle}>Bienvenido</Text>
             <View style={styles.headerTitleRow}>
               <Image
-                source={appLogo}
+                source={appLogoSource}
                 style={styles.headerLogo}
                 resizeMode="contain"
               />

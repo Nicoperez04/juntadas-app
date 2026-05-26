@@ -6,14 +6,18 @@
  */
 import React from 'react';
 import { Image, View, StyleSheet } from 'react-native';
+import { appLogoSource } from '@/shared/assets/appAssets';
 import { theme } from '@/shared/constants/theme';
-
-const appLogo = require('../../../assets/logo-nobg.png');
 
 export const AppLogo = () => {
   return (
     <View style={styles.container}>
-      <Image source={appLogo} style={styles.image} resizeMode="contain" />
+      <Image
+        source={appLogoSource}
+        style={styles.image}
+        resizeMode="contain"
+        accessibilityLabel="Logo de Ronda App"
+      />
     </View>
   );
 };

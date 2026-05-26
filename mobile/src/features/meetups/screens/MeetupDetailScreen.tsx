@@ -112,6 +112,18 @@ const formatDate = (dateStr: string): string => {
 };
 
 /**
+ * Determina si la juntada ya comenzó comparando fecha y hora con el momento actual.
+ *
+ * @param date - Fecha en formato YYYY-MM-DD desde Supabase
+ * @param time - Hora en formato HH:MM:SS desde Supabase
+ * @returns true si la fecha/hora de inicio ya pasó o es ahora
+ */
+const hasMeetupStarted = (date: string, time: string): boolean => {
+  const meetupDateTime = new Date(`${date}T${time}`);
+  return new Date() >= meetupDateTime;
+};
+
+/**
  * Label visual y color para cada estado de asistencia.
  * Centraliza los valores para que sean consistentes en toda la pantalla.
  */
@@ -427,6 +439,8 @@ export const MeetupDetailScreen = () => {
   const isCancelled = meetup.status === 'cancelled';
   const isFinished = meetup.status === 'finished';
   const isActive = meetup.status === 'active';
+  const canFinish =
+    isOrganizer && isActive && hasMeetupStarted(meetup.date, meetup.time);
   const roleLabel = isOrganizer ? 'Organizador' : 'Invitado';
   const currentAttendance: AttendanceStatus =
     currentUserParticipant?.attendanceStatus ?? 'pending';
@@ -844,8 +858,8 @@ export const MeetupDetailScreen = () => {
           </View>
         )}
 
-        {/* Finalizar juntada — solo organizador en juntadas activas */}
-        {isOrganizer && isActive && (
+        {/* Finalizar juntada — solo organizador cuando la juntada ya comenzó */}
+        {canFinish && (
           <View style={styles.cancelSection}>
             <TouchableOpacity
               style={[styles.finishBtn, isFinishing && styles.cancelBtnDisabled]}

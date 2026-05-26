@@ -1,154 +1,148 @@
 {
-  "scope": "global",
-  "description": "Inventario global de conversaciones y transcripts documentados para la entrega 1. Incluye Cursor, Claude, Claude Code CLI y ChatGPT cuando aplica.",
-  "last_updated": "2026-05-26",
-  "tools": {
-    "cursoride": {
-      "description": "Cursor Agent / Cursor IDE",
-      "conversation_files": [
-        "conversaciones/expo-router-navigation.md",
-        "conversaciones/instalacion-skills.md",
-        "conversaciones/exportacion-conversaciones.md",
-        "conversaciones/cursor-rules-migracion-indice.md",
-        "conversaciones/bloque-1/cursor-bloque-1-completo.md",
-        "conversaciones/bloque-2/cursor-bloque-2-chat-1.md",
-        "conversaciones/bloque-2/cursor-bloque-2-chat-2.md",
-        "conversaciones/bloque-3/cursor-bloque-3-completo.md",
-        "conversaciones/bloque-4/cursor-bloque-4-completo.md",
-        "conversaciones/bloque-5/cursor-bloque-5-completo.md",
-        "conversaciones/bloque-6/cursor-bloque-6-completo.md"
-      ]
-    },
-    "claude": {
-      "description": "Claude y Claude Code CLI",
-      "conversation_files": [
-        "conversaciones/bloque-debugging/claude-bloque-debugging-completo.md"
-      ]
-    },
-    "chatgpt": {
-      "description": "ChatGPT / Codex usado para correcciones y auditoria de documentacion IA",
-      "conversation_files": [
-        "conversaciones/bloque-debugging/claude-bloque-debugging-completo.md",
-        "conversaciones/bloque-7/cursor-bloque-7-completo.md"
-      ]
-    }
-  },
   "sessions": {
-    "6a1d9500-e86b-40c7-8580-1ccd03f250d2": {
+    "05ad3d82-072a-4b3c-8188-47b0166ba77a": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
       "provider": "cursoride",
-      "block": "bloque-1",
-      "conversation_file": "conversaciones/bloque-1/cursor-bloque-1-completo.md",
-      "status": "documented",
-      "source": "agent-transcript"
-    },
-    "33f39f0b-1864-4ed0-9fd1-c1a756dd4546": {
-      "provider": "cursoride",
-      "block": "bloque-1",
-      "conversation_file": "conversaciones/bloque-1/cursor-bloque-1-completo.md",
-      "status": "documented",
-      "source": "agent-transcript"
-    },
-    "d437a364-f990-4d5b-a564-e835952021eb": {
-      "provider": "cursoride",
-      "block": "bloque-2",
-      "conversation_file": "conversaciones/bloque-2/cursor-bloque-2-chat-1.md",
-      "status": "documented",
-      "source": "agent-transcript"
-    },
-    "f46fd390-1e41-4a47-96ca-aee7d8346e87": {
-      "provider": "cursoride",
-      "block": "bloque-2",
-      "conversation_file": "conversaciones/bloque-2/cursor-bloque-2-chat-1.md",
-      "status": "documented",
-      "source": "agent-transcript"
-    },
-    "434cdfd7-6aa1-4cf7-aebf-8af94c996e6f": {
-      "provider": "cursoride",
-      "block": "bloque-2",
-      "conversation_file": "conversaciones/bloque-2/cursor-bloque-2-chat-2.md",
-      "status": "documented",
-      "source": "agent-transcript"
-    },
-    "7af78798-869f-4827-9261-20830212f502": {
-      "provider": "cursoride",
-      "block": "bloque-3",
-      "conversation_file": "conversaciones/bloque-3/cursor-bloque-3-completo.md",
-      "status": "documented",
-      "source": "agent-transcript"
-    },
-    "6ec0dfa5-19d0-43a2-8893-d21b6043f0be": {
-      "provider": "cursoride",
-      "block": "bloque-3",
-      "conversation_file": "conversaciones/bloque-3/cursor-bloque-3-completo.md",
-      "status": "documented",
-      "source": "agent-transcript"
-    },
-    "4b48349f-050f-41a8-a6e7-f9ee7cd90d55": {
-      "provider": "cursoride",
-      "block": "bloque-3",
-      "conversation_file": "conversaciones/bloque-3/cursor-bloque-3-completo.md",
-      "status": "documented",
-      "source": "agent-transcript"
+      "last_updated": ""
     },
     "2628f302-44de-49ef-a3b5-60118adcc749": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
       "provider": "cursoride",
-      "block": "bloque-4",
-      "conversation_file": "conversaciones/bloque-4/cursor-bloque-4-completo.md",
-      "status": "documented",
-      "source": "agent-transcript"
+      "last_updated": ""
     },
-    "05ad3d82-072a-4b3c-8188-47b0166ba77a": {
+    "33f39f0b-1864-4ed0-9fd1-c1a756dd4546": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
       "provider": "cursoride",
-      "block": "bloque-4",
-      "conversation_file": "conversaciones/bloque-4/cursor-bloque-4-completo.md",
-      "status": "documented",
-      "source": "agent-transcript"
+      "last_updated": ""
+    },
+    "434cdfd7-6aa1-4cf7-aebf-8af94c996e6f": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
+      "provider": "cursoride",
+      "last_updated": ""
+    },
+    "4b48349f-050f-41a8-a6e7-f9ee7cd90d55": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
+      "provider": "cursoride",
+      "last_updated": ""
+    },
+    "6a1d9500-e86b-40c7-8580-1ccd03f250d2": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
+      "provider": "cursoride",
+      "last_updated": ""
+    },
+    "6ec0dfa5-19d0-43a2-8893-d21b6043f0be": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
+      "provider": "cursoride",
+      "last_updated": ""
+    },
+    "7af78798-869f-4827-9261-20830212f502": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
+      "provider": "cursoride",
+      "last_updated": ""
     },
     "88514432-4ce7-4010-a15b-d856d8c58521": {
-      "provider": "cursoride",
-      "block": "bloque-5",
-      "conversation_file": "conversaciones/bloque-5/cursor-bloque-5-completo.md",
-      "status": "documented",
-      "source": "agent-transcript",
       "user_message_count": 5,
       "agent_message_count": 151,
       "start_timestamp": "2026-05-25T19:21:54-03:00",
       "end_timestamp": "2026-05-25T19:21:54-03:00",
       "markdown_size_bytes": 145280,
+      "provider": "cursoride",
       "last_updated": "2026-05-25T23:18:45Z"
     },
-    "fe54c11e-b2e1-4b72-86fe-b9bad5e10a75": {
+    "9a8214be-3892-42ba-ab74-757efbd0f8ab": {
+      "user_message_count": 5,
+      "agent_message_count": 139,
+      "start_timestamp": "2026-05-26T18:41:20-03:00",
+      "end_timestamp": "2026-05-26T18:41:20-03:00",
+      "markdown_size_bytes": 125557,
       "provider": "cursoride",
-      "block": "bloque-6",
-      "conversation_file": "conversaciones/bloque-6/cursor-bloque-6-completo.md",
-      "status": "documented",
-      "source": "agent-transcript"
-    },
-    "claude-bloque-debugging": {
-      "provider": "claude-code-cli",
-      "block": "bloque-debugging",
-      "conversation_file": "conversaciones/bloque-debugging/claude-bloque-debugging-completo.md",
-      "status": "documented",
-      "source": "manual-consolidation"
-    },
-    "chatgpt-codex-documentacion-ia": {
-      "provider": "chatgpt-codex",
-      "block": "bloque-debugging",
-      "conversation_file": "conversaciones/bloque-debugging/claude-bloque-debugging-completo.md",
-      "status": "documented",
-      "source": "manual-consolidation"
+      "last_updated": "2026-05-26T23:05:56Z"
     },
     "chatgpt-codex-bloque-7-marca": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
       "provider": "chatgpt-codex",
-      "block": "bloque-7",
-      "conversation_file": "conversaciones/bloque-7/cursor-bloque-7-completo.md",
-      "status": "documented",
-      "source": "manual-consolidation"
+      "last_updated": ""
+    },
+    "chatgpt-codex-documentacion-ia": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
+      "provider": "chatgpt-codex",
+      "last_updated": ""
+    },
+    "claude-bloque-debugging": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
+      "provider": "claude-code-cli",
+      "last_updated": ""
+    },
+    "d437a364-f990-4d5b-a564-e835952021eb": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
+      "provider": "cursoride",
+      "last_updated": ""
+    },
+    "f46fd390-1e41-4a47-96ca-aee7d8346e87": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
+      "provider": "cursoride",
+      "last_updated": ""
+    },
+    "fe54c11e-b2e1-4b72-86fe-b9bad5e10a75": {
+      "user_message_count": 0,
+      "agent_message_count": 0,
+      "start_timestamp": "",
+      "end_timestamp": "",
+      "markdown_size_bytes": 0,
+      "provider": "cursoride",
+      "last_updated": ""
     }
-  },
-  "notes": [
-    "No se versiona la carpeta .cursor porque es propia del entorno local del desarrollador que uso Cursor.",
-    "Los conteos exactos de mensajes solo se conservan para los transcripts donde fueron exportados previamente.",
-    "Las conversaciones de Claude y ChatGPT/Codex se registran por consolidacion manual en Markdown."
-  ]
+  }
 }

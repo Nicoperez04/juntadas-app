@@ -1,6 +1,6 @@
 export const appConfig = {
   app: {
-    name: 'JuntadasApp',
+    name: 'Ronda App',
     version: '1.0.0',
   },
   meetups: {

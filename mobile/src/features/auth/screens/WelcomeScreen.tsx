@@ -24,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { appConfig } from '@/config/appConfig';
 import { AppLogo } from '@/shared/components/AppLogo';
 import { AppButton } from '@/shared/components/AppButton';
 import { theme } from '@/shared/constants/theme';
@@ -79,7 +80,7 @@ export const WelcomeScreen = () => {
           {/* Marca */}
           <View style={styles.logoSection}>
             <AppLogo />
-            <Text style={styles.appName}>Juntadas</Text>
+            <Text style={styles.appName}>{appConfig.app.name}</Text>
           </View>
 
           {/* Título hero con énfasis en la palabra clave */}

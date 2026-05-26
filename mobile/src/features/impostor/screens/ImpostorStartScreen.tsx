@@ -82,7 +82,7 @@ export const ImpostorStartScreen = () => {
   const route = useRoute<RoutePropType>();
   const meetupId = route.params?.meetupId;
 
-  const { session, setupGame } = useImpostor(meetupId);
+  const { session, setupGame, updateSessionPlayers } = useImpostor(meetupId);
 
   const [showSetup, setShowSetup] = useState(false);
   const [showHowToModal, setShowHowToModal] = useState(false);
@@ -124,36 +124,30 @@ export const ImpostorStartScreen = () => {
     [],
   );
 
-useFocusEffect(
-  useCallback(() => {
-    if (session?.phase !== 'playing' && session?.phase !== 'revealing') return;
-    
-    // Si el usuario vació la lista manualmente en una sesión anterior,
-    // no restaurar los jugadores de la sesión guardada
-    if (playersManuallyCleared) return;
-
-    setPlayers(session.players);
-    setShowSetup(true);
-    setWordMode(session.wordMode);
-    setIncludeImpostorHint(session.includeImpostorHint);
-    if (CATEGORIES.includes(session.topic)) {
-      setSelectedCategory(session.topic);
-    }
-    pickPendingWord(session.wordMode, session.topic);
-  }, [
-    session?.phase,
-    session?.players,
-    session?.wordMode,
-    session?.topic,
-    session?.includeImpostorHint,
-    pickPendingWord,
-    playersManuallyCleared,
-  ]),
-);
-
-  /** Pre-carga participantes confirmados solo si hay meetupId */
+  /**
+   * Al enfocar la pantalla: restaura jugadores de sesión activa (nueva ronda)
+   * o carga participantes confirmados solo en la primera entrada al flujo.
+   */
   useFocusEffect(
     useCallback(() => {
+      const hasActiveSession =
+        session?.phase === 'playing' || session?.phase === 'revealing';
+
+      if (hasActiveSession) {
+        if (!playersManuallyCleared) {
+          setPlayers(session.players);
+          setShowSetup(true);
+          setWordMode(session.wordMode);
+          setIncludeImpostorHint(session.includeImpostorHint);
+          if (CATEGORIES.includes(session.topic)) {
+            setSelectedCategory(session.topic);
+          }
+          pickPendingWord(session.wordMode, session.topic);
+        }
+        setIsLoadingPlayers(false);
+        return;
+      }
+
       if (!meetupId) {
         setIsLoadingPlayers(false);
         return;
@@ -166,24 +160,21 @@ useFocusEffect(
         if (error) {
           setToast({ message: error, type: 'error' });
         } else if (data) {
-          // Siempre recargar desde Supabase al entrar a la pantalla
-          // para reflejar cambios en participantes desde la última vez
           setPlayers(data);
+          setPlayersManuallyCleared(false);
         }
 
         setIsLoadingPlayers(false);
       };
 
       void loadPlayers();
-    }, [meetupId]),
+    }, [
+      meetupId,
+      session,
+      playersManuallyCleared,
+      pickPendingWord,
+    ]),
   );
-
-  useEffect(() => {
-    if (session?.players.length && players.length === 0 && !playersManuallyCleared) {
-      setPlayers(session.players);
-      setShowSetup(true);
-    }
-  }, [session?.players, players.length]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -223,24 +214,37 @@ useFocusEffect(
   const handleRemovePlayer = useCallback((playerId: string) => {
     void triggerSelectionHaptic();
     setPlayers((prev) => {
-    const next = prev.filter((p) => p.id !== playerId);
-    if (next.length === 0) setPlayersManuallyCleared(true);
-    return next;
-  });
-}, []);
+      const next = prev.filter((p) => p.id !== playerId);
+      if (next.length === 0) setPlayersManuallyCleared(true);
+      updateSessionPlayers(next);
+      return next;
+    });
+  }, [updateSessionPlayers]);
 
   const handleAddPlayer = useCallback(() => {
     const trimmed = newPlayerName.trim();
     if (!trimmed) return;
 
+    const normalizedName = trimmed.toLowerCase();
+    const isDuplicate = players.some(
+      (player) => player.name.trim().toLowerCase() === normalizedName,
+    );
+
+    if (isDuplicate) {
+      setToast({ message: 'Ya existe un jugador con ese nombre', type: 'error' });
+      return;
+    }
+
     void triggerSelectionHaptic();
-    setPlayers((prev) => [
-      ...prev,
+    const nextPlayers: Player[] = [
+      ...players,
       { id: createLocalPlayerId(), name: trimmed, isFromApp: false },
-    ]);
+    ];
+    setPlayers(nextPlayers);
+    updateSessionPlayers(nextPlayers);
     setNewPlayerName('');
     setShowAddPlayer(false);
-  }, [newPlayerName]);
+  }, [newPlayerName, players, updateSessionPlayers]);
 
   const handleReshuffleWord = useCallback(() => {
     void triggerSelectionHaptic();

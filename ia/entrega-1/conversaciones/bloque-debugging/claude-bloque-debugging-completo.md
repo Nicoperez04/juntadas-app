@@ -1230,3 +1230,162 @@ que el botón final de inicio de partida no quede tapado por el tab bar fijo.
 - `ia/entrega-1/prompts/bloque-debugging/cursor-13-impostor-scroll-start.md`
 - `ia/entrega-1/conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`
 - `ia/entrega-1/indice_ia.md`
+
+---
+
+## Sesión adicional — cursor-14: Logo en bienvenida y nombre Ronda App
+
+### Prompt
+
+Debemos resolver el siguiente inconveniente. Ahora mismo sobre la pantalla de
+bienvenida no aparece el logo correspondiente que esta en assets y el nombre de
+la aplicacion debe ser Ronda App. El problema es que a mi no me aparece el logo
+pero a mi compañero si, tambien hay que corregir el slug dentro del app.json
+para que respete ese nombre.
+
+Almacena este prompt dentro del bloque debugging con la informacion
+correspondiente.
+
+### Respuesta
+
+Se centralizó la carga del logo oficial, se alineó el nombre visible de la app
+con **Ronda App** y se corrigió el slug de Expo.
+
+### Cambios aplicados
+
+- Nuevo módulo `src/shared/assets/appAssets.ts` con `appLogoSource` como única
+  fuente del `require()` de `logo-nobg.png`.
+- `AppLogo` y `MeetupHomeScreen` reutilizan ese export compartido.
+- `WelcomeScreen` deja de hardcodear "Juntadas" y lee `appConfig.app.name`.
+- `appConfig.app.name` pasa a `Ronda App`.
+- `app.json`: `slug` actualizado de `juntadas` a `ronda-app`.
+
+### Diagnóstico del logo inconsistente entre devs
+
+El icono genérico violeta con personas corresponde a la versión anterior de
+`AppLogo` (Ionicons). Si el código ya está actualizado pero el PNG no se ve,
+lo más probable es cache de Metro o un placeholder de OneDrive sin descargar.
+Recomendación: `npx expo start -c` y verificar que exista
+`mobile/assets/logo-nobg.png` localmente.
+
+### Archivos modificados
+
+- `mobile/src/shared/assets/appAssets.ts`
+- `mobile/src/shared/components/AppLogo.tsx`
+- `mobile/src/features/meetups/screens/MeetupHomeScreen.tsx`
+- `mobile/src/features/auth/screens/WelcomeScreen.tsx`
+- `mobile/src/config/appConfig.ts`
+- `mobile/app.json`
+- `ia/entrega-1/prompts/bloque-debugging/cursor-14-welcome-logo-app-name.md`
+- `ia/entrega-1/conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`
+- `ia/entrega-1/indice_ia.md`
+
+---
+
+## Sesión adicional — cursor-15: Jugadores manuales desaparecen al tocar Nueva ronda
+
+### Prompt
+
+Necesito que analices y corrijas un bug en el flujo del juego Impostor.
+
+Desde Detalle de juntada se inicia el juego con participantes confirmados como
+base. Al agregar jugadores manualmente y jugar una ronda, al tocar "Nueva ronda"
+desaparecen los agregados manuales y solo quedan los confirmados originales.
+
+Comportamiento esperado: los manuales persisten mientras dure la sesión del
+juego; "Nueva ronda" reinicia solo roles/palabra/estado de ronda, no la lista;
+al reentrar desde cero debe volver a cargarse la base desde confirmados.
+
+Esto va al bloque debugging porque estamos con un fix.
+
+### Respuesta
+
+Se corrigió el conflicto entre dos `useFocusEffect` que competían al volver del
+flujo de roles al setup.
+
+### Diagnóstico
+
+1. Un efecto restauraba jugadores desde la sesión Zustand (incluidos manuales).
+2. Otro recargaba **siempre** desde Supabase los confirmados cuando había
+   `meetupId`, pisando la lista restaurada al completar la petición async.
+
+### Cambios aplicados
+
+- Un solo `useFocusEffect` con lógica bifurcada:
+  - Sesión activa → restaurar desde Zustand, sin fetch a Supabase.
+  - Sin sesión + `meetupId` → cargar base inicial desde confirmados.
+- `updateSessionPlayers` en `useImpostor` para sincronizar altas/bajas manuales
+  en el setup entre rondas.
+- Validación anti-duplicados por nombre (case-insensitive) al agregar jugador.
+- `clearSession()` al tocar "Terminar" para permitir reentrada limpia.
+
+### Archivos modificados
+
+- `mobile/src/features/impostor/screens/ImpostorStartScreen.tsx`
+- `mobile/src/features/impostor/screens/ImpostorRoleScreen.tsx`
+- `mobile/src/features/impostor/hooks/useImpostor.ts`
+- `ia/entrega-1/prompts/bloque-debugging/cursor-15-impostor-jugadores-nueva-ronda.md`
+- `ia/entrega-1/conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`
+- `ia/entrega-1/indice_ia.md`
+
+---
+
+## Sesión adicional — cursor-16: Botones cortados en fin de ronda de Impostor
+
+### Prompt
+
+En la pantalla de fin de ronda del Impostor, con muchos participantes el botón
+"Terminar" queda cortado o fuera de pantalla. Los botones "Nueva ronda" y
+"Terminar" deben verse completos y ser tocables siempre.
+
+Esto va al bloque debugging porque estamos con un fix.
+
+### Respuesta
+
+Se reestructuró el layout de la fase final en `ImpostorRoleScreen` separando
+contenido scrolleable de acciones fijas.
+
+### Diagnóstico
+
+Lista de jugadores y botones compartían un `ScrollView` sin `flex: 1` y con
+`paddingBottom` insuficiente para el tab bar absoluto (`APP_TAB_BAR_OFFSET`).
+
+### Cambios aplicados
+
+- `ScrollView` con `flex: 1` para icono, títulos y lista de jugadores.
+- Footer fijo `finalActions` con "Nueva ronda" y "Terminar".
+- `paddingBottom: APP_TAB_BAR_OFFSET + theme.spacing.sm` en el footer para
+  evitar solapamiento con el tab bar.
+
+### Archivos modificados
+
+- `mobile/src/features/impostor/screens/ImpostorRoleScreen.tsx`
+- `ia/entrega-1/prompts/bloque-debugging/cursor-16-impostor-fin-ronda-scroll.md`
+- `ia/entrega-1/conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`
+- `ia/entrega-1/indice_ia.md`
+
+---
+
+## Sesión de cierre — Fixes finales E1
+
+### Lo que se corrigió
+
+- Botón "Finalizar juntada" ahora solo aparece cuando la juntada ya comenzó (fecha y hora cumplidas)
+- Mejoras adicionales en el módulo Impostor
+- Logo, nombre e ícono de la app configurados
+- Splash screen con color violeta y logo
+- Estados de carga (skeleton) agregados en Figma: Mis Juntadas, Recuerdos y Detalle
+
+### Prompts relacionados
+
+- [`cursor-09-fix-finalizar-juntada.md`](../../prompts/bloque-debugging/cursor-09-fix-finalizar-juntada.md) — visibilidad condicionada de "Finalizar juntada"
+- [`cursor-14-welcome-logo-app-name.md`](../../prompts/bloque-debugging/cursor-14-welcome-logo-app-name.md) — logo y nombre Ronda App en bienvenida
+- [`cursor-15-impostor-jugadores-nueva-ronda.md`](../../prompts/bloque-debugging/cursor-15-impostor-jugadores-nueva-ronda.md) — persistencia de jugadores manuales
+- [`cursor-16-impostor-fin-ronda-scroll.md`](../../prompts/bloque-debugging/cursor-16-impostor-fin-ronda-scroll.md) — layout responsivo fin de ronda
+- [`cursor-10-documentar-cierre-e1.md`](../../prompts/bloque-debugging/cursor-10-documentar-cierre-e1.md) — documentación de cierre E1
+
+### Documentación generada
+
+- `ia/entrega-1/resumen_uso_ia.md`
+- `docs/PENDIENTES.md`
+- `docs/BACKLOG_E2_E3.md`

@@ -21,6 +21,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
+import { APP_TAB_BAR_OFFSET } from '@/shared/components/AppTabBar';
 import { triggerSelectionHaptic, triggerSuccessHaptic } from '@/shared/utils/haptics';
 import type { MainStackParamList } from '@/features/meetups/types';
 import { ImpostorTabBar } from '../components/ImpostorTabBar';
@@ -68,6 +69,7 @@ export const ImpostorRoleScreen = () => {
     currentPlayer,
     currentIsImpostor,
     revealedCount,
+    clearSession,
   } = useImpostor(meetupId);
 
   const [isRevealed, setIsRevealed] = useState(false);
@@ -106,12 +108,16 @@ export const ImpostorRoleScreen = () => {
   }, [navigation, meetupId]);
 
   const handleFinish = useCallback(() => {
+    // Al salir del flujo se limpia la sesión para que la próxima entrada
+    // vuelva a cargar la base desde participantes confirmados de la juntada
+    clearSession();
+
     if (meetupId) {
       navigation.navigate(Routes.MeetupDetail, { meetupId });
       return;
     }
     navigation.navigate(Routes.Games);
-  }, [navigation, meetupId]);
+  }, [navigation, meetupId, clearSession]);
 
   if (!session || !currentPlayer) {
     return null;
@@ -151,8 +157,10 @@ export const ImpostorRoleScreen = () => {
         </SafeAreaView>
 
         <ScrollView
-          contentContainerStyle={styles.finalContent}
+          style={styles.finalScroll}
+          contentContainerStyle={styles.finalScrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.finalIconWrapper}>
             <Ionicons name="sparkles" size={64} color={theme.colors.secondary} />
@@ -177,10 +185,13 @@ export const ImpostorRoleScreen = () => {
               </View>
             ))}
           </View>
+        </ScrollView>
 
+        {/* Footer fijo: acciones siempre visibles por encima del tab bar */}
+        <View style={styles.finalActions}>
           <AppButton label="Nueva ronda" onPress={handleNewRound} />
           <AppButton label="Terminar" variant="ghost" onPress={handleFinish} />
-        </ScrollView>
+        </View>
 
         <ImpostorTabBar activeTabId="games" />
       </View>
@@ -460,11 +471,25 @@ const styles = StyleSheet.create({
   nextButtonWrapper: {
     marginTop: theme.spacing.lg,
   },
-  finalContent: {
+  finalScroll: {
+    flex: 1,
+  },
+  finalScrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.md,
     alignItems: 'center',
     gap: theme.spacing.md,
+  },
+  finalActions: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
+    // Reserva espacio para el tab bar absoluto y evita que "Terminar" quede tapado
+    paddingBottom: APP_TAB_BAR_OFFSET + theme.spacing.sm,
+    gap: theme.spacing.sm,
+    backgroundColor: impostorColors.revealBackground,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: impostorColors.heroDark,
   },
   finalIconWrapper: {
     width: 100,

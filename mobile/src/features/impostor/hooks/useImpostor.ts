@@ -157,6 +157,15 @@ export const useImpostor = (meetupId?: string) => {
   /** Cantidad de jugadores que ya completaron su turno de revelación */
   const revealedCount = session?.currentPlayerIndex ?? 0;
 
+  /**
+   * Sincroniza la lista de jugadores en la sesión activa sin reiniciar la ronda.
+   * Permite agregar o quitar jugadores manuales en el setup entre rondas.
+   */
+  const updateSessionPlayers = (players: Player[]): void => {
+    if (!session) return;
+    setSession(sessionKey, { ...session, players });
+  };
+
   return {
     session,
     sessionKey,
@@ -164,6 +173,7 @@ export const useImpostor = (meetupId?: string) => {
     nextPlayer,
     resetGameWithNewWord,
     clearSession: () => clearSession(sessionKey),
+    updateSessionPlayers,
     currentPlayer,
     currentIsImpostor,
     revealedCount,
