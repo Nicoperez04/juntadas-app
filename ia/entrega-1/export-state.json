@@ -1,4 +1,5 @@
 {
   "nextNumber": 1,
-  "note": "El próximo chat nuevo (después del de corrección de exports) usará numeración 01, 02, etc."
+  "scope": "specstory-only",
+  "note": "Estado auxiliar solo para exports de SpecStory. El inventario global de IA vive en conversaciones/statistics.json y el indice general en indice_ia.md."
 }

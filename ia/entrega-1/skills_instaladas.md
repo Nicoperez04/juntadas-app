@@ -306,6 +306,37 @@ Ya existe src/features/memories/types.ts vacío.
 
 ---
 
+## Skill propia de Cursor documentada
+
+Durante el Bloque 5 se definió una regla/skill local de Cursor llamada
+`photo-gallery-patterns.mdc` para registrar patrones específicos del módulo de
+recuerdos.
+
+No se versiona el archivo `.cursor/rules/photo-gallery-patterns.mdc` porque la
+carpeta `.cursor/` pertenece al entorno local del desarrollador que utilizó
+Cursor. Para la entrega, la evidencia queda registrada en:
+
+- `ia/entrega-1/conversaciones/bloque-5/cursor-bloque-5-completo.md`
+- `ia/entrega-1/prompts/bloque-5/cursor-01-recuerdos-implementacion.md`
+- `ia/entrega-1/prompts/bloque-5/cursor-03-documentar-bloque-5.md`
+
+### Contenido documentado
+
+La regla propia cubría:
+
+- Supabase Storage para bucket `memories` y path `{meetupId}/{userId}/{timestamp}.jpg`
+- Grid de fotos con `FlatList` de 3 columnas
+- Vista ampliada modal con navegación horizontal y cierre por swipe down
+- Permisos de `expo-image-picker`
+- Estados de carga, subida y empty state
+
+### Estado
+
+Documentada como decisión de uso de IA para la entrega. No instalada ni
+versionada como skill compartida del repo.
+
+---
+
 ## CLAUDE.md — contexto permanente del proyecto
 
 Además de las skills, se creó el archivo `mobile/CLAUDE.md` que actúa como

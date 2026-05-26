@@ -1152,3 +1152,49 @@ Se bloqueó la modificación de asistencia cuando la juntada ya no está activa.
 - `mobile/src/features/participants/screens/ParticipantListScreen.tsx`
 - `ia/entrega-1/prompts/bloque-debugging/cursor-11-congelar-asistencia.md`
 - `ia/entrega-1/indice_ia.md`
+
+---
+
+## Sesión adicional — cursor-12: Auditoría de índice, statistics y documentación IA
+
+### Prompt
+
+Necesito que revises el `statistics.json` y `indice_ia.md` en búsqueda de
+inconsistencias entre la carpeta `entrega-1` y todo su contenido y lo que dicen
+estos archivos.
+
+Luego se pidió documentar el prompt y la respuesta como se venía haciendo, y
+aplicar las correcciones considerando `statistics.json` como global, eliminando
+las referencias a UX fixes y documentando la skill faltante.
+
+También se aclaró que no se debe crear `.cursor/` porque es propio del
+desarrollador que utilizó Cursor, y que la documentación debe reflejar que se
+usó Claude además de Cursor.
+
+### Respuesta
+
+Se corrigió la documentación IA de la entrega para que el índice, las
+estadísticas y el registro de skills queden alineados con el contenido real del
+directorio.
+
+### Cambios aplicados
+
+- `statistics.json` pasó a ser un inventario global de uso IA, con secciones
+  para Cursor, Claude/Claude Code CLI y ChatGPT/Codex.
+- Se eliminaron del índice las referencias al export faltante de UX fixes.
+- Se corrigió el enlace roto del prompt B5 de Claude:
+  `claude-04-B5-avatar-header.md` → `claude-04-B5-perfil.md`.
+- Se creó el prompt faltante `prompts/exportacion-conversaciones.md`.
+- Se documentó `photo-gallery-patterns.mdc` en `skills_instaladas.md` sin crear
+  `.cursor/`.
+- El índice ahora registra explícitamente el Bloque Debugging de Claude Code CLI.
+- Se agregó el prompt `cursor-12-auditoria-indice-statistics.md`.
+
+### Archivos modificados
+
+- `ia/entrega-1/conversaciones/statistics.json`
+- `ia/entrega-1/indice_ia.md`
+- `ia/entrega-1/skills_instaladas.md`
+- `ia/entrega-1/prompts/exportacion-conversaciones.md`
+- `ia/entrega-1/prompts/bloque-debugging/cursor-12-auditoria-indice-statistics.md`
+- `ia/entrega-1/conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`

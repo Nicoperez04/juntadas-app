@@ -1,4 +1,6 @@
 {
+  "scope": "specstory-only",
+  "note": "Mapeo auxiliar para organizar exports crudos de SpecStory. No representa el total de conversaciones de Cursor, Claude ni ChatGPT/Codex.",
   "trial": [
     {
       "title": "Diagnóstico Expo Router y renombrado a src/navigation",

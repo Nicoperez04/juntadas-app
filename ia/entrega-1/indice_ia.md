@@ -1,6 +1,6 @@
 ﻿# Índice de temas consultados con IA — Entrega 1
 
-## Claude (claude.ai)
+## Claude / Claude Code CLI
 
 01 - Contextualización del proyecto y revisión de documentos técnicos
 02 - Análisis y revisión del diseño en Figma (mockups y wireframes)
@@ -15,6 +15,7 @@
 11 - Resolución de conflicto entre Expo Router y React Navigation
 12 - Configuración de Cursor Rules para el proyecto
 13 - Instalación de agent skills para React Native, Expo, Supabase y diseño móvil (ver `skills_instaladas.md`)
+14 - Bloque Debugging con Claude Code CLI: fixes B1, B3, B4, B5, B9 y B10 → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md)
 
 ## Cursor
 
@@ -62,7 +63,7 @@
 
 ### Fixes participantes y UX — Cursor (25/05/2026)
 
-- **27** · Fixes UX: avatar participantes, footer, toast asistencia → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`conversaciones/2026-05-25_21-19-18Z-ux-fixes-for-footer,-avatars,-and-attendance-toast.md`](conversaciones/2026-05-25_21-19-18Z-ux-fixes-for-footer,-avatars,-and-attendance-toast.md) · [`prompts/bloque-debugging/cursor-02-participant-list-avatar.md`](prompts/bloque-debugging/cursor-02-participant-list-avatar.md)
+- **27** · Ajustes de participantes, footer y toast de asistencia → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-02-participant-list-avatar.md`](prompts/bloque-debugging/cursor-02-participant-list-avatar.md)
 - **28** · Fixes participantes: abandonar desde detalle, volver a unirse, historial restringido → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-07-fixes-participantes.md`](prompts/bloque-debugging/cursor-07-fixes-participantes.md)
 - **Documentación** · Fixes participantes y UX → [`prompts/bloque-debugging/cursor-08-documentar-fixes.md`](prompts/bloque-debugging/cursor-08-documentar-fixes.md)
 
@@ -70,7 +71,7 @@
 
 - **29** · Implementación del módulo de recuerdos (galería, viewer, subida múltiple, eliminación) → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/cursor-01-recuerdos-implementacion.md`](prompts/bloque-5/cursor-01-recuerdos-implementacion.md)
 - **30** · Fixes recuerdos: refresh al eliminar desde viewer, tooltip de primera visita y modal de ayuda → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/cursor-02-memories-fixes.md`](prompts/bloque-5/cursor-02-memories-fixes.md)
-- **31** · Skill propia: `photo-gallery-patterns.mdc` → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`.cursor/rules/photo-gallery-patterns.mdc`](../../../.cursor/rules/photo-gallery-patterns.mdc)
+- **31** · Skill propia: `photo-gallery-patterns.mdc` → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · documentada en [`skills_instaladas.md`](skills_instaladas.md)
 - **Documentación** · Cierre del Bloque 5 → [`prompts/bloque-5/cursor-03-documentar-bloque-5.md`](prompts/bloque-5/cursor-03-documentar-bloque-5.md)
 
 ### Bloque Debugging — Fixes y pulido UX (Claude Code CLI) (25/05/2026)
@@ -78,21 +79,21 @@
 - **B1** · Footer tab bar faltante en pantallas principales (CreateMeetup, JoinMeetup, Profile, MeetupDetail, History) → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-01-B1-footer.md`](prompts/bloque-debugging/claude-01-B1-footer.md)
 - **B3** · Bug impostor: restauración no deseada de jugadores al vaciar la lista → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-02-B3-impostor.md`](prompts/bloque-debugging/claude-02-B3-impostor.md)
 - **B4** · Modal de asistencia no se cierra después de guardar (Toast superpuesto sobre sheet abierto) → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-03-B4-asistencia.md`](prompts/bloque-debugging/claude-03-B4-asistencia.md)
-- **B5** · Avatar del header no muestra foto de perfil y no navega al perfil → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-04-B5-avatar-header.md`](prompts/bloque-debugging/claude-04-B5-avatar-header.md)
+- **B5** · Avatar del header no muestra foto de perfil y no navega al perfil → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-04-B5-perfil.md`](prompts/bloque-debugging/claude-04-B5-perfil.md)
 - **B9** · Cursor del input de código aparece al extremo derecho — input OTP con 6 cajas individuales → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md)
 - **B10** · Popup de foto de perfil reemplazado por modal custom con diseño de la app → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/claude-05-B10-avatar-modal.md`](prompts/bloque-debugging/claude-05-B10-avatar-modal.md)
-- **cursor-01** · Fixes UX: footer parpadeante, avatares en MeetupDetailScreen y toast de asistencia → [`conversaciones/2026-05-25_21-19-18Z-ux-fixes-for-footer,-avatars,-and-attendance-toast.md`](conversaciones/2026-05-25_21-19-18Z-ux-fixes-for-footer,-avatars,-and-attendance-toast.md)
 - **cursor-02** · Fix avatar en ParticipantListScreen (`profile.avatarUrl`) → [`prompts/bloque-debugging/cursor-02-participant-list-avatar.md`](prompts/bloque-debugging/cursor-02-participant-list-avatar.md)
 - **cursor-07** · Abandonar juntada, volver a unirse e historial restringido → [`prompts/bloque-debugging/cursor-07-fixes-participantes.md`](prompts/bloque-debugging/cursor-07-fixes-participantes.md)
 - **cursor-09** · Botón finalizar juntada en detalle → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-09-finalizar-juntada.md`](prompts/bloque-debugging/cursor-09-finalizar-juntada.md)
 - **cursor-10** · Color warning para finalizar juntada → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-10-finalizar-warning.md`](prompts/bloque-debugging/cursor-10-finalizar-warning.md)
 - **cursor-11** · Congelar asistencia en juntadas finalizadas o canceladas → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-11-congelar-asistencia.md`](prompts/bloque-debugging/cursor-11-congelar-asistencia.md)
+- **cursor-12** · Auditoría y corrección de índice, estadísticas globales y documentación IA → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-12-auditoria-indice-statistics.md`](prompts/bloque-debugging/cursor-12-auditoria-indice-statistics.md)
 
 ---
 
 ## Cómo mantener actualizado
 
-### Bloques 1–6 (conversaciones completas desde Cursor)
+### Bloques 1–6 y debugging (conversaciones completas desde Cursor y Claude)
 
 Regenerar prompts + respuestas finales completas desde los agent transcripts:
 
