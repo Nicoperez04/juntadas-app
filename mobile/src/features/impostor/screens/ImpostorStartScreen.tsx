@@ -28,6 +28,7 @@ import { theme } from '@/shared/constants/theme';
 import { appConfig } from '@/config/appConfig';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
+import { APP_TAB_BAR_OFFSET } from '@/shared/components/AppTabBar';
 import { Toast } from '@/shared/components/Toast';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
 import type { MainStackParamList } from '@/features/meetups/types';
@@ -627,7 +628,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: APP_TAB_BAR_OFFSET + theme.spacing.xl,
     gap: theme.spacing.md,
   },
   introSection: { gap: theme.spacing.lg },

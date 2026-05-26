@@ -1198,3 +1198,35 @@ directorio.
 - `ia/entrega-1/prompts/exportacion-conversaciones.md`
 - `ia/entrega-1/prompts/bloque-debugging/cursor-12-auditoria-indice-statistics.md`
 - `ia/entrega-1/conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`
+
+---
+
+## Sesión adicional — cursor-13: Scroll inferior en inicio de Impostor
+
+### Prompt
+
+Ahora necesito que arregles un problema con el scrollbar en el momento de
+iniciar el juego Impostor. El scrollbar vertical no baja lo suficiente para
+poder presionar el botón de jugar o empezar juego.
+
+Esto va al bloque debugging porque estamos con un fix.
+
+### Respuesta
+
+Se corrigió el espacio inferior del `ScrollView` en `ImpostorStartScreen` para
+que el botón final de inicio de partida no quede tapado por el tab bar fijo.
+
+### Cambios aplicados
+
+- `ImpostorStartScreen` importa `APP_TAB_BAR_OFFSET` desde `AppTabBar`.
+- `styles.scrollContent.paddingBottom` ahora suma `APP_TAB_BAR_OFFSET` más
+  `theme.spacing.xl`.
+- El contenido puede scrollear lo suficiente para dejar visible y presionable
+  el botón "Iniciar partida" por encima del footer.
+
+### Archivos modificados
+
+- `mobile/src/features/impostor/screens/ImpostorStartScreen.tsx`
+- `ia/entrega-1/prompts/bloque-debugging/cursor-13-impostor-scroll-start.md`
+- `ia/entrega-1/conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`
+- `ia/entrega-1/indice_ia.md`

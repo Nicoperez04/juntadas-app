@@ -93,6 +93,7 @@
 - **cursor-10** · Color warning para finalizar juntada → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-10-finalizar-warning.md`](prompts/bloque-debugging/cursor-10-finalizar-warning.md)
 - **cursor-11** · Congelar asistencia en juntadas finalizadas o canceladas → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-11-congelar-asistencia.md`](prompts/bloque-debugging/cursor-11-congelar-asistencia.md)
 - **cursor-12** · Auditoría y corrección de índice, estadísticas globales y documentación IA → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-12-auditoria-indice-statistics.md`](prompts/bloque-debugging/cursor-12-auditoria-indice-statistics.md)
+- **cursor-13** · Scroll inferior en inicio de Impostor para acceder al botón de partida → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-13-impostor-scroll-start.md`](prompts/bloque-debugging/cursor-13-impostor-scroll-start.md)
 
 ---
 
