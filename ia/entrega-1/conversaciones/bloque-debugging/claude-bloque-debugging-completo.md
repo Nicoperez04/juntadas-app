@@ -1100,3 +1100,55 @@ Se agregó la acción de finalizar juntada para organizadores en juntadas activa
 - `mobile/src/features/meetups/screens/MeetupDetailScreen.tsx`
 - `ia/entrega-1/prompts/bloque-debugging/cursor-09-finalizar-juntada.md`
 - `ia/entrega-1/indice_ia.md`
+
+---
+
+## Sesión adicional — cursor-10: Color warning para finalizar juntada
+
+### Prompt
+
+Hace que el botón de finalizar juntada sea del color warning de los definidos. Hacele sus estilos así como tiene `cancelBtn`.
+
+### Respuesta
+
+Se separaron los estilos de la acción "Finalizar juntada" para que use los tokens de advertencia del sistema de diseño.
+
+### Cambios aplicados
+
+- `MeetupDetailScreen` usa `styles.finishBtn` y `styles.finishBtnText` para el botón de finalizar.
+- El botón usa `theme.colors.warningLight` como fondo, `theme.colors.warning` como borde, ícono y texto.
+- El modal de confirmación usa `styles.modalWarningBtn` y `styles.modalWarningBtnText`, con `theme.colors.warning`.
+- La acción de cancelar mantiene los estilos rojos destructivos (`cancelBtn` / `modalDestructiveBtn`).
+
+### Archivos modificados
+
+- `mobile/src/features/meetups/screens/MeetupDetailScreen.tsx`
+- `ia/entrega-1/prompts/bloque-debugging/cursor-10-finalizar-warning.md`
+- `ia/entrega-1/indice_ia.md`
+
+---
+
+## Sesión adicional — cursor-11: Congelar asistencia en juntadas finalizadas o canceladas
+
+### Prompt
+
+Necesito arreglar el hecho de que sobre una juntada finalizada o cancelada se pueda seguir modificando la asistencia. Esta debería quedar congelada una vez la juntada esté en estos estados.
+
+### Respuesta
+
+Se bloqueó la modificación de asistencia cuando la juntada ya no está activa.
+
+### Cambios aplicados
+
+- `participantService` agrega una verificación previa del estado de `meetups` antes de modificar asistencia propia o asistencia de otros como organizador.
+- Si la juntada está `cancelled` o `finished`, el servicio devuelve un mensaje específico y no actualiza `attendance_status`.
+- `ParticipantListScreen` carga el estado de la juntada y desactiva edición de asistencia si no está `active`.
+- En modo congelado, la lista queda en solo lectura y muestra el texto "La asistencia quedó congelada porque la juntada ya no está activa".
+- El footer de modificar asistencia/abandonar se oculta para participantes si la juntada ya no está activa.
+
+### Archivos modificados
+
+- `mobile/src/features/participants/services/participantService.ts`
+- `mobile/src/features/participants/screens/ParticipantListScreen.tsx`
+- `ia/entrega-1/prompts/bloque-debugging/cursor-11-congelar-asistencia.md`
+- `ia/entrega-1/indice_ia.md`

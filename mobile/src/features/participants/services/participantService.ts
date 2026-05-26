@@ -10,6 +10,7 @@ import type {
   MeetupParticipant,
   AttendanceStatus,
   ParticipantRole,
+  MeetupStatus,
 } from '@/features/meetups/types';
 
 /** Contrato de retorno uniforme de todas las operaciones del servicio */
@@ -45,10 +46,40 @@ const translateError = (message: string): string => {
   if (message.includes('Solo podés modificar tu propia asistencia')) return message;
   if (message.includes('Solo el organizador puede modificar')) return message;
   if (message.includes('Participante no encontrado')) return message;
+  if (message.includes('La asistencia no puede modificarse')) return message;
   if (message.includes('No se puede modificar la asistencia del organizador')) {
     return message;
   }
   return 'Ocurrió un error inesperado — intentá de nuevo';
+};
+
+/**
+ * Verifica que la juntada siga activa antes de permitir cambios de asistencia.
+ * Las juntadas finalizadas o canceladas conservan su asistencia como snapshot.
+ *
+ * @param meetupId - UUID de la juntada
+ * @returns null si se puede modificar o mensaje de bloqueo
+ */
+const getAttendanceFreezeError = async (
+  meetupId: string,
+): Promise<string | null> => {
+  const { data, error } = await supabase
+    .from('meetups')
+    .select('status')
+    .eq('id', meetupId)
+    .single();
+
+  if (error) throw error;
+
+  const status = data.status as MeetupStatus;
+  if (status === 'cancelled') {
+    return 'La asistencia no puede modificarse porque la juntada fue cancelada';
+  }
+  if (status === 'finished') {
+    return 'La asistencia no puede modificarse porque la juntada ya finalizó';
+  }
+
+  return null;
 };
 
 /**
@@ -88,6 +119,11 @@ export const participantService = {
     status: AttendanceStatus,
   ): Promise<ServiceResult<MeetupParticipant>> {
     try {
+      const freezeError = await getAttendanceFreezeError(meetupId);
+      if (freezeError) {
+        return { data: null, error: freezeError };
+      }
+
       // Verificar que el participante exista y no sea organizador
       const { data: existing, error: fetchError } = await supabase
         .from('meetup_participants')
@@ -170,6 +206,11 @@ export const participantService = {
     status: AttendanceStatus,
   ): Promise<ServiceResult<MeetupParticipant>> {
     try {
+      const freezeError = await getAttendanceFreezeError(meetupId);
+      if (freezeError) {
+        return { data: null, error: freezeError };
+      }
+
       const { data: organizerRow, error: organizerError } = await supabase
         .from('meetup_participants')
         .select('id, role')

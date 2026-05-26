@@ -29,8 +29,9 @@ import { Toast } from '@/shared/components/Toast';
 import { useParticipants } from '../hooks/useParticipants';
 import { ModifyAttendanceScreen } from './ModifyAttendanceScreen';
 import { getParticipantDisplayName } from '../utils/participantDisplay';
+import { meetupService } from '@/features/meetups/services/meetupService';
 import type { MeetupParticipant, AttendanceStatus } from '../types';
-import type { MainStackParamList } from '@/features/meetups/types';
+import type { MainStackParamList, MeetupStatus } from '@/features/meetups/types';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'ParticipantList'>;
 type RoutePropType = RouteProp<MainStackParamList, 'ParticipantList'>;
@@ -189,6 +190,7 @@ export const ParticipantListScreen = () => {
   const { meetupId } = route.params;
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [meetupStatus, setMeetupStatus] = useState<MeetupStatus | null>(null);
   const [attendanceModalTarget, setAttendanceModalTarget] =
     useState<AttendanceModalTarget | null>(null);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -220,11 +222,32 @@ export const ParticipantListScreen = () => {
     });
   }, []);
 
+  /**
+   * Carga el estado de la juntada para congelar acciones de asistencia
+   * cuando ya fue finalizada o cancelada.
+   */
+  useEffect(() => {
+    let mounted = true;
+
+    void meetupService.getMeetupById(meetupId).then(({ data }) => {
+      if (mounted) {
+        setMeetupStatus(data?.status ?? null);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [meetupId]);
+
   const currentParticipant = participants.find(
     (p) => p.userId === currentUserId,
   );
   const isOrganizer = currentParticipant?.role === 'organizer';
   const isParticipant = !!currentParticipant && !isOrganizer;
+  const canModifyAttendance = meetupStatus === 'active';
+  const isAttendanceFrozen =
+    meetupStatus === 'cancelled' || meetupStatus === 'finished';
   const currentAttendance =
     currentParticipant?.attendanceStatus ?? 'pending';
 
@@ -313,6 +336,7 @@ export const ParticipantListScreen = () => {
           renderItem={({ item }) => {
             const canEditAsOrganizer =
               isOrganizer &&
+              canModifyAttendance &&
               item.role !== 'organizer' &&
               item.userId !== currentUserId;
 
@@ -335,9 +359,13 @@ export const ParticipantListScreen = () => {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            isOrganizer ? (
+            isOrganizer && canModifyAttendance ? (
               <Text style={styles.organizerHint}>
                 Tocá un participante para modificar su asistencia
+              </Text>
+            ) : isAttendanceFrozen ? (
+              <Text style={styles.organizerHint}>
+                La asistencia quedó congelada porque la juntada ya no está activa
               </Text>
             ) : null
           }
@@ -351,7 +379,7 @@ export const ParticipantListScreen = () => {
         />
       )}
 
-      {isParticipant && (
+      {isParticipant && canModifyAttendance && (
         <View style={styles.footer}>
           <ModifyAttendanceLink
             align="stretch"
@@ -394,6 +422,10 @@ export const ParticipantListScreen = () => {
           }
         }}
         onSave={async (status) => {
+          if (!canModifyAttendance) {
+            throw new Error('La asistencia no puede modificarse porque la juntada ya no está activa');
+          }
+
           if (attendanceModalTarget?.mode === 'organizer') {
             const result = await updateParticipantAttendance(
               attendanceModalTarget.participant.userId,

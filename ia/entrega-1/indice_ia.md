@@ -85,6 +85,8 @@
 - **cursor-02** · Fix avatar en ParticipantListScreen (`profile.avatarUrl`) → [`prompts/bloque-debugging/cursor-02-participant-list-avatar.md`](prompts/bloque-debugging/cursor-02-participant-list-avatar.md)
 - **cursor-07** · Abandonar juntada, volver a unirse e historial restringido → [`prompts/bloque-debugging/cursor-07-fixes-participantes.md`](prompts/bloque-debugging/cursor-07-fixes-participantes.md)
 - **cursor-09** · Botón finalizar juntada en detalle → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-09-finalizar-juntada.md`](prompts/bloque-debugging/cursor-09-finalizar-juntada.md)
+- **cursor-10** · Color warning para finalizar juntada → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-10-finalizar-warning.md`](prompts/bloque-debugging/cursor-10-finalizar-warning.md)
+- **cursor-11** · Congelar asistencia en juntadas finalizadas o canceladas → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-11-congelar-asistencia.md`](prompts/bloque-debugging/cursor-11-congelar-asistencia.md)
 
 ---
 
