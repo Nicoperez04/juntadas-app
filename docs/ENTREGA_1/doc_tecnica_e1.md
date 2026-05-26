@@ -1,4 +1,4 @@
-# Documento Técnico - Date App - Entrega 1
+# Documento Técnico - Ronda App - Entrega 1
 **Grupo:** Egüen Agustina, Pascucci Agostina, Perez Nicolas, Smith Justina, Talavera Santiago 
 **Fecha de Actualización:** 23/05/2026 
 **Versión / Entrega:** Entrega 1 - MVP Básico
@@ -6,7 +6,7 @@
 ---
 ### Resumen de Decisiones Técnicas (Entrega 1)
 
-El proyecto **Date App** se sustenta en una arquitectura moderna y modular, priorizando el desarrollo ágil y la escalabilidad progresiva exigida para las próximas entregas. Las decisiones técnicas fundamentales se resumen a continuación:
+El proyecto **Ronda App** se sustenta en una arquitectura moderna y modular, priorizando el desarrollo ágil y la escalabilidad progresiva exigida para las próximas entregas. Las decisiones técnicas fundamentales se resumen a continuación:
 
 | Categoría | Decisión Técnica | Descripción |
 | :--- | :--- | :--- |
@@ -1106,7 +1106,7 @@ Información de la Entrega 1
 **Estructura sugerida del README**
 
 ```
-# DATE APP
+# Ronda APP
 
 ## Descripción
 

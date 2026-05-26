@@ -1,4 +1,4 @@
-# Documento de Alcance -- Date App 
+# Documento de Alcance -- Ronda App 
 
 **Grupo:** Egüen Agustina, Pascucci Agostina, Perez Nicolas, Smith Justina, Talavera Santiago
 
@@ -38,45 +38,51 @@ La elección de una aplicación móvil responde a la naturaleza del problema: la
 | **RF-02** | **Consultar Juntada** | La aplicación debe permitir visualizar el detalle de una juntada, incluyendo su información principal, participantes y contenido disponible. | E1 (MVP) |
 | **RF-03** | **Editar Juntada** | La aplicación debe permitir modificar los datos básicos de una juntada antes de su realización. | E1 (MVP) |
 | **RF-04** | **Cancelar Juntada** | La aplicación debe permitir al creador cancelar una juntada previamente creada. | E1 (MVP) |
+| **RF-05** | **Finalizar Juntada** | La aplicación debe permitir al organizador finalizar una juntada activa. Al finalizar, el evento pasa a estado "finalizada", se traslada al historial y se deshabilita la edición de datos y cambios de asistencia. | E1 (MVP) |
 
 #### Módulo 2 -- Participación en Juntadas
 
 | ID | Requisito Funcional | Descripción del Requerimiento | Entrega Objetivo |
 |----|----|----|----|
-| **RF-05** | **Unirse a juntada** | La aplicación debe permitir a un usuario incorporarse a una juntada existente mediante un mecanismo simple de acceso, como código o enlace. | E1 (MVP) |
-| **RF-06** | **Registrar asistencia** | La aplicación debe permitir a cada participante indicar su estado de asistencia a la juntada. | E1 (MVP) |
-| **RF-07** | **Modificar asistencia** | La aplicación debe permitir actualizar el estado de asistencia registrado previamente por un participante. | E1 (MVP) |
-| **RF-08** | **Visualizar participantes** | La aplicación debe permitir consultar la lista de participantes de una juntada junto con su estado de asistencia. | E1 (MVP) |
-| **RF-09** | **Abandonar juntada** | La aplicación debe permitir a un participante dejar de formar parte de una juntada a la que se había unido. | E1 (MVP) |
+| **RF-06** | **Unirse a juntada** | La aplicación debe permitir a un usuario incorporarse a una juntada existente mediante un mecanismo simple de acceso, como código o enlace. | E1 (MVP) |
+| **RF-07** | **Registrar asistencia** | La aplicación debe permitir a cada participante indicar su estado de asistencia a la juntada. | E1 (MVP) |
+| **RF-08** | **Modificar asistencia** | La aplicación debe permitir actualizar el estado de asistencia registrado previamente por un participante. El organizador de la juntada podrá modificar la asistencia de cualquiera de los participantes. | E1 (MVP) |
+| **RF-09** | **Visualizar participantes** | La aplicación debe permitir consultar la lista de participantes de una juntada junto con su estado de asistencia. | E1 (MVP) |
+| **RF-10** | **Abandonar juntada** | La aplicación debe permitir a un participante dejar de formar parte de una juntada a la que se había unido. | E1 (MVP) |
+| **RF-11** | **Reincorporacion por abandono** |  La aplicación debe permitir a un usuario volver a unirse mediante código de invitación a una juntada que había abandonado previamente, reactivando su participación activa. | E1 (MVP) |
 
 #### Módulo 3 -- Juego Integrado
 
 | ID | Requisito Funcional | Descripción del Requerimiento | Entrega Objetivo |
 |----|----|----|----|
-| **RF-10** | **Iniciar partida de Impostor** | La aplicación debe permitir a un usuario iniciar una partida del juego \"Impostor\" dentro del contexto de una juntada activa. | E1 (MVP) |
-| **RF-11** | **Asignar roles ocultos** | La aplicación debe asignar de forma aleatoria, individual y privada el rol de \"Impostor\" o \"Jugador Regular\" a cada participante. | E1 (MVP) |
-| **RF-12** | **Distribuir consigna de juego** | La aplicación debe revelar la palabra o consigna secreta a los jugadores regulares, mostrando una pantalla diferenciada (sin la palabra) al usuario con el rol de impostor. | E1 (MVP) |
+| **RF-12** | **Iniciar partida de Impostor** | La aplicación debe permitir a un usuario iniciar una partida del juego \"Impostor\" dentro del contexto de una juntada activa. | E1 (MVP) |
+| **RF-13** | **Asignar roles ocultos** | La aplicación debe asignar de forma aleatoria, individual y privada el rol de \"Impostor\" o \"Jugador Regular\" a cada participante. | E1 (MVP) |
+| **RF-14** | **Distribuir consigna de juego** | La aplicación debe revelar la palabra o consigna secreta a los jugadores regulares, mostrando una pantalla diferenciada (sin la palabra) al usuario con el rol de impostor. | E1 (MVP) |
+| **RF-15** | **Elegir categoría** | La aplicación debe permitir elegir una categoría de palabras para el juego Impostor. | E1 (MVP) |
+
 
 #### Módulo 4 -- Recuerdos compartidos
 
 | ID | Requisito Funcional | Descripción del Requerimiento | Entrega Objetivo |
 |----|----|----|----|
-| **RF-13** | **Cargar fotografías** | La aplicación debe permitir subir fotografías asociadas a una juntada determinada. | E1 (MVP) |
-| **RF-14** | **Visualizar galería de la juntada** | La aplicación debe permitir consultar una galería básica con las fotografías cargadas para una juntada. | E1 (MVP) |
-| **RF-15** | **Asociar contenido multimedia a la juntada** | La aplicación debe registrar cada fotografía cargada vinculándola con la juntada correspondiente y, cuando aplique, con el usuario que la subió. | E1 (MVP) |
+| **RF-16** | **Cargar fotografías** | La aplicación debe permitir subir fotografías asociadas a una juntada determinada. | E1 (MVP) |
+| **RF-17** | **Visualizar galería de la juntada** | La aplicación debe permitir consultar una galería básica con las fotografías cargadas para una juntada. | E1 (MVP) |
+| **RF-18** | **Asociar contenido multimedia a la juntada** | La aplicación debe registrar cada fotografía cargada vinculándola con la juntada correspondiente y, cuando aplique, con el usuario que la subió. | E1 (MVP) |
+| **RF-19** | **Eliminar fotografías** | La aplicación debe permitir a un participante eliminar las imágenes que él mismo haya cargado en la galería compartida de la juntada. | E1 (MVP) |
 
 #### Módulo 5 -- Historial
 
 | ID | Requisito Funcional | Descripción del Requerimiento | Entrega Objetivo |
 |----|----|----|----|
-| **RF-17** | **Consultar historial de juntadas** | La aplicación debe permitir al usuario visualizar un listado básico de juntadas creadas o en las que haya participado. | E1 (MVP) |
+| **RF-20** | **Consultar historial de juntadas** | La aplicación debe permitir al usuario visualizar un listado básico de juntadas creadas o en las que haya participado. | E1 (MVP) |
 
 #### Módulo 6 -- Usuarios
 
 | ID | Requisito Funcional | Descripción del Requerimiento | Entrega Objetivo |
 |----|----|----|----|
-| **RF-18** | **Gestionar información básica del usuario** | La aplicación debe permitir registrar y consultar la información básica de un usuario, incluyendo al menos su nombre visible y los datos mínimos necesarios para identificarlo dentro de la plataforma. | E1 (MVP) |
-| **RF-19** | **Distinguir roles básicos de usuario** | La aplicación debe distinguir, al menos, entre el usuario organizador de una juntada y los usuarios participantes, habilitando acciones acordes a cada rol dentro de la primera etapa del sistema. | E1 (MVP) |
+| **RF-21** | **Gestionar información básica del usuario** | La aplicación debe permitir registrar y consultar la información básica de un usuario, incluyendo al menos su nombre visible y los datos mínimos necesarios para identificarlo dentro de la plataforma. | E1 (MVP) |
+| **RF-22** | **Distinguir roles básicos de usuario** | La aplicación debe distinguir, al menos, entre el usuario organizador de una juntada y los usuarios participantes, habilitando acciones acordes a cada rol dentro de la primera etapa del sistema. | E1 (MVP) |
+| **RF-23** | **Autenticación básica de usuarios** | La aplicación debe permitir el registro, inicio y persistencia de sesión de los usuarios de forma segura. | E1 (MVP) |
 
 **Backlog**
 
@@ -86,12 +92,11 @@ En la segunda entrega se prevé ampliar el dominio en su dimensión horizontal, 
 
 | ID | Requisito Funcional | Descripción del Requerimiento | Entrega Objetivo |
 |----|----|----|----|
-| **RF-20** | **Autenticación de usuarios** | La aplicación debe permitir el registro, inicio y persistencia de sesión de los usuarios de forma segura. | E2 |
-| **RF-21** | **Gestión de multiples eventos** | La aplicación debe permitir a un usuario crear, editar, eliminar y visualizar simultáneamente múltiples juntadas (activas, futuras o pasadas). | E2 |
-| **RF-22** | **Catálogo de dinámicas sociales** | La aplicación debe permitir seleccionar e instanciar diferentes tipos de juegos (ej. anotador de Truco, anotador de Generala) desde un catálogo interno durante la ejecución de una juntada. | E2 |
-| **RF-23** | **Gestión de galería compartida** | La aplicación debe permitir a los asistentes de una juntada cargar, visualizar y eliminar elementos multimedia (fotos/videos) en un álbum colaborativo exclusivo de ese evento. | E2 |
-| **RF-24** | **Control de asistencia y accesos** | La aplicación debe validar el ingreso a una juntada mediante mecanismos de invitación (códigos o enlaces), gestionando el estado de los asistentes y previniendo duplicidades o accesos no autorizados | E2 |
-| **RF-25** | **Historial detallado de juntadas** | La aplicación debe proveer a cada usuario un registro histórico de sus eventos pasados, incluyendo estadísticas de los juegos realizados y acceso directo al contenido multimedia archivado. | E2 |
+| **RF-24** | **Gestión de multiples eventos** | La aplicación debe permitir a un usuario crear, editar, eliminar y visualizar simultáneamente múltiples juntadas (activas, futuras o pasadas). | E2 |
+| **RF-25** | **Catálogo de dinámicas sociales** | La aplicación debe permitir seleccionar e instanciar diferentes tipos de juegos (ej. anotador de Truco, anotador de Generala) desde un catálogo interno durante la ejecución de una juntada. | E2 |
+| **RF-26** | **Gestión de galería compartida** | La aplicación debe permitir a los asistentes de una juntada cargar, visualizar y eliminar elementos multimedia (fotos/videos) en un álbum colaborativo exclusivo de ese evento. | E2 |
+| **RF-27** | **Control de asistencia y accesos** | La aplicación debe validar el ingreso a una juntada mediante mecanismos de invitación (códigos o enlaces), gestionando el estado de los asistentes y previniendo duplicidades o accesos no autorizados | E2 |
+| **RF-28** | **Historial detallado de juntadas** | La aplicación debe proveer a cada usuario un registro histórico de sus eventos pasados, incluyendo estadísticas de los juegos realizados y acceso directo al contenido multimedia archivado. | E2 |
 
 #### Backlog para Entrega 3: Producto Final
 
@@ -99,11 +104,11 @@ En la tercera entrega se prevé expandir el producto en su dimensión vertical, 
 
 | ID | Requisito Funcional | Descripción del Requerimiento | Entrega Objetivo |
 |----|----|----|----|
-| **RF-30** | **Gestión de Grupos/Comunidades** | La aplicación debe permitir la creación de \"Grupos\" estables, funcionando como una entidad jerárquica superior que contenga y organice múltiples juntadas recurrentes | E3 |
-| **RF-31** | **Control de acceso basado en roles** | La aplicación debe asignar permisos diferenciados a los usuarios según su nivel de autoridad dentro de un grupo o juntada (ej. Administrador, Moderador, Miembro, Invitado). | E3 |
-| **RF-32** | **Moderación administrativa** | La aplicación debe permitir a los administradores gestionar los miembros de un grupo, cancelar juntadas y auditar o eliminar contenido multimedia que incumpla las normas. | E3 |
-| **RF-33** | **Consolidación multimedia grupal** | La aplicación debe proveer una vista unificada que agrupe y permita gestionar todos los recuerdos y álbumes de las distintas juntadas pertenecientes a un mismo Grupo. | E3 |
-| **RF-34** | **Panel de actividad grupal** | La aplicación debe mostrar un resumen consolidado a nivel de Grupo, destacando el historial de eventos, próximas juntadas programadas y la información general de la comunidad. | E3 |
+| **RF-29** | **Gestión de Grupos/Comunidades** | La aplicación debe permitir la creación de \"Grupos\" estables, funcionando como una entidad jerárquica superior que contenga y organice múltiples juntadas recurrentes | E3 |
+| **RF-30** | **Control de acceso basado en roles** | La aplicación debe asignar permisos diferenciados a los usuarios según su nivel de autoridad dentro de un grupo o juntada (ej. Administrador, Moderador, Miembro, Invitado). | E3 |
+| **RF-31** | **Moderación administrativa** | La aplicación debe permitir a los administradores gestionar los miembros de un grupo, cancelar juntadas y auditar o eliminar contenido multimedia que incumpla las normas. | E3 |
+| **RF-32** | **Consolidación multimedia grupal** | La aplicación debe proveer una vista unificada que agrupe y permita gestionar todos los recuerdos y álbumes de las distintas juntadas pertenecientes a un mismo Grupo. | E3 |
+| **RF-33** | **Panel de actividad grupal** | La aplicación debe mostrar un resumen consolidado a nivel de Grupo, destacando el historial de eventos, próximas juntadas programadas y la información general de la comunidad. | E3 |
 
 ## 3. Requerimientos No Funcionales (RNF) 
 

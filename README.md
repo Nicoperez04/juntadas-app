@@ -1,7 +1,9 @@
-# 🍻 Juntadas App
+# 🍻 Ronda App
 
 Aplicación móvil para organizar juntadas entre amigos. 
 **Trabajo Integrador 2026 - Entrega 1 (MVP Básico)**
+
+   
 
 ## 🚀 Tecnologías Principales
 - **Framework:** React Native + Expo (SDK 55)
@@ -63,6 +65,7 @@ El proyecto implementa una arquitectura modular segmentada por características 
 - `src/features/`: Encapsulamiento modular del negocio:
   - `auth/`: Registro, inicio de sesión y perfiles.
   - `meetups/`: Flujo de creación, edición e historial de juntadas.
+  - `memories/`: Módulo para guardar recuerdos de las juntadas
   - `participants/`: Listados y control de estados de asistencia.
   - `impostor/`: Lógica del juego offline administrada mediante estados de Zustand.
 
