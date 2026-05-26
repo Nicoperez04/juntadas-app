@@ -28,7 +28,8 @@
     "chatgpt": {
       "description": "ChatGPT / Codex usado para correcciones y auditoria de documentacion IA",
       "conversation_files": [
-        "conversaciones/bloque-debugging/claude-bloque-debugging-completo.md"
+        "conversaciones/bloque-debugging/claude-bloque-debugging-completo.md",
+        "conversaciones/bloque-7/cursor-bloque-7-completo.md"
       ]
     }
   },
@@ -134,6 +135,13 @@
       "provider": "chatgpt-codex",
       "block": "bloque-debugging",
       "conversation_file": "conversaciones/bloque-debugging/claude-bloque-debugging-completo.md",
+      "status": "documented",
+      "source": "manual-consolidation"
+    },
+    "chatgpt-codex-bloque-7-marca": {
+      "provider": "chatgpt-codex",
+      "block": "bloque-7",
+      "conversation_file": "conversaciones/bloque-7/cursor-bloque-7-completo.md",
       "status": "documented",
       "source": "manual-consolidation"
     }

@@ -61,6 +61,11 @@
 - **26** · Implementación del perfil de usuario (ProfileScreen, avatar, estadísticas, logout) → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/cursor-01-perfil-implementacion.md`](prompts/bloque-6/cursor-01-perfil-implementacion.md)
 - **Documentación** · Cierre del Bloque 6 → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/cursor-02-documentar-bloque-6.md`](prompts/bloque-6/cursor-02-documentar-bloque-6.md)
 
+### Bloque 7 — Marca (26/05/2026)
+
+- **32** · Reemplazo de icono por logo oficial (`logo-nobg.png`) → [`conversaciones/bloque-7/cursor-bloque-7-completo.md`](conversaciones/bloque-7/cursor-bloque-7-completo.md) · [`prompts/bloque-7/cursor-01-logo-app.md`](prompts/bloque-7/cursor-01-logo-app.md)
+- **33** · Logo en heading de home y cambio de nombre a Ronda App → [`conversaciones/bloque-7/cursor-bloque-7-completo.md`](conversaciones/bloque-7/cursor-bloque-7-completo.md) · [`prompts/bloque-7/cursor-02-home-logo-app-name.md`](prompts/bloque-7/cursor-02-home-logo-app-name.md)
+
 ### Fixes participantes y UX — Cursor (25/05/2026)
 
 - **27** · Ajustes de participantes, footer y toast de asistencia → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-02-participant-list-avatar.md`](prompts/bloque-debugging/cursor-02-participant-list-avatar.md)
@@ -110,6 +115,7 @@ El script lee los JSONL en `.cursor/projects/.../agent-transcripts/` y actualiza
 - `conversaciones/bloque-4/cursor-bloque-4-completo.md`
 - `conversaciones/bloque-5/cursor-bloque-5-completo.md`
 - `conversaciones/bloque-6/cursor-bloque-6-completo.md` *(pendiente de agregar al script)*
+- `conversaciones/bloque-7/cursor-bloque-7-completo.md` *(documentación manual de marca)*
 
 Cada sesión incluye el **prompt completo** (archivo guardado + mensaje enviado en chat) y la **respuesta final completa** del agente (sin tool calls).
 

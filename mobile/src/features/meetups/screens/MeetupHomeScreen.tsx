@@ -44,6 +44,8 @@ const AVATAR_PALETTE = [
   '#D97706',
 ];
 
+const appLogo = require('../../../../assets/logo-nobg.png');
+
 /**
  * Genera un índice de color determinístico a partir de un string.
  * Garantiza que el mismo string siempre produzca el mismo color de avatar.
@@ -349,7 +351,14 @@ export const MeetupHomeScreen = () => {
         <View style={styles.header}>
           <View>
             <Text style={styles.headerSubtitle}>Bienvenido</Text>
-            <Text style={styles.headerTitle}>Mis juntadas</Text>
+            <View style={styles.headerTitleRow}>
+              <Image
+                source={appLogo}
+                style={styles.headerLogo}
+                resizeMode="contain"
+              />
+              <Text style={styles.headerTitle}>Mis juntadas</Text>
+            </View>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -551,7 +560,16 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.xl,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.textPrimary,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
     marginTop: 2,
+  },
+  headerLogo: {
+    width: 30,
+    height: 30,
   },
   headerRight: {
     flexDirection: 'row',
