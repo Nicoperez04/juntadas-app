@@ -191,6 +191,26 @@ export const useMeetups = () => {
   );
 
   /**
+   * Finaliza una juntada activa. Solo el organizador puede ejecutar esta acción.
+   *
+   * @param meetupId - UUID de la juntada a finalizar
+   * @returns La juntada finalizada o mensaje de error
+   */
+  const finishMeetup = useCallback(
+    async (meetupId: string): Promise<OperationResult<Meetup>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      const result = await meetupService.finishMeetup(meetupId, userId);
+      if (!result.error) {
+        await loadMeetups(userId);
+      }
+      return result;
+    },
+    [userId, loadMeetups],
+  );
+
+  /**
    * Edita los campos de una juntada activa. Solo el organizador puede editar.
    *
    * @param meetupId - UUID de la juntada
@@ -238,6 +258,7 @@ export const useMeetups = () => {
     getMeetupById,
     getMeetupParticipants,
     cancelMeetup,
+    finishMeetup,
     editMeetup,
     getFinishedMeetups,
     refresh,

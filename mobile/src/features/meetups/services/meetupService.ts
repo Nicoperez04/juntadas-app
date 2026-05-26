@@ -607,6 +607,61 @@ export const meetupService = {
   },
 
   /**
+   * Finaliza una juntada activa. Solo el organizador puede ejecutar esta acción.
+   * Setea status = 'finished' para moverla al historial sin marcarla como cancelada.
+   *
+   * @param meetupId - UUID de la juntada
+   * @param userId - UUID del usuario que intenta finalizar
+   * @returns La juntada finalizada o mensaje de error
+   */
+  async finishMeetup(
+    meetupId: string,
+    userId: string,
+  ): Promise<ServiceResult<Meetup>> {
+    try {
+      const { data: meetup, error: fetchError } = await supabase
+        .from('meetups')
+        .select('*')
+        .eq('id', meetupId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!meetup) {
+        return { data: null, error: 'Juntada no encontrada' };
+      }
+      if (meetup.created_by !== userId) {
+        return {
+          data: null,
+          error: 'Solo el organizador puede finalizar la juntada',
+        };
+      }
+      if (meetup.status === 'cancelled') {
+        return { data: null, error: 'No se puede finalizar una juntada cancelada' };
+      }
+      if (meetup.status === 'finished') {
+        return { data: null, error: 'La juntada ya está finalizada' };
+      }
+
+      const { data: updated, error: updateError } = await supabase
+        .from('meetups')
+        .update({ status: 'finished' })
+        .eq('id', meetupId)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      return { data: mapMeetupRow(updated as MeetupRow), error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return {
+        data: null,
+        error: translateError(message) || 'Error al finalizar la juntada',
+      };
+    }
+  },
+
+  /**
    * Edita los campos modificables de una juntada activa.
    * Solo el organizador puede editar y una juntada cancelada no es editable.
    *

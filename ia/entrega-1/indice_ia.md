@@ -84,6 +84,7 @@
 - **cursor-01** · Fixes UX: footer parpadeante, avatares en MeetupDetailScreen y toast de asistencia → [`conversaciones/2026-05-25_21-19-18Z-ux-fixes-for-footer,-avatars,-and-attendance-toast.md`](conversaciones/2026-05-25_21-19-18Z-ux-fixes-for-footer,-avatars,-and-attendance-toast.md)
 - **cursor-02** · Fix avatar en ParticipantListScreen (`profile.avatarUrl`) → [`prompts/bloque-debugging/cursor-02-participant-list-avatar.md`](prompts/bloque-debugging/cursor-02-participant-list-avatar.md)
 - **cursor-07** · Abandonar juntada, volver a unirse e historial restringido → [`prompts/bloque-debugging/cursor-07-fixes-participantes.md`](prompts/bloque-debugging/cursor-07-fixes-participantes.md)
+- **cursor-09** · Botón finalizar juntada en detalle → [`conversaciones/bloque-debugging/claude-bloque-debugging-completo.md`](conversaciones/bloque-debugging/claude-bloque-debugging-completo.md) · [`prompts/bloque-debugging/cursor-09-finalizar-juntada.md`](prompts/bloque-debugging/cursor-09-finalizar-juntada.md)
 
 ---
 

@@ -1070,3 +1070,33 @@ Ninguno relacionado a este bug.
 - Botón "Abandonar juntada" agregado en MeetupDetailScreen para participantes
 - joinMeetup actualizado para permitir volver a unirse si left_at IS NOT NULL
 - Historial: badge "Abandonada" + acceso restringido en detalle si el usuario abandonó
+
+---
+
+## Sesión adicional — cursor-09: Botón finalizar juntada
+
+### Prompt
+
+En el detalle de una juntada, refiriéndose a las acciones sobre una juntada, se puede solo cancelar la juntada. Tenemos que agregar un botón para finalizar la juntada.
+
+Poner el botón con los mismos estilos que el botón de cancelar, pero por encima de este.
+
+Este prompt va a `bloque-debugging`. Mirar lo que hay para respetar el formato.
+
+### Respuesta
+
+Se agregó la acción de finalizar juntada para organizadores en juntadas activas.
+
+### Cambios aplicados
+
+- `meetupService.finishMeetup(meetupId, userId)` valida que el usuario sea organizador, rechaza juntadas canceladas o ya finalizadas y actualiza `status` a `finished`.
+- `useMeetups` expone `finishMeetup` y refresca la lista al finalizar correctamente.
+- `MeetupDetailScreen` agrega estado de finalización, botón "Finalizar juntada" encima de "Cancelar juntada" con los mismos estilos, modal de confirmación y toast de éxito/error.
+
+### Archivos modificados
+
+- `mobile/src/features/meetups/services/meetupService.ts`
+- `mobile/src/features/meetups/hooks/useMeetups.ts`
+- `mobile/src/features/meetups/screens/MeetupDetailScreen.tsx`
+- `ia/entrega-1/prompts/bloque-debugging/cursor-09-finalizar-juntada.md`
+- `ia/entrega-1/indice_ia.md`

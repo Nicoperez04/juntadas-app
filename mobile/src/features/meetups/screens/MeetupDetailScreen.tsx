@@ -258,7 +258,7 @@ export const MeetupDetailScreen = () => {
   const route = useRoute<RoutePropType>();
   const { meetupId } = route.params;
 
-  const { getMeetupById, cancelMeetup } = useMeetups();
+  const { getMeetupById, cancelMeetup, finishMeetup } = useMeetups();
 
   const [meetup, setMeetup] = useState<Meetup | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -266,6 +266,8 @@ export const MeetupDetailScreen = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [attendanceModalTarget, setAttendanceModalTarget] =
     useState<AttendanceModalTarget | null>(null);
+  const [isFinishing, setIsFinishing] = useState(false);
+  const [showFinishModal, setShowFinishModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -456,6 +458,25 @@ export const MeetupDetailScreen = () => {
     await loadData();
     await refreshParticipants();
     setToast({ message: 'Juntada cancelada', type: 'success' });
+  };
+
+  /**
+   * Ejecuta la finalización de la juntada tras confirmación en el modal.
+   */
+  const confirmFinishMeetup = async () => {
+    setIsFinishing(true);
+    const result = await finishMeetup(meetupId);
+    setIsFinishing(false);
+    setShowFinishModal(false);
+
+    if (result.error) {
+      setToast({ message: result.error, type: 'error' });
+      return;
+    }
+
+    await loadData();
+    await refreshParticipants();
+    setToast({ message: 'Juntada finalizada', type: 'success' });
   };
 
   /**
@@ -823,6 +844,31 @@ export const MeetupDetailScreen = () => {
           </View>
         )}
 
+        {/* Finalizar juntada — solo organizador en juntadas activas */}
+        {isOrganizer && isActive && (
+          <View style={styles.cancelSection}>
+            <TouchableOpacity
+              style={[styles.finishBtn, isFinishing && styles.cancelBtnDisabled]}
+              onPress={() => setShowFinishModal(true)}
+              disabled={isFinishing}
+              activeOpacity={0.8}
+            >
+              {isFinishing ? (
+                <ActivityIndicator color={theme.colors.warning} />
+              ) : (
+                <>
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={18}
+                    color={theme.colors.warning}
+                  />
+                  <Text style={styles.finishBtnText}>Finalizar juntada</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Cancelar juntada — solo organizador en juntadas activas */}
         {isOrganizer && isActive && (
           <View style={styles.cancelSection}>
@@ -899,6 +945,56 @@ export const MeetupDetailScreen = () => {
           pendingToastRef.current = '✓ Asistencia actualizada';
         }}
       />
+
+      {/* Modal de confirmación para finalizar juntada */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showFinishModal}
+        onRequestClose={() => !isFinishing && setShowFinishModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconBox}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={32}
+                color={theme.colors.warning}
+              />
+            </View>
+            <Text style={styles.modalTitle}>Finalizar juntada</Text>
+            <Text style={styles.modalSubtitle}>
+              La juntada pasará al historial y ya no se podrán editar sus datos
+              ni modificar acciones de organización.
+            </Text>
+            <View style={styles.modalActions}>
+              <AppButton
+                label="No, volver"
+                variant="ghost"
+                onPress={() => setShowFinishModal(false)}
+                disabled={isFinishing}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.modalWarningBtn,
+                  isFinishing && styles.modalDestructiveBtnDisabled,
+                ]}
+                onPress={confirmFinishMeetup}
+                disabled={isFinishing}
+                activeOpacity={0.8}
+              >
+                {isFinishing ? (
+                  <ActivityIndicator color={theme.colors.surface} />
+                ) : (
+                  <Text style={styles.modalWarningBtnText}>
+                    Sí, finalizar
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal de confirmación para cancelar juntada */}
       <Modal
@@ -1369,6 +1465,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.error,
   },
+  finishBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.warningLight,
+    borderRadius: theme.radius.lg,
+    paddingVertical: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.warning,
+  },
   cancelBtnDisabled: {
     opacity: 0.6,
   },
@@ -1376,6 +1483,11 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.error,
+  },
+  finishBtnText: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.warning,
   },
   shareCard: {
     backgroundColor: theme.colors.surface,
@@ -1495,10 +1607,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
   },
+  modalWarningBtn: {
+    height: theme.components.buttonHeight,
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.warning,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
   modalDestructiveBtnDisabled: {
     opacity: 0.6,
   },
   modalDestructiveBtnText: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.surface,
+  },
+  modalWarningBtnText: {
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.surface,
