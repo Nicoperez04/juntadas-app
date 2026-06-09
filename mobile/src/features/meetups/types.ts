@@ -40,6 +40,8 @@ export interface Meetup {
   updatedAt: string;
   /** Fecha de cancelación; null si la juntada está activa o terminó normalmente */
   cancelledAt: string | null;
+  /** URL pública de la foto de portada; null o undefined si no tiene portada */
+  cover_url?: string | null;
 }
 
 /**

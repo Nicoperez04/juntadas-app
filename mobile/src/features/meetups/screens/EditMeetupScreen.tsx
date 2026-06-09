@@ -16,6 +16,7 @@ import {
   Platform,
   TextInput,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,13 +24,19 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
 import { Toast } from '@/shared/components/Toast';
-import { useMeetups } from '../hooks/useMeetups';
+import { triggerSuccessHaptic } from '@/shared/utils/haptics';
+import {
+  useMeetups,
+  useUploadMeetupCover,
+  useRemoveMeetupCover,
+} from '../hooks/useMeetups';
 import { createMeetupSchema } from '../schemas/meetupSchemas';
 import { formatDateForDisplay } from '../services/meetupService';
 import type { CreateMeetupFormData } from '../types';
@@ -104,6 +111,141 @@ const FieldInput = ({
   </View>
 );
 
+// ─── CoverPickerSection (portada opcional de la juntada) ─────────────────────
+// Mismo componente visual que en CreateMeetupScreen para mantener
+// consistencia entre crear y editar (patrón existente de FieldInput).
+
+/**
+ * Sección de selección de foto de portada (opcional).
+ * Sin portada muestra un área punteada que abre la galería; con portada
+ * muestra el preview con overlay y botones para cambiarla o quitarla.
+ * Componente presentacional: la lógica de ImagePicker vive en la pantalla.
+ */
+interface CoverPickerSectionProps {
+  /** URI de la imagen a previsualizar (local o remota); null si no hay portada */
+  coverUri: string | null;
+  /** Abre el selector de imagen de la galería */
+  onPick: () => void;
+  /** Quita la portada seleccionada */
+  onRemove: () => void;
+  /** Mensaje de error de permisos o selección; null si no hay error */
+  error: string | null;
+}
+
+const CoverPickerSection = ({
+  coverUri,
+  onPick,
+  onRemove,
+  error,
+}: CoverPickerSectionProps) => (
+  <View style={coverStyles.wrapper}>
+    {coverUri ? (
+      <View style={coverStyles.previewBox}>
+        <Image
+          source={{ uri: coverUri }}
+          style={coverStyles.previewImage}
+          resizeMode="cover"
+        />
+        {/* Overlay semitransparente para dar contraste a los botones */}
+        <View style={coverStyles.previewOverlay} />
+        <View style={coverStyles.previewActions}>
+          <TouchableOpacity
+            style={coverStyles.previewActionBtn}
+            onPress={onPick}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Cambiar foto de portada"
+          >
+            <Ionicons
+              name="camera-outline"
+              size={18}
+              color={theme.colors.textPrimary}
+            />
+            <Text style={coverStyles.previewActionText}>Cambiar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={coverStyles.previewActionBtn}
+            onPress={onRemove}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Quitar foto de portada"
+          >
+            <Ionicons
+              name="trash-outline"
+              size={18}
+              color={theme.colors.error}
+            />
+            <Text style={[coverStyles.previewActionText, coverStyles.previewActionTextDanger]}>
+              Quitar
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    ) : (
+      <TouchableOpacity
+        style={coverStyles.emptyBox}
+        onPress={onPick}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Agregar foto de portada"
+      >
+        <Ionicons
+          name="camera-outline"
+          size={32}
+          color={theme.colors.textSecondary}
+        />
+        <Text style={coverStyles.emptyText}>Agregar portada (opcional)</Text>
+      </TouchableOpacity>
+    )}
+    {error ? <Text style={coverStyles.errorText}>{error}</Text> : null}
+  </View>
+);
+
+/**
+ * Abre la galería con las opciones acordadas para portadas
+ * (solo imágenes, recorte 16:9, calidad 0.8) y retorna la URI elegida.
+ *
+ * @returns URI local de la imagen o null si se canceló o faltan permisos
+ */
+const pickCoverFromGallery = async (): Promise<
+  { uri: string } | { permissionDenied: true } | null
+> => {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) {
+    return { permissionDenied: true };
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    // El recorte con aspect solo aplica con allowsEditing en Android;
+    // en iOS el usuario recorta libre pero la UI muestra siempre 16:9
+    allowsEditing: true,
+    aspect: [16, 9],
+    quality: 0.8,
+  });
+
+  if (result.canceled || result.assets.length === 0) {
+    return null;
+  }
+
+  return { uri: result.assets[0].uri };
+};
+
+/**
+ * Extrae la ruta del archivo dentro del bucket a partir de la URL pública.
+ * La URL pública tiene el formato .../object/public/meetup-covers/{path};
+ * removeMeetupCover necesita ese {path} para borrar el archivo.
+ *
+ * @param coverUrl - URL pública almacenada en cover_url
+ * @returns Ruta relativa dentro del bucket o null si el formato no coincide
+ */
+const getCoverFilePath = (coverUrl: string): string | null => {
+  const marker = '/meetup-covers/';
+  const index = coverUrl.indexOf(marker);
+  if (index === -1) return null;
+  return coverUrl.substring(index + marker.length);
+};
+
 /**
  * Convierte una fecha DD/MM/YYYY o YYYY-MM-DD a objeto Date.
  *
@@ -150,6 +292,8 @@ export const EditMeetupScreen = () => {
   const { meetupId } = route.params;
 
   const { getMeetupById, editMeetup } = useMeetups();
+  const uploadCoverMutation = useUploadMeetupCover();
+  const removeCoverMutation = useRemoveMeetupCover();
 
   const [isLoadingMeetup, setIsLoadingMeetup] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -159,6 +303,16 @@ export const EditMeetupScreen = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<Date>(new Date());
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [successToastMessage, setSuccessToastMessage] =
+    useState('✓ Juntada actualizada');
+
+  // Estado de la portada: la URL actual viene de la DB; la URI nueva es
+  // local hasta que se guarde; coverRemoved marca que el usuario la quitó.
+  // No forma parte del schema de Zod a propósito.
+  const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(null);
+  const [newCoverUri, setNewCoverUri] = useState<string | null>(null);
+  const [coverRemoved, setCoverRemoved] = useState(false);
+  const [coverError, setCoverError] = useState<string | null>(null);
 
   const {
     control,
@@ -216,6 +370,12 @@ export const EditMeetupScreen = () => {
 
     setSelectedDate(parseDateString(displayDate));
     setSelectedTime(parseTimeString(formTime));
+
+    // Pre-cargar la portada actual y limpiar selecciones locales previas
+    setExistingCoverUrl(data.cover_url ?? null);
+    setNewCoverUri(null);
+    setCoverRemoved(false);
+
     setIsLoadingMeetup(false);
   }, [meetupId, getMeetupById, navigation, reset]);
 
@@ -244,6 +404,65 @@ export const EditMeetupScreen = () => {
     }
   };
 
+  /**
+   * Abre la galería y guarda la URI elegida para el preview.
+   * Elegir una foto nueva anula un "quitar" previo en la misma sesión.
+   */
+  const handlePickCover = async () => {
+    setCoverError(null);
+    const result = await pickCoverFromGallery();
+    if (result === null) return;
+    if ('permissionDenied' in result) {
+      setCoverError('Necesitamos acceso a tu galería para elegir la portada');
+      return;
+    }
+    setNewCoverUri(result.uri);
+    setCoverRemoved(false);
+  };
+
+  /**
+   * Quita la portada del preview. El borrado real en Storage/DB
+   * se ejecuta recién al guardar los cambios.
+   */
+  const handleRemoveCover = () => {
+    setNewCoverUri(null);
+    setCoverRemoved(true);
+  };
+
+  // URI que se muestra en el preview: prioriza la foto nueva local,
+  // luego la portada existente salvo que el usuario la haya quitado
+  const displayCoverUri = newCoverUri ?? (coverRemoved ? null : existingCoverUrl);
+
+  /**
+   * Aplica los cambios de portada pendientes después de guardar el formulario.
+   * Sube la foto nueva o elimina la actual según lo que haya hecho el usuario.
+   *
+   * @returns Mensaje de error si alguna operación falló; null si todo salió bien
+   */
+  const applyCoverChanges = async (): Promise<string | null> => {
+    if (newCoverUri) {
+      const result = await uploadCoverMutation.mutateAsync({
+        meetupId,
+        fileUri: newCoverUri,
+      });
+      return result.error;
+    }
+
+    if (coverRemoved && existingCoverUrl) {
+      const filePath = getCoverFilePath(existingCoverUrl);
+      if (!filePath) {
+        return 'No se pudo determinar el archivo de portada a eliminar';
+      }
+      const result = await removeCoverMutation.mutateAsync({
+        meetupId,
+        filePath,
+      });
+      return result.error;
+    }
+
+    return null;
+  };
+
   const onSubmit = async (data: CreateMeetupFormData) => {
     setSubmitError(null);
     const result = await editMeetup(meetupId, {
@@ -260,7 +479,24 @@ export const EditMeetupScreen = () => {
       return;
     }
 
-    // Mostramos el toast antes de volver para que el usuario vea la confirmación
+    // Los cambios de portada se aplican después del formulario; si fallan,
+    // los datos ya quedaron guardados y el usuario puede reintentar la foto
+    const coverChangeError = await applyCoverChanges();
+    if (coverChangeError) {
+      setSubmitError(coverChangeError);
+      return;
+    }
+
+    // Mensaje de éxito según la operación de portada realizada, si hubo alguna
+    let toastMessage = '✓ Juntada actualizada';
+    if (newCoverUri) {
+      toastMessage = '✓ Portada actualizada';
+    } else if (coverRemoved && existingCoverUrl) {
+      toastMessage = '✓ Portada eliminada';
+    }
+
+    void triggerSuccessHaptic();
+    setSuccessToastMessage(toastMessage);
     setShowSuccessToast(true);
   };
 
@@ -318,6 +554,14 @@ export const EditMeetupScreen = () => {
             Modificá los datos de tu juntada. Los cambios se aplican de inmediato
             para todos los participantes.
           </Text>
+
+          {/* Portada — muestra la actual, la nueva elegida o el área vacía */}
+          <CoverPickerSection
+            coverUri={displayCoverUri}
+            onPick={() => void handlePickCover()}
+            onRemove={handleRemoveCover}
+            error={coverError}
+          />
 
           <Controller
             control={control}
@@ -477,7 +721,7 @@ export const EditMeetupScreen = () => {
       </KeyboardAvoidingView>
 
       <Toast
-        message="✓ Juntada actualizada"
+        message={successToastMessage}
         type="success"
         visible={showSuccessToast}
         onHide={() => {
@@ -488,6 +732,73 @@ export const EditMeetupScreen = () => {
     </SafeAreaView>
   );
 };
+
+const coverStyles = StyleSheet.create({
+  wrapper: {
+    marginBottom: theme.spacing.md,
+  },
+  emptyBox: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: theme.radius.lg,
+    borderWidth: theme.components.inputBorderWidth,
+    borderStyle: 'dashed',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+  },
+  emptyText: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.textSecondary,
+  },
+  previewBox: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: theme.radius.lg,
+    overflow: 'hidden',
+    backgroundColor: theme.colors.border,
+  },
+  previewImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  previewOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+  },
+  previewActions: {
+    position: 'absolute',
+    right: theme.spacing.sm,
+    bottom: theme.spacing.sm,
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  previewActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.full,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    ...theme.shadows.sm,
+  },
+  previewActionText: {
+    fontSize: theme.typography.sizes.xs,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textPrimary,
+  },
+  previewActionTextDanger: {
+    color: theme.colors.error,
+  },
+  errorText: {
+    marginTop: theme.spacing.xs,
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.error,
+  },
+});
 
 const fieldStyles = StyleSheet.create({
   wrapper: {

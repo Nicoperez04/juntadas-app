@@ -45,6 +45,8 @@ interface MeetupRow {
   created_at: string;
   updated_at: string;
   cancelled_at: string | null;
+  /** URL pública de la portada; null si la juntada no tiene foto */
+  cover_url: string | null;
 }
 
 /** Estructura de una fila de meetup_participants tal como la retorna Supabase */
@@ -83,6 +85,9 @@ interface AttendanceCountRow {
   meetup_id: string;
   attendance_status: string;
 }
+
+/** Nombre del bucket de Storage donde se guardan las portadas de juntadas */
+const COVERS_BUCKET = 'meetup-covers';
 
 /** Caracteres válidos para generar el código de juntada */
 const JOIN_CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -139,6 +144,8 @@ const mapMeetupRow = (row: MeetupRow): Meetup => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   cancelledAt: row.cancelled_at,
+  // Se mantiene snake_case según el contrato definido para este campo
+  cover_url: row.cover_url ?? null,
 });
 
 /**
@@ -814,6 +821,174 @@ export const meetupService = {
       return {
         data: null,
         error: translateError(message) || 'Error al obtener el historial',
+      };
+    }
+  },
+
+  /**
+   * Sube la foto de portada de una juntada al bucket 'meetup-covers' y
+   * actualiza cover_url en la tabla meetups con la URL pública resultante.
+   *
+   * El path sigue la convención {meetupId}/{userId}/{timestamp}.jpg que
+   * esperan las políticas RLS del bucket (solo el organizador puede subir).
+   * Si falla la actualización de la tabla, se elimina el archivo recién
+   * subido para no dejar huérfanos en Storage.
+   *
+   * @param meetupId - UUID de la juntada
+   * @param fileUri - URI local de la imagen seleccionada con ImagePicker
+   * @param userId - UUID del organizador autenticado
+   * @returns La URL pública de la portada o mensaje de error
+   */
+  async uploadMeetupCover(
+    meetupId: string,
+    fileUri: string,
+    userId: string,
+  ): Promise<ServiceResult<string>> {
+    try {
+      // fetch sobre la URI local convierte la imagen en bytes subibles,
+      // mismo patrón que usa memoriesService para los recuerdos
+      const response = await fetch(fileUri);
+      const arrayBuffer = await response.arrayBuffer();
+      const filePath = `${meetupId}/${userId}/${Date.now()}.jpg`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(COVERS_BUCKET)
+        .upload(filePath, arrayBuffer, {
+          contentType: 'image/jpeg',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        return { data: null, error: 'No se pudo subir la portada' };
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from(COVERS_BUCKET)
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('meetups')
+        .update({ cover_url: publicUrlData.publicUrl })
+        .eq('id', meetupId);
+
+      if (updateError) {
+        // Rollback manual: borrar el archivo huérfano si falla el update en DB
+        await supabase.storage.from(COVERS_BUCKET).remove([filePath]);
+        return { data: null, error: 'No se pudo guardar la portada' };
+      }
+
+      return { data: publicUrlData.publicUrl, error: null };
+    } catch {
+      return { data: null, error: 'Error inesperado al subir la portada' };
+    }
+  },
+
+  /**
+   * Elimina la foto de portada de una juntada: borra el archivo del bucket
+   * y setea cover_url = null en la tabla meetups.
+   *
+   * @param meetupId - UUID de la juntada
+   * @param filePath - Ruta del archivo dentro del bucket ({meetupId}/{userId}/{timestamp}.jpg)
+   * @returns null en data; error solo si algún paso falla
+   */
+  async removeMeetupCover(
+    meetupId: string,
+    filePath: string,
+  ): Promise<ServiceResult<null>> {
+    try {
+      const { error: storageError } = await supabase.storage
+        .from(COVERS_BUCKET)
+        .remove([filePath]);
+
+      if (storageError) {
+        return { data: null, error: 'No se pudo eliminar el archivo de portada' };
+      }
+
+      const { error: updateError } = await supabase
+        .from('meetups')
+        .update({ cover_url: null })
+        .eq('id', meetupId);
+
+      if (updateError) {
+        return { data: null, error: 'No se pudo quitar la portada' };
+      }
+
+      return { data: null, error: null };
+    } catch {
+      return { data: null, error: 'Error inesperado al quitar la portada' };
+    }
+  },
+
+  /**
+   * Transfiere la organización de una juntada a otro participante activo.
+   *
+   * Ejecuta tres pasos en secuencia, abortando ante el primer error:
+   *   1. El organizador actual pasa a role = 'participant'
+   *   2. El nuevo organizador pasa a role = 'organizer'
+   *   3. created_by en meetups se actualiza al nuevo organizador
+   *
+   * El orden importa por RLS: los pasos 1 y 2 requieren que el usuario
+   * autenticado siga siendo created_by de la juntada, por eso el update
+   * de meetups va al final. Supabase JS no soporta transacciones desde
+   * el cliente, así que un fallo intermedio puede dejar estado parcial.
+   *
+   * NOTA: el enum participant_role de la DB solo admite 'organizer' y
+   * 'participant'; se usa 'participant' como rol del organizador saliente.
+   *
+   * @param meetupId - UUID de la juntada
+   * @param newOrganizerUserId - UUID del participante que recibe la organización
+   * @param currentOrganizerUserId - UUID del organizador actual autenticado
+   * @returns null en data; error si algún paso de la secuencia falla
+   */
+  async transferOrganizer(
+    meetupId: string,
+    newOrganizerUserId: string,
+    currentOrganizerUserId: string,
+  ): Promise<ServiceResult<null>> {
+    try {
+      // Paso 1: degradar al organizador actual
+      const { error: demoteError } = await supabase
+        .from('meetup_participants')
+        .update({ role: 'participant' })
+        .eq('meetup_id', meetupId)
+        .eq('user_id', currentOrganizerUserId);
+
+      if (demoteError) {
+        return { data: null, error: 'No se pudo actualizar tu rol' };
+      }
+
+      // Paso 2: promover al nuevo organizador
+      const { error: promoteError } = await supabase
+        .from('meetup_participants')
+        .update({ role: 'organizer' })
+        .eq('meetup_id', meetupId)
+        .eq('user_id', newOrganizerUserId);
+
+      if (promoteError) {
+        return {
+          data: null,
+          error: 'No se pudo asignar el nuevo organizador',
+        };
+      }
+
+      // Paso 3: actualizar el creador de la juntada (último por RLS)
+      const { error: meetupError } = await supabase
+        .from('meetups')
+        .update({ created_by: newOrganizerUserId })
+        .eq('id', meetupId);
+
+      if (meetupError) {
+        return {
+          data: null,
+          error: 'No se pudo transferir la organización de la juntada',
+        };
+      }
+
+      return { data: null, error: null };
+    } catch {
+      return {
+        data: null,
+        error: 'Error inesperado al transferir la organización',
       };
     }
   },

@@ -7,10 +7,13 @@
  * para que la pantalla quede como orquestadora.
  */
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/shared/constants/theme';
 import type { Meetup } from '../types';
+
+/** Altura fija del banner de portada en el detalle */
+const COVER_BANNER_HEIGHT = 200;
 
 /** Props del encabezado del detalle */
 interface MeetupDetailHeaderProps {
@@ -48,6 +51,17 @@ export const MeetupDetailHeader = ({
 
   return (
     <>
+      {/* Banner de portada — solo si la juntada tiene foto configurada */}
+      {meetup.cover_url && (
+        <Image
+          source={{ uri: meetup.cover_url }}
+          style={styles.coverBanner}
+          resizeMode="cover"
+          accessibilityRole="image"
+          accessibilityLabel={`Portada de ${meetup.title}`}
+        />
+      )}
+
       {/* Banner de estado para juntadas canceladas o finalizadas */}
       {(isCancelled || isFinished) && (
         <View
@@ -156,6 +170,13 @@ export const MeetupDetailHeader = ({
 };
 
 const styles = StyleSheet.create({
+  coverBanner: {
+    width: '100%',
+    height: COVER_BANNER_HEIGHT,
+    borderRadius: theme.radius.lg,
+    marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.border,
+  },
   statusBanner: {
     flexDirection: 'row',
     alignItems: 'center',
