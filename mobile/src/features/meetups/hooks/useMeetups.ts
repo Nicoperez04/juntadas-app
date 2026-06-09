@@ -32,6 +32,137 @@ interface EditMeetupVariables {
   formData: CreateMeetupFormData;
 }
 
+/** Variables de la mutación de subida de portada */
+interface UploadCoverVariables {
+  meetupId: string;
+  /** URI local de la imagen seleccionada con ImagePicker */
+  fileUri: string;
+}
+
+/** Variables de la mutación de eliminación de portada */
+interface RemoveCoverVariables {
+  meetupId: string;
+  /** Ruta del archivo dentro del bucket meetup-covers */
+  filePath: string;
+}
+
+/** Variables de la mutación de transferencia de organización */
+interface TransferOrganizerVariables {
+  meetupId: string;
+  /** UUID del participante que pasa a ser organizador */
+  newOrganizerUserId: string;
+}
+
+/**
+ * Mutación para subir o reemplazar la foto de portada de una juntada.
+ * Solo el organizador puede ejecutarla (lo garantiza la RLS del bucket).
+ * En caso de éxito invalida la lista del usuario y el detalle de la juntada
+ * para que la portada nueva aparezca en todas las pantallas.
+ *
+ * @returns Mutación de TanStack Query; data es la URL pública de la portada
+ */
+export const useUploadMeetupCover = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async ({
+      meetupId,
+      fileUri,
+    }: UploadCoverVariables): Promise<OperationResult<string>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.uploadMeetupCover(meetupId, fileUri, userId);
+    },
+    onSuccess: async (result, { meetupId }) => {
+      if (!result.error) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['meetups', userId] }),
+          queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+        ]);
+      }
+    },
+  });
+};
+
+/**
+ * Mutación para quitar la foto de portada de una juntada.
+ * Elimina el archivo del bucket y deja cover_url en null.
+ * En caso de éxito invalida las mismas queries que la subida.
+ *
+ * @returns Mutación de TanStack Query; data es siempre null
+ */
+export const useRemoveMeetupCover = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async ({
+      meetupId,
+      filePath,
+    }: RemoveCoverVariables): Promise<OperationResult<null>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.removeMeetupCover(meetupId, filePath);
+    },
+    onSuccess: async (result, { meetupId }) => {
+      if (!result.error) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['meetups', userId] }),
+          queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+        ]);
+      }
+    },
+  });
+};
+
+/**
+ * Mutación para transferir la organización de una juntada a otro participante.
+ * El usuario autenticado debe ser el organizador actual. En caso de éxito
+ * invalida lista y detalle para que isOrganizer se recalcule automáticamente.
+ *
+ * @returns Mutación de TanStack Query; data es siempre null
+ */
+export const useTransferOrganizer = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async ({
+      meetupId,
+      newOrganizerUserId,
+    }: TransferOrganizerVariables): Promise<OperationResult<null>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.transferOrganizer(
+        meetupId,
+        newOrganizerUserId,
+        userId,
+      );
+    },
+    onSuccess: async (result, { meetupId }) => {
+      if (!result.error) {
+        // Además de lista y detalle se invalidan participantes y la
+        // participación propia, porque isOrganizer en useMeetupDetail
+        // se deriva de esas queries y debe recalcularse solo.
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['meetups', userId] }),
+          queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+          queryClient.invalidateQueries({
+            queryKey: ['participants', meetupId],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ['userParticipation', meetupId, userId],
+          }),
+        ]);
+      }
+    },
+  });
+};
+
 export const useMeetups = () => {
   const queryClient = useQueryClient();
   const { userId, isLoading: isLoadingSession } = useCurrentUser();

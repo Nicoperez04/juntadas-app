@@ -147,49 +147,64 @@ const MeetupCard = ({ meetup, onPress }: MeetupCardProps) => {
       ]}
       onPress={onPress}
     >
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle} numberOfLines={1}>
-          {meetup.title}
-        </Text>
-        <View
-          style={[
-            styles.roleBadge,
-            isOrganizer ? styles.badgeOrganizer : styles.badgeParticipant,
-          ]}
-        >
-          <Text
-            style={[
-              styles.roleBadgeText,
-              isOrganizer
-                ? styles.badgeTextOrganizer
-                : styles.badgeTextParticipant,
-            ]}
-          >
-            {isOrganizer ? 'Organizador' : 'Invitado'}
-          </Text>
+      {/* Fila superior: thumbnail de portada (si existe) + datos de la juntada */}
+      <View style={styles.cardTopRow}>
+        {meetup.cover_url && (
+          <Image
+            source={{ uri: meetup.cover_url }}
+            style={styles.cardThumbnail}
+            resizeMode="cover"
+            accessibilityRole="image"
+            accessibilityLabel={`Portada de ${meetup.title}`}
+          />
+        )}
+
+        <View style={styles.cardBody}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle} numberOfLines={1}>
+              {meetup.title}
+            </Text>
+            <View
+              style={[
+                styles.roleBadge,
+                isOrganizer ? styles.badgeOrganizer : styles.badgeParticipant,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.roleBadgeText,
+                  isOrganizer
+                    ? styles.badgeTextOrganizer
+                    : styles.badgeTextParticipant,
+                ]}
+              >
+                {isOrganizer ? 'Organizador' : 'Invitado'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.cardInfoRow}>
+            <Ionicons
+              name="calendar-outline"
+              size={13}
+              color={theme.colors.textSecondary}
+            />
+            <Text style={styles.cardInfoText}>
+              {formatDate(meetup.date)} · {meetup.time}
+            </Text>
+          </View>
+
+          <View style={styles.cardInfoRow}>
+            <Ionicons
+              name="location-outline"
+              size={13}
+              color={theme.colors.textSecondary}
+            />
+            <Text style={styles.cardInfoText} numberOfLines={1}>
+              {meetup.location}
+            </Text>
+          </View>
         </View>
-      </View>
-
-      <View style={styles.cardInfoRow}>
-        <Ionicons
-          name="calendar-outline"
-          size={13}
-          color={theme.colors.textSecondary}
-        />
-        <Text style={styles.cardInfoText}>
-          {formatDate(meetup.date)} · {meetup.time}
-        </Text>
-      </View>
-
-      <View style={styles.cardInfoRow}>
-        <Ionicons
-          name="location-outline"
-          size={13}
-          color={theme.colors.textSecondary}
-        />
-        <Text style={styles.cardInfoText} numberOfLines={1}>
-          {meetup.location}
-        </Text>
       </View>
 
       <View style={styles.cardFooter}>
@@ -327,6 +342,20 @@ export const MeetupHomeScreen = () => {
         <Ionicons name="add" size={18} color={theme.colors.surface} />
         <Text style={styles.emptyButtonText}>Crear mi primera juntada</Text>
       </Pressable>
+
+      {/* Acceso al historial aunque no haya juntadas activas en el home */}
+      <TouchableOpacity
+        style={[styles.historyLink, styles.historyLinkInEmpty]}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate(Routes.MeetupHistory)}
+      >
+        <Text style={styles.historyLinkText}>Ver historial</Text>
+        <Ionicons
+          name="chevron-forward"
+          size={15}
+          color={theme.colors.primary}
+        />
+      </TouchableOpacity>
     </View>
   );
 
@@ -676,6 +705,19 @@ const styles = StyleSheet.create({
     opacity: 0.88,
     transform: [{ scale: 0.985 }],
   },
+  cardTopRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+  },
+  cardThumbnail: {
+    width: 60,
+    height: 60,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.border,
+  },
+  cardBody: {
+    flex: 1,
+  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -843,6 +885,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: theme.spacing.md,
     gap: theme.spacing.xs,
+  },
+  historyLinkInEmpty: {
+    marginTop: theme.spacing.lg,
   },
   historyLinkText: {
     fontSize: theme.typography.sizes.sm,

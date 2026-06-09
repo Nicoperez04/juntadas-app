@@ -15,12 +15,10 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Share,
   ActivityIndicator,
   Pressable,
   Modal,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -37,6 +35,7 @@ import { useMeetupDetail } from '../hooks/useMeetupDetail';
 import { MeetupDetailHeader } from '../components/MeetupDetailHeader';
 import { MeetupParticipantsSummary } from '../components/MeetupParticipantsSummary';
 import { MeetupOrganizerActions } from '../components/MeetupOrganizerActions';
+import { MeetupShareButton } from '../components/MeetupShareButton';
 import type { MeetupParticipant, AttendanceStatus } from '../types';
 import type { MainStackParamList } from '@/navigation/types';
 
@@ -134,32 +133,6 @@ export const MeetupDetailScreen = () => {
       pendingToastRef.current = null;
     }
   }, [refreshAll]);
-
-  /**
-   * Comparte el código de la juntada usando la API nativa Share.
-   * Permite al usuario enviarlo por el canal que prefiera (WhatsApp, etc.).
-   */
-  const handleShare = async () => {
-    if (!meetup) return;
-    try {
-      await Share.share({
-        message: `¡Unite a mi juntada "${meetup.title}"! Usá el código: ${meetup.joinCode}`,
-        title: 'Compartir juntada',
-      });
-    } catch {
-      // Error ignorado — el usuario puede haber cancelado el share sheet
-    }
-  };
-
-  /**
-   * Copia el código al clipboard y muestra un toast de confirmación
-   * en lugar de cambiar el ícono del botón.
-   */
-  const handleCopy = async () => {
-    if (!meetup) return;
-    await Clipboard.setStringAsync(meetup.joinCode);
-    setToast({ message: '✓ Código copiado', type: 'success' });
-  };
 
   if (isLoading || (isLoadingParticipants && participants.length === 0)) {
     return (
@@ -407,40 +380,14 @@ export const MeetupDetailScreen = () => {
               <Text style={styles.shareHint}>
                 Compartí este código para que otros puedan unirse
               </Text>
-              <View style={styles.shareButtons}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.shareBtn,
-                    styles.shareBtnCopy,
-                    pressed && styles.shareBtnPressed,
-                  ]}
-                  onPress={handleCopy}
-                >
-                  <Ionicons
-                    name="copy-outline"
-                    size={18}
-                    color={theme.colors.primary}
-                  />
-                  <Text style={styles.shareBtnText}>Copiar</Text>
-                </Pressable>
-
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.shareBtn,
-                    styles.shareBtnShare,
-                    pressed && styles.shareBtnPressed,
-                  ]}
-                  onPress={handleShare}
-                >
-                  <Ionicons
-                    name="share-social-outline"
-                    size={18}
-                    color={theme.colors.surface}
-                  />
-                  <Text style={[styles.shareBtnText, styles.shareBtnTextWhite]}>
-                    Compartir
-                  </Text>
-                </Pressable>
+              {/* Botón con bottom sheet: copiar código o compartir por WhatsApp.
+                  Visible para todos los miembros (organizador y participantes). */}
+              <View style={styles.shareButtonWrapper}>
+                <MeetupShareButton
+                  meetupTitle={meetup.title}
+                  joinCode={meetup.joinCode}
+                  onFeedback={(message, type) => setToast({ message, type })}
+                />
               </View>
             </View>
           </View>
@@ -870,38 +817,8 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
     textAlign: 'center',
   },
-  shareButtons: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
+  shareButtonWrapper: {
     width: '100%',
-  },
-  shareBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    borderRadius: theme.radius.md,
-    paddingVertical: theme.spacing.md,
-  },
-  shareBtnCopy: {
-    backgroundColor: theme.colors.primaryLight,
-    borderWidth: 1.5,
-    borderColor: theme.colors.primary,
-  },
-  shareBtnShare: {
-    backgroundColor: theme.colors.primary,
-  },
-  shareBtnPressed: {
-    opacity: 0.8,
-  },
-  shareBtnText: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.primary,
-  },
-  shareBtnTextWhite: {
-    color: theme.colors.surface,
   },
   modalOverlay: {
     flex: 1,
