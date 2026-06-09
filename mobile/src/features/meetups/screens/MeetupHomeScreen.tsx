@@ -29,7 +29,8 @@ import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useMeetups } from '../hooks/useMeetups';
-import type { MeetupWithRole, MainStackParamList } from '../types';
+import type { MeetupWithRole } from '../types';
+import type { MainStackParamList } from '@/navigation/types';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'MeetupHome'>;
 

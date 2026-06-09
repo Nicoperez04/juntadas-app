@@ -23,7 +23,7 @@ import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
 import { APP_TAB_BAR_OFFSET } from '@/shared/components/AppTabBar';
 import { triggerSelectionHaptic, triggerSuccessHaptic } from '@/shared/utils/haptics';
-import type { MainStackParamList } from '@/features/meetups/types';
+import type { MainStackParamList } from '@/navigation/types';
 import { ImpostorTabBar } from '../components/ImpostorTabBar';
 import { impostorColors } from '../constants/impostorTheme';
 import { getCategoryLabel } from '../data/wordBank';

@@ -33,7 +33,8 @@ import { AppButton } from '@/shared/components/AppButton';
 import { AppTabBar } from '@/shared/components/AppTabBar';
 import { useMeetups } from '../hooks/useMeetups';
 import { joinMeetupSchema } from '../schemas/meetupSchemas';
-import type { JoinMeetupFormData, MainStackParamList } from '../types';
+import type { JoinMeetupFormData } from '../types';
+import type { MainStackParamList } from '@/navigation/types';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'JoinMeetup'>;
 

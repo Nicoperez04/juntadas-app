@@ -21,8 +21,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { supabase } from '@/lib/supabase/client';
 import { theme } from '@/shared/constants/theme';
+import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { Routes } from '@/navigation/routes';
 import { ModifyAttendanceLink } from '@/shared/components/ModifyAttendanceLink';
 import { Toast } from '@/shared/components/Toast';
@@ -31,7 +31,8 @@ import { ModifyAttendanceScreen } from './ModifyAttendanceScreen';
 import { getParticipantDisplayName } from '../utils/participantDisplay';
 import { meetupService } from '@/features/meetups/services/meetupService';
 import type { MeetupParticipant, AttendanceStatus } from '../types';
-import type { MainStackParamList, MeetupStatus } from '@/features/meetups/types';
+import type { MeetupStatus } from '@/features/meetups/types';
+import type { MainStackParamList } from '@/navigation/types';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'ParticipantList'>;
 type RoutePropType = RouteProp<MainStackParamList, 'ParticipantList'>;
@@ -189,7 +190,9 @@ export const ParticipantListScreen = () => {
   const route = useRoute<RoutePropType>();
   const { meetupId } = route.params;
 
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // Usuario autenticado resuelto desde la caché compartida de sesión
+  const { userId: currentUserId } = useCurrentUser();
+
   const [meetupStatus, setMeetupStatus] = useState<MeetupStatus | null>(null);
   const [attendanceModalTarget, setAttendanceModalTarget] =
     useState<AttendanceModalTarget | null>(null);
@@ -215,12 +218,6 @@ export const ParticipantListScreen = () => {
     leaveMeetup,
     refresh,
   } = useParticipants(meetupId, currentUserId);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setCurrentUserId(session?.user?.id ?? null);
-    });
-  }, []);
 
   /**
    * Carga el estado de la juntada para congelar acciones de asistencia

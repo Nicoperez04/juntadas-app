@@ -23,7 +23,8 @@ import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppTabBar } from '@/shared/components/AppTabBar';
 import { useMeetups } from '../hooks/useMeetups';
-import type { MeetupWithRole, MeetupStatus, MainStackParamList } from '../types';
+import type { MeetupWithRole, MeetupStatus } from '../types';
+import type { MainStackParamList } from '@/navigation/types';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'MeetupHistory'>;
 
