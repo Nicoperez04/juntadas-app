@@ -23,15 +23,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { supabase } from '@/lib/supabase/client';
 import { theme } from '@/shared/constants/theme';
+import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { appConfig } from '@/config/appConfig';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
 import { APP_TAB_BAR_OFFSET } from '@/shared/components/AppTabBar';
 import { Toast } from '@/shared/components/Toast';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
-import type { MainStackParamList } from '@/features/meetups/types';
+import type { MainStackParamList } from '@/navigation/types';
 import { ImpostorTabBar } from '../components/ImpostorTabBar';
 import { impostorColors } from '../constants/impostorTheme';
 import {
@@ -99,7 +99,9 @@ export const ImpostorStartScreen = () => {
   const [playersManuallyCleared, setPlayersManuallyCleared] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Usuario autenticado resuelto desde la caché compartida de sesión
+  const { userId: currentUserId } = useCurrentUser();
 
   /** Historial de palabras — referencia estable si no hay sesión */
   const usedWordsPool = session?.usedWords ?? EMPTY_USED_WORDS;
@@ -175,14 +177,6 @@ export const ImpostorStartScreen = () => {
       pickPendingWord,
     ]),
   );
-
-  useEffect(() => {
-    const loadUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setCurrentUserId(data.user?.id ?? null);
-    };
-    void loadUser();
-  }, []);
 
   const handleEnterSetup = useCallback(() => {
     void triggerSelectionHaptic();

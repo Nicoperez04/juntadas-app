@@ -25,10 +25,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { supabase } from '@/lib/supabase/client';
 import { theme } from '@/shared/constants/theme';
+import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { Toast } from '@/shared/components/Toast';
-import type { MainStackParamList } from '@/features/meetups/types';
+import type { MainStackParamList } from '@/navigation/types';
 import { memoriesService } from '../services/memoriesService';
 import { notifyMemoryDeleted } from '../utils/memoryGallerySync';
 import type { Memory } from '../types';
@@ -139,8 +139,10 @@ export const MemoryViewerScreen = () => {
   const route = useRoute<RoutePropType>();
   const { memories, initialIndex } = route.params;
 
+  // Usuario autenticado resuelto desde la caché compartida de sesión
+  const { userId: currentUserId } = useCurrentUser();
+
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [localMemories, setLocalMemories] = useState(memories);
@@ -150,12 +152,6 @@ export const MemoryViewerScreen = () => {
   } | null>(null);
 
   const flatListRef = useRef<FlatList<Memory>>(null);
-
-  React.useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setCurrentUserId(session?.user?.id ?? null);
-    });
-  }, []);
 
   React.useEffect(() => {
     if (initialIndex > 0) {

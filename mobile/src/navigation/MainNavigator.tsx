@@ -2,8 +2,8 @@
  * Navegador principal de la app (usuario autenticado).
  *
  * Gestiona el stack de todas las pantallas disponibles post-login.
- * MeetupHomeScreen es la ruta inicial. Las pantallas de impostor y perfil
- * mantienen placeholders hasta que se implementen en sus bloques.
+ * MeetupHomeScreen es la ruta inicial por defecto; AppNavigator puede
+ * cambiarla a CompleteProfile cuando el usuario debe completar onboarding.
  *
  * El header nativo está oculto en todas las pantallas porque cada una
  * implementa su propio header con diseño consistente al sistema de diseño.
@@ -11,6 +11,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Routes } from './routes';
+import type { MainStackParamList } from './types';
 
 // Pantallas implementadas — bloque 1
 import { CompleteProfileScreen } from '@/features/auth/screens/CompleteProfileScreen';
@@ -36,12 +37,24 @@ import { MemoryViewerScreen } from '@/features/memories/screens/MemoryViewerScre
 // Pantallas implementadas — bloque 6 (perfil)
 import { ProfileScreen } from '@/features/auth/screens/ProfileScreen';
 
-const Stack = createNativeStackNavigator();
+// El genérico habilita el chequeo de nombres de ruta y parámetros en compilación
+const Stack = createNativeStackNavigator<MainStackParamList>();
 
-export const MainNavigator = () => {
+/** Props del navegador principal */
+interface MainNavigatorProps {
+  /**
+   * Ruta inicial del stack. AppNavigator la setea en CompleteProfile
+   * cuando el usuario todavía tiene un username autogenerado.
+   */
+  initialRouteName?: keyof MainStackParamList;
+}
+
+export const MainNavigator = ({
+  initialRouteName = Routes.MeetupHome,
+}: MainNavigatorProps) => {
   return (
     <Stack.Navigator
-      initialRouteName={Routes.MeetupHome}
+      initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,
         // Sin animación de transición: el footer embebido en cada pantalla

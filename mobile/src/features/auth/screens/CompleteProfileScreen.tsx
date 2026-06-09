@@ -23,6 +23,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQueryClient } from '@tanstack/react-query';
+import { Routes } from '@/navigation/routes';
+import type { MainStackParamList } from '@/navigation/types';
 import { AppButton } from '@/shared/components/AppButton';
 import { AppInput } from '@/shared/components/AppInput';
 import { AppLogo } from '@/shared/components/AppLogo';
@@ -73,7 +78,11 @@ const ruleStyles = StyleSheet.create({
   },
 });
 
+type NavProp = NativeStackNavigationProp<MainStackParamList, 'CompleteProfile'>;
+
 export const CompleteProfileScreen = () => {
+  const navigation = useNavigation<NavProp>();
+  const queryClient = useQueryClient();
   const { completeProfile, isLoading, error } = useAuth();
 
   const {
@@ -90,8 +99,18 @@ export const CompleteProfileScreen = () => {
 
   const username = watch('username');
 
+  /**
+   * Guarda el username elegido y, si fue exitoso, sale del onboarding.
+   * Se invalida la caché del perfil para que el guard de AppNavigator
+   * no vuelva a redirigir a esta pantalla, y se usa replace para que
+   * el botón de volver no regrese al paso de onboarding.
+   */
   const onSubmit = async (data: CompleteProfileFormData) => {
-    await completeProfile(data);
+    const { error: submitError } = await completeProfile(data);
+    if (!submitError) {
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      navigation.replace(Routes.MeetupHome);
+    }
   };
 
   // El username es válido cuando pasa todas las reglas de Zod sin errores

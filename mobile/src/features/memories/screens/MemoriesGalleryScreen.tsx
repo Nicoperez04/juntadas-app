@@ -25,13 +25,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { supabase } from '@/lib/supabase/client';
 import { theme } from '@/shared/constants/theme';
+import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { Routes } from '@/navigation/routes';
 import { Toast } from '@/shared/components/Toast';
 import { AppButton } from '@/shared/components/AppButton';
 import { meetupService } from '@/features/meetups/services/meetupService';
-import type { MainStackParamList } from '@/features/meetups/types';
+import type { MainStackParamList } from '@/navigation/types';
 import { useMemories } from '../hooks/useMemories';
 import { registerMemoryDeletedHandler } from '../utils/memoryGallerySync';
 import type { Memory } from '../types';
@@ -223,7 +223,9 @@ export const MemoriesGalleryScreen = () => {
   const route = useRoute<RoutePropType>();
   const { meetupId, isActive } = route.params;
 
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // Usuario autenticado resuelto desde la caché compartida de sesión
+  const { userId: currentUserId } = useCurrentUser();
+
   const [meetupTitle, setMeetupTitle] = useState('');
   const [meetupDate, setMeetupDate] = useState('');
   const [meetupTime, setMeetupTime] = useState('');
@@ -276,12 +278,6 @@ export const MemoriesGalleryScreen = () => {
   useEffect(() => {
     return registerMemoryDeletedHandler(handleMemoryDeleted);
   }, [handleMemoryDeleted]);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setCurrentUserId(session?.user?.id ?? null);
-    });
-  }, []);
 
   useEffect(() => {
     void meetupService.getMeetupById(meetupId).then(({ data }) => {

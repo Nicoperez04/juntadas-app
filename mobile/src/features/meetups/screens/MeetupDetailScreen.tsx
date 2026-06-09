@@ -1,15 +1,14 @@
 /**
- * Pantalla de detalle de una juntada.
+ * Pantalla de detalle de una juntada — orquestadora.
  *
- * Muestra la información completa de la juntada: datos principales,
- * acciones (Jugar / Recuerdos), lista de participantes con sus estados
- * de asistencia, y la sección de código para compartir.
+ * La lógica de datos (meetup, participantes, rol del usuario, acciones)
+ * vive en useMeetupDetail; las secciones visuales principales viven en
+ * MeetupDetailHeader, MeetupParticipantsSummary y MeetupOrganizerActions.
  *
- * El rol del usuario actual se determina buscando su ID dentro de la
- * lista de participantes. El código se copia al clipboard vía expo-clipboard
- * y se comparte vía la API nativa de Share.
+ * Esta pantalla solo coordina: navegación, modales de confirmación,
+ * el modal de asistencia, el toast de feedback y la sección de compartir.
  */
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,7 +19,6 @@ import {
   ActivityIndicator,
   Pressable,
   Modal,
-  Image,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,25 +26,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { supabase } from '@/lib/supabase/client';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
 import { AppTabBar } from '@/shared/components/AppTabBar';
-import { ModifyAttendanceLink } from '@/shared/components/ModifyAttendanceLink';
 import { Toast } from '@/shared/components/Toast';
-import { useMeetups } from '../hooks/useMeetups';
-import { useParticipants } from '@/features/participants/hooks/useParticipants';
-import { participantService } from '@/features/participants/services/participantService';
 import { ModifyAttendanceScreen } from '@/features/participants/screens/ModifyAttendanceScreen';
 import { getParticipantDisplayName } from '@/features/participants/utils/participantDisplay';
-import type {
-  Meetup,
-  MeetupParticipant,
-  ParticipantRole,
-  AttendanceStatus,
-  MainStackParamList,
-} from '../types';
+import { useMeetupDetail } from '../hooks/useMeetupDetail';
+import { MeetupDetailHeader } from '../components/MeetupDetailHeader';
+import { MeetupParticipantsSummary } from '../components/MeetupParticipantsSummary';
+import { MeetupOrganizerActions } from '../components/MeetupOrganizerActions';
+import type { MeetupParticipant, AttendanceStatus } from '../types';
+import type { MainStackParamList } from '@/navigation/types';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'MeetupDetail'>;
 type RoutePropType = RouteProp<MainStackParamList, 'MeetupDetail'>;
@@ -55,98 +47,6 @@ type RoutePropType = RouteProp<MainStackParamList, 'MeetupDetail'>;
 type AttendanceModalTarget =
   | { mode: 'self' }
   | { mode: 'organizer'; participant: MeetupParticipant };
-
-/**
- * Paleta de colores para avatares de participantes.
- * El índice se calcula hasheando el userId para consistencia visual.
- */
-const AVATAR_PALETTE = [
-  '#7C3AED',
-  '#EC4899',
-  '#0EA5E9',
-  '#059669',
-  '#D97706',
-  '#DC2626',
-  '#7C3AED',
-];
-
-/**
- * Genera un índice de color determinístico a partir de un string.
- *
- * @param str - String a hashear (userId)
- * @returns Índice dentro de AVATAR_PALETTE
- */
-const getAvatarColorIndex = (str: string): number => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return Math.abs(hash) % AVATAR_PALETTE.length;
-};
-
-/**
- * Extrae las iniciales de un nombre completo (máximo 2 caracteres).
- *
- * @param name - Nombre completo
- * @returns Iniciales en mayúsculas
- */
-const getInitials = (name: string): string => {
-  const parts = name.trim().split(' ').filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
-
-/**
- * Formatea una fecha en formato legible para el usuario.
- * Soporta ISO (YYYY-MM-DD) y DD/MM/YYYY.
- *
- * @param dateStr - Fecha como string
- * @returns Fecha formateada
- */
-const formatDate = (dateStr: string): string => {
-  if (dateStr.includes('/')) return dateStr;
-  const parts = dateStr.split('-');
-  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  return dateStr;
-};
-
-/**
- * Determina si la juntada ya comenzó comparando fecha y hora con el momento actual.
- *
- * @param date - Fecha en formato YYYY-MM-DD desde Supabase
- * @param time - Hora en formato HH:MM:SS desde Supabase
- * @returns true si la fecha/hora de inicio ya pasó o es ahora
- */
-const hasMeetupStarted = (date: string, time: string): boolean => {
-  const meetupDateTime = new Date(`${date}T${time}`);
-  return new Date() >= meetupDateTime;
-};
-
-/**
- * Label visual y color para cada estado de asistencia.
- * Centraliza los valores para que sean consistentes en toda la pantalla.
- */
-const ATTENDANCE_CONFIG: Record<
-  string,
-  { label: string; bgColor: string; textColor: string }
-> = {
-  confirmed: {
-    label: 'Confirmado',
-    bgColor: theme.colors.successLight,
-    textColor: theme.colors.success,
-  },
-  pending: {
-    label: 'Pendiente',
-    bgColor: '#FEF3C7',
-    textColor: '#92400E',
-  },
-  declined: {
-    label: 'Decliné',
-    bgColor: theme.colors.errorLight,
-    textColor: theme.colors.error,
-  },
-};
 
 /** Card de acción principal (Jugar / Recuerdos) */
 interface ActionCardProps {
@@ -171,111 +71,37 @@ const ActionCard = ({ icon, label, color, onPress }: ActionCardProps) => (
   </Pressable>
 );
 
-/** Fila de un participante en la lista */
-interface ParticipantRowProps {
-  participant: MeetupParticipant;
-  onPress?: () => void;
-  editable?: boolean;
-}
-
-const ParticipantItem = ({
-  participant,
-  onPress,
-  editable = false,
-}: ParticipantRowProps) => {
-  const config =
-    ATTENDANCE_CONFIG[participant.attendanceStatus] ??
-    ATTENDANCE_CONFIG.pending;
-  const avatarColor =
-    AVATAR_PALETTE[getAvatarColorIndex(participant.userId)];
-
-  const displayName = getParticipantDisplayName(participant);
-  const initials = getInitials(displayName);
-
-  // Si tiene avatar en el perfil, mostrar foto; si no, iniciales con color determinístico
-  const avatarUrl = participant.profile.avatarUrl;
-
-  const content = (
-    <>
-      {avatarUrl ? (
-        <Image
-          source={{ uri: avatarUrl }}
-          style={styles.participantAvatar}
-        />
-      ) : (
-        <View style={[styles.participantAvatar, { backgroundColor: avatarColor }]}>
-          <Text style={styles.participantAvatarText}>{initials}</Text>
-        </View>
-      )}
-      <View style={styles.participantInfo}>
-        <Text style={styles.participantName} numberOfLines={1}>
-          {displayName}
-        </Text>
-        <Text style={styles.participantUsername}>
-          @{participant.profile.username}
-        </Text>
-      </View>
-      {participant.role === 'organizer' && (
-        <Ionicons
-          name="star"
-          size={14}
-          color="#D97706"
-          style={styles.organizerStar}
-        />
-      )}
-      <View
-        style={[
-          styles.attendanceBadge,
-          { backgroundColor: config.bgColor },
-        ]}
-      >
-        <Text
-          style={[styles.attendanceBadgeText, { color: config.textColor }]}
-        >
-          {config.label}
-        </Text>
-      </View>
-      {editable && (
-        <Ionicons
-          name="chevron-forward"
-          size={16}
-          color={theme.colors.textDisabled}
-        />
-      )}
-    </>
-  );
-
-  if (onPress) {
-    return (
-      <TouchableOpacity
-        style={[
-          styles.participantRow,
-          editable && styles.participantRowEditable,
-        ]}
-        onPress={onPress}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel={`Editar asistencia de ${displayName}`}
-      >
-        {content}
-      </TouchableOpacity>
-    );
-  }
-
-  return <View style={styles.participantRow}>{content}</View>;
-};
-
 export const MeetupDetailScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
   const { meetupId } = route.params;
 
-  const { getMeetupById, cancelMeetup, finishMeetup } = useMeetups();
+  const {
+    meetup,
+    participants,
+    confirmedCount,
+    isLoading,
+    isLoadingParticipants,
+    error,
+    currentUserParticipant,
+    userRole,
+    hasAbandoned,
+    isOrganizer,
+    isParticipant,
+    isActive,
+    isCancelled,
+    isFinished,
+    canFinish,
+    cancel,
+    finish,
+    leave,
+    updateAttendance,
+    updateParticipantAttendance,
+    reload,
+    refreshAll,
+  } = useMeetupDetail(meetupId);
 
-  const [meetup, setMeetup] = useState<Meetup | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // Estados de UI: visibilidad de modales y operaciones en curso
   const [attendanceModalTarget, setAttendanceModalTarget] =
     useState<AttendanceModalTarget | null>(null);
   const [isFinishing, setIsFinishing] = useState(false);
@@ -284,10 +110,6 @@ export const MeetupDetailScreen = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
-  const [userParticipation, setUserParticipation] = useState<{
-    role: ParticipantRole;
-    leftAt: string | null;
-  } | null>(null);
   const [toast, setToast] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -300,86 +122,18 @@ export const MeetupDetailScreen = () => {
    */
   const pendingToastRef = useRef<string | null>(null);
 
-  const {
-    participants,
-    isLoading: isLoadingParticipants,
-    updateAttendance,
-    updateParticipantAttendance,
-    leaveMeetup,
-    refresh: refreshParticipants,
-  } = useParticipants(meetupId, currentUserId);
-
-  // Obtener el ID del usuario actual para determinar su rol en la juntada
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setCurrentUserId(session?.user?.id ?? null);
-    });
-  }, []);
-
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    const meetupResult = await getMeetupById(meetupId);
-
-    if (meetupResult.error) {
-      setError(meetupResult.error);
-    } else {
-      setMeetup(meetupResult.data);
-    }
-
-    setIsLoading(false);
-  }, [meetupId, getMeetupById]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  /**
-   * Carga la participación del usuario aunque haya abandonado la juntada,
-   * porque la lista activa de participantes no incluye registros con left_at.
-   */
-  useEffect(() => {
-    if (!currentUserId) {
-      setUserParticipation(null);
-      return;
-    }
-
-    void participantService
-      .getUserParticipation(meetupId, currentUserId)
-      .then(({ data }) => {
-        if (data) {
-          setUserParticipation({ role: data.role, leftAt: data.leftAt });
-        } else {
-          setUserParticipation(null);
-        }
-      });
-  }, [meetupId, currentUserId]);
-
-  /** Rol del usuario actual determinado desde la lista de participantes */
-  const currentUserParticipant = participants.find(
-    (p) => p.userId === currentUserId,
-  );
-  const userRole: ParticipantRole =
-    currentUserParticipant?.role ?? userParticipation?.role ?? 'participant';
-  const hasAbandoned = userParticipation?.leftAt != null;
-
-  const confirmedCount = participants.filter(
-    (p) => p.attendanceStatus === 'confirmed',
-  ).length;
-
   /**
    * Cierra el modal de asistencia y recarga datos en paralelo para evitar
-   * re-renders intermedios por llamadas secuenciales a loadData y refresh.
+   * re-renders intermedios por llamadas secuenciales.
    */
   const handleAttendanceClose = useCallback(async () => {
     setAttendanceModalTarget(null);
-    await Promise.all([loadData(), refreshParticipants()]);
+    await refreshAll();
     if (pendingToastRef.current) {
       setToast({ message: pendingToastRef.current, type: 'success' });
       pendingToastRef.current = null;
     }
-  }, [loadData, refreshParticipants]);
+  }, [refreshAll]);
 
   /**
    * Comparte el código de la juntada usando la API nativa Share.
@@ -427,20 +181,13 @@ export const MeetupDetailScreen = () => {
         <Text style={styles.errorFullText}>
           {error ?? 'No se pudo cargar la juntada'}
         </Text>
-        <TouchableOpacity onPress={loadData} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => void reload()} activeOpacity={0.7}>
           <Text style={styles.retryText}>Reintentar</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
-  const isOrganizer = userRole === 'organizer';
-  const isParticipant = userRole === 'participant' && !hasAbandoned;
-  const isCancelled = meetup.status === 'cancelled';
-  const isFinished = meetup.status === 'finished';
-  const isActive = meetup.status === 'active';
-  const canFinish =
-    isOrganizer && isActive && hasMeetupStarted(meetup.date, meetup.time);
   const roleLabel = isOrganizer ? 'Organizador' : 'Invitado';
   const currentAttendance: AttendanceStatus =
     currentUserParticipant?.attendanceStatus ?? 'pending';
@@ -460,7 +207,7 @@ export const MeetupDetailScreen = () => {
    */
   const confirmCancelMeetup = async () => {
     setIsCancelling(true);
-    const result = await cancelMeetup(meetupId);
+    const result = await cancel();
     setIsCancelling(false);
     setShowCancelModal(false);
 
@@ -469,8 +216,6 @@ export const MeetupDetailScreen = () => {
       return;
     }
 
-    await loadData();
-    await refreshParticipants();
     setToast({ message: 'Juntada cancelada', type: 'success' });
   };
 
@@ -479,7 +224,7 @@ export const MeetupDetailScreen = () => {
    */
   const confirmFinishMeetup = async () => {
     setIsFinishing(true);
-    const result = await finishMeetup(meetupId);
+    const result = await finish();
     setIsFinishing(false);
     setShowFinishModal(false);
 
@@ -488,8 +233,6 @@ export const MeetupDetailScreen = () => {
       return;
     }
 
-    await loadData();
-    await refreshParticipants();
     setToast({ message: 'Juntada finalizada', type: 'success' });
   };
 
@@ -498,7 +241,7 @@ export const MeetupDetailScreen = () => {
    */
   const confirmLeaveMeetup = async () => {
     setIsLeaving(true);
-    const result = await leaveMeetup();
+    const result = await leave();
     setIsLeaving(false);
     setShowLeaveModal(false);
 
@@ -513,72 +256,72 @@ export const MeetupDetailScreen = () => {
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={22}
-            color={theme.colors.textPrimary}
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detalle</Text>
-        {isOrganizer ? (
+        {/* Barra superior de navegación con acción de editar (organizador) */}
+        <View style={styles.header}>
           <TouchableOpacity
-            onPress={() =>
-              !isCancelled &&
-              !isFinished &&
-              navigation.navigate(Routes.EditMeetup, { meetupId })
-            }
-            style={[
-              styles.editBtn,
-              (isCancelled || isFinished) && styles.editBtnDisabled,
-            ]}
-            activeOpacity={isCancelled || isFinished ? 1 : 0.7}
-            disabled={isCancelled || isFinished}
+            onPress={() => navigation.goBack()}
+            style={styles.backBtn}
+            activeOpacity={0.7}
           >
             <Ionicons
-              name="create-outline"
-              size={20}
-              color={
-                isCancelled || isFinished
-                  ? theme.colors.textDisabled
-                  : theme.colors.primary
-              }
+              name="arrow-back"
+              size={22}
+              color={theme.colors.textPrimary}
             />
-            <Text
-              style={[
-                styles.editBtnText,
-                (isCancelled || isFinished) && styles.editBtnTextDisabled,
-              ]}
-            >
-              Editar
-            </Text>
           </TouchableOpacity>
-        ) : (
-          <View
-            style={[
-              styles.roleBadge,
-              isOrganizer ? styles.badgeOrganizer : styles.badgeParticipant,
-            ]}
-          >
-            <Text
+          <Text style={styles.headerTitle}>Detalle</Text>
+          {isOrganizer ? (
+            <TouchableOpacity
+              onPress={() =>
+                !isCancelled &&
+                !isFinished &&
+                navigation.navigate(Routes.EditMeetup, { meetupId })
+              }
               style={[
-                styles.roleBadgeText,
-                isOrganizer
-                  ? styles.badgeTextOrganizer
-                  : styles.badgeTextParticipant,
+                styles.editBtn,
+                (isCancelled || isFinished) && styles.editBtnDisabled,
+              ]}
+              activeOpacity={isCancelled || isFinished ? 1 : 0.7}
+              disabled={isCancelled || isFinished}
+            >
+              <Ionicons
+                name="create-outline"
+                size={20}
+                color={
+                  isCancelled || isFinished
+                    ? theme.colors.textDisabled
+                    : theme.colors.primary
+                }
+              />
+              <Text
+                style={[
+                  styles.editBtnText,
+                  (isCancelled || isFinished) && styles.editBtnTextDisabled,
+                ]}
+              >
+                Editar
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View
+              style={[
+                styles.roleBadge,
+                isOrganizer ? styles.badgeOrganizer : styles.badgeParticipant,
               ]}
             >
-              {roleLabel}
-            </Text>
-          </View>
-        )}
-      </View>
+              <Text
+                style={[
+                  styles.roleBadgeText,
+                  isOrganizer
+                    ? styles.badgeTextOrganizer
+                    : styles.badgeTextParticipant,
+                ]}
+              >
+                {roleLabel}
+              </Text>
+            </View>
+          )}
+        </View>
       </SafeAreaView>
 
       <ScrollView
@@ -586,120 +329,13 @@ export const MeetupDetailScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Banner de estado para juntadas canceladas o finalizadas */}
-        {(isCancelled || isFinished) && (
-          <View
-            style={[
-              styles.statusBanner,
-              isCancelled ? styles.statusBannerCancelled : styles.statusBannerFinished,
-            ]}
-          >
-            <Ionicons
-              name={isCancelled ? 'close-circle' : 'checkmark-circle'}
-              size={20}
-              color={isCancelled ? theme.colors.error : theme.colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.statusBannerText,
-                isCancelled
-                  ? styles.statusBannerTextCancelled
-                  : styles.statusBannerTextFinished,
-              ]}
-            >
-              {isCancelled
-                ? 'Esta juntada fue cancelada'
-                : 'Esta juntada ya finalizó'}
-            </Text>
-          </View>
-        )}
-
-        {/* Banner para usuarios que abandonaron la juntada */}
-        {hasAbandoned && (
-          <View style={styles.abandonedBanner}>
-            <Ionicons
-              name="exit-outline"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
-            <Text style={styles.abandonedBannerText}>
-              Abandonaste esta juntada. Podés volver a unirte con el código.
-            </Text>
-          </View>
-        )}
-
-        {/* Card principal con datos de la juntada */}
-        <View style={styles.mainCard}>
-          <Text style={styles.meetupTitle}>{meetup.title}</Text>
-          {meetup.description && (
-            <Text style={styles.meetupDescription}>{meetup.description}</Text>
-          )}
-
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconBox}>
-              <Ionicons
-                name="calendar"
-                size={18}
-                color={theme.colors.primary}
-              />
-            </View>
-            <View>
-              <Text style={styles.infoLabel}>Fecha y hora</Text>
-              <Text style={styles.infoValue}>
-                {formatDate(meetup.date)} · {meetup.time}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconBox}>
-              <Ionicons
-                name="location"
-                size={18}
-                color={theme.colors.secondary}
-              />
-            </View>
-            <View style={styles.infoTextFlex}>
-              <Text style={styles.infoLabel}>Ubicación</Text>
-              <Text style={styles.infoValue} numberOfLines={2}>
-                {meetup.location}
-              </Text>
-            </View>
-          </View>
-
-          {meetup.estimatedCost !== null && (
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconBox}>
-                <Ionicons
-                  name="cash"
-                  size={18}
-                  color={theme.colors.success}
-                />
-              </View>
-              <View>
-                <Text style={styles.infoLabel}>Costo estimado</Text>
-                <Text style={styles.infoValue}>
-                  ${meetup.estimatedCost} por persona
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* Contador de participantes — oculto si el usuario abandonó */}
-          {!hasAbandoned && (
-            <View style={styles.participantCounter}>
-              <Ionicons
-                name="people"
-                size={16}
-                color={theme.colors.textSecondary}
-              />
-              <Text style={styles.participantCounterText}>
-                {participants.length} participantes · {confirmedCount}{' '}
-                confirmados
-              </Text>
-            </View>
-          )}
-        </View>
+        {/* Banners de estado + card principal con los datos de la juntada */}
+        <MeetupDetailHeader
+          meetup={meetup}
+          hasAbandoned={hasAbandoned}
+          participantCount={participants.length}
+          confirmedCount={confirmedCount}
+        />
 
         {/* Botones de acción: Jugar y Recuerdos — ocultos si abandonó */}
         {!isCancelled && !hasAbandoned && (
@@ -721,7 +357,8 @@ export const MeetupDetailScreen = () => {
               onPress={() =>
                 navigation.navigate(Routes.MemoriesGallery, {
                   meetupId,
-                  isActive: meetup.status === 'active' || meetup.status === 'finished',
+                  isActive:
+                    meetup.status === 'active' || meetup.status === 'finished',
                 })
               }
             />
@@ -730,70 +367,21 @@ export const MeetupDetailScreen = () => {
 
         {/* Sección de participantes — oculta si el usuario abandonó */}
         {!hasAbandoned && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              Participantes ({participants.length})
-            </Text>
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate(Routes.ParticipantList, { meetupId })
-              }
-              activeOpacity={0.7}
-            >
-              <Text style={styles.seeAllLink}>Ver participantes</Text>
-            </TouchableOpacity>
-          </View>
-          {isOrganizer && isActive && (
-            <Text style={styles.organizerHint}>
-              Tocá un participante para modificar su asistencia
-            </Text>
-          )}
-          <View style={styles.participantsList}>
-            {participants.slice(0, 5).map((participant) => {
-              const canEditAsOrganizer =
-                isOrganizer &&
-                isActive &&
-                participant.role !== 'organizer';
-
-              return (
-                <ParticipantItem
-                  key={participant.id}
-                  participant={participant}
-                  editable={canEditAsOrganizer}
-                  onPress={
-                    canEditAsOrganizer
-                      ? () =>
-                          setAttendanceModalTarget({
-                            mode: 'organizer',
-                            participant,
-                          })
-                      : undefined
-                  }
-                />
-              );
-            })}
-            {participants.length > 5 && (
-              <TouchableOpacity
-                style={styles.moreParticipants}
-                onPress={() =>
-                  navigation.navigate(Routes.ParticipantList, { meetupId })
-                }
-                activeOpacity={0.7}
-              >
-                <Text style={styles.moreParticipantsText}>
-                  +{participants.length - 5} más
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {isParticipant && isActive && (
-            <ModifyAttendanceLink
-              onPress={() => setAttendanceModalTarget({ mode: 'self' })}
-            />
-          )}
-        </View>
+          <MeetupParticipantsSummary
+            participants={participants}
+            isOrganizer={isOrganizer}
+            isActive={isActive}
+            isParticipant={isParticipant}
+            onSeeAll={() =>
+              navigation.navigate(Routes.ParticipantList, { meetupId })
+            }
+            onEditParticipant={(participant) =>
+              setAttendanceModalTarget({ mode: 'organizer', participant })
+            }
+            onModifyOwnAttendance={() =>
+              setAttendanceModalTarget({ mode: 'self' })
+            }
+          />
         )}
 
         {/* Volver a unirse — solo si abandonó y la juntada sigue activa */}
@@ -858,61 +446,21 @@ export const MeetupDetailScreen = () => {
           </View>
         )}
 
-        {/* Finalizar juntada — solo organizador cuando la juntada ya comenzó */}
-        {canFinish && (
-          <View style={styles.cancelSection}>
-            <TouchableOpacity
-              style={[styles.finishBtn, isFinishing && styles.cancelBtnDisabled]}
-              onPress={() => setShowFinishModal(true)}
-              disabled={isFinishing}
-              activeOpacity={0.8}
-            >
-              {isFinishing ? (
-                <ActivityIndicator color={theme.colors.warning} />
-              ) : (
-                <>
-                  <Ionicons
-                    name="checkmark-circle-outline"
-                    size={18}
-                    color={theme.colors.warning}
-                  />
-                  <Text style={styles.finishBtnText}>Finalizar juntada</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Cancelar juntada — solo organizador en juntadas activas */}
-        {isOrganizer && isActive && (
-          <View style={styles.cancelSection}>
-            <TouchableOpacity
-              style={[styles.cancelBtn, isCancelling && styles.cancelBtnDisabled]}
-              onPress={() => setShowCancelModal(true)}
-              disabled={isCancelling}
-              activeOpacity={0.8}
-            >
-              {isCancelling ? (
-                <ActivityIndicator color={theme.colors.error} />
-              ) : (
-                <>
-                  <Ionicons
-                    name="close-circle-outline"
-                    size={18}
-                    color={theme.colors.error}
-                  />
-                  <Text style={styles.cancelBtnText}>Cancelar juntada</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Acciones del organizador: finalizar y cancelar */}
+        <MeetupOrganizerActions
+          canFinish={canFinish}
+          canCancel={isOrganizer && isActive}
+          isFinishing={isFinishing}
+          isCancelling={isCancelling}
+          onFinishPress={() => setShowFinishModal(true)}
+          onCancelPress={() => setShowCancelModal(true)}
+        />
 
         {/* Abandonar juntada — solo participantes activos en juntadas activas */}
         {userRole === 'participant' && isActive && !hasAbandoned && (
-          <View style={styles.cancelSection}>
+          <View style={styles.leaveSection}>
             <TouchableOpacity
-              style={[styles.cancelBtn, isLeaving && styles.cancelBtnDisabled]}
+              style={[styles.leaveBtn, isLeaving && styles.leaveBtnDisabled]}
               onPress={() => setShowLeaveModal(true)}
               disabled={isLeaving}
               activeOpacity={0.8}
@@ -926,7 +474,7 @@ export const MeetupDetailScreen = () => {
                     size={20}
                     color={theme.colors.error}
                   />
-                  <Text style={styles.cancelBtnText}>Abandonar juntada</Text>
+                  <Text style={styles.leaveBtnText}>Abandonar juntada</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -1000,9 +548,7 @@ export const MeetupDetailScreen = () => {
                 {isFinishing ? (
                   <ActivityIndicator color={theme.colors.surface} />
                 ) : (
-                  <Text style={styles.modalWarningBtnText}>
-                    Sí, finalizar
-                  </Text>
+                  <Text style={styles.modalWarningBtnText}>Sí, finalizar</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1020,11 +566,7 @@ export const MeetupDetailScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalIconBox}>
-              <Ionicons
-                name="warning"
-                size={32}
-                color={theme.colors.error}
-              />
+              <Ionicons name="warning" size={32} color={theme.colors.error} />
             </View>
             <Text style={styles.modalTitle}>Cancelar juntada</Text>
             <Text style={styles.modalSubtitle}>
@@ -1231,117 +773,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.xl * 2,
   },
-  statusBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    borderRadius: theme.radius.lg,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  statusBannerCancelled: {
-    backgroundColor: theme.colors.errorLight,
-    borderWidth: 1,
-    borderColor: theme.colors.error,
-  },
-  statusBannerFinished: {
-    backgroundColor: theme.colors.border,
-    borderWidth: 1,
-    borderColor: theme.colors.textDisabled,
-  },
-  statusBannerText: {
-    flex: 1,
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  statusBannerTextCancelled: {
-    color: theme.colors.error,
-  },
-  statusBannerTextFinished: {
-    color: theme.colors.textSecondary,
-  },
-  abandonedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    borderRadius: theme.radius.lg,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    backgroundColor: theme.colors.border,
-    borderWidth: 1,
-    borderColor: theme.colors.textDisabled,
-  },
-  abandonedBannerText: {
-    flex: 1,
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.textSecondary,
-  },
-  mainCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    ...theme.shadows.md,
-  },
-  meetupTitle: {
-    fontSize: theme.typography.sizes.xl,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  meetupDescription: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: theme.spacing.md,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.md,
-  },
-  infoIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoTextFlex: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.typography.weights.medium,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  infoValue: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.textPrimary,
-    fontWeight: theme.typography.weights.semibold,
-    marginTop: 2,
-  },
-  participantCounter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  participantCounterText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.typography.weights.medium,
-  },
   actionsRow: {
     flexDirection: 'row',
     gap: theme.spacing.md,
@@ -1374,101 +805,18 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: theme.spacing.md,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
   sectionTitle: {
     fontSize: theme.typography.sizes.lg,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.textPrimary,
   },
-  seeAllLink: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.medium,
-    color: theme.colors.primary,
-  },
-  participantsList: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    overflow: 'hidden',
-    ...theme.shadows.sm,
-  },
-  organizerHint: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-    lineHeight: 20,
-  },
-  participantRowEditable: {
-    backgroundColor: theme.colors.background,
-  },
-  participantRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    gap: theme.spacing.md,
-  },
-  participantAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  participantAvatarText: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.surface,
-  },
-  participantInfo: {
-    flex: 1,
-  },
-  participantName: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.textPrimary,
-  },
-  participantUsername: {
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  organizerStar: {
-    marginRight: theme.spacing.xs,
-  },
-  attendanceBadge: {
-    borderRadius: theme.radius.full,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 3,
-  },
-  attendanceBadgeText: {
-    fontSize: theme.typography.sizes.xs,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  moreParticipants: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  moreParticipantsText: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.medium,
-    color: theme.colors.primary,
-  },
-  cancelSection: {
-    marginBottom: theme.spacing.md,
-  },
   rejoinSection: {
     marginBottom: theme.spacing.md,
   },
-  cancelBtn: {
+  leaveSection: {
+    marginBottom: theme.spacing.md,
+  },
+  leaveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1479,29 +827,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.error,
   },
-  finishBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    backgroundColor: theme.colors.warningLight,
-    borderRadius: theme.radius.lg,
-    paddingVertical: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.warning,
-  },
-  cancelBtnDisabled: {
+  leaveBtnDisabled: {
     opacity: 0.6,
   },
-  cancelBtnText: {
+  leaveBtnText: {
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.error,
-  },
-  finishBtnText: {
-    fontSize: theme.typography.sizes.md,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.warning,
   },
   shareCard: {
     backgroundColor: theme.colors.surface,

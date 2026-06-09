@@ -1,6 +1,4 @@
-﻿import type { Memory } from '@/features/memories/types';
-
-/**
+﻿/**
  * Tipos del módulo de juntadas.
  *
  * Define las entidades, roles y estados que circulan entre pantallas,
@@ -95,25 +93,3 @@ export interface MeetupParticipant {
     avatarUrl: string | null;
   };
 }
-
-/**
- * Tipado de los parámetros de cada ruta del navegador principal.
- * Permite que useNavigation y useRoute estén completamente tipados
- * en las pantallas de este módulo.
- */
-export type MainStackParamList = {
-  MeetupHome: undefined;
-  CreateMeetup: undefined;
-  JoinMeetup: undefined;
-  MeetupDetail: { meetupId: string };
-  EditMeetup: { meetupId: string };
-  ParticipantList: { meetupId: string };
-  Games: undefined;
-  ImpostorStart: { meetupId?: string };
-  ImpostorRole: { meetupId?: string };
-  MemoriesGallery: { meetupId: string; isActive: boolean };
-  MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string };
-  MeetupHistory: undefined;
-  CompleteProfile: undefined;
-  Profile: undefined;
-};

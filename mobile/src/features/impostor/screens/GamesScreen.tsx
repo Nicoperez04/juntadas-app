@@ -20,7 +20,7 @@ import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
-import type { MainStackParamList } from '@/features/meetups/types';
+import type { MainStackParamList } from '@/navigation/types';
 import { ImpostorTabBar } from '../components/ImpostorTabBar';
 import { impostorColors } from '../constants/impostorTheme';
 
