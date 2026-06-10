@@ -39,6 +39,7 @@ export type MainStackParamList = {
   MemoriesGallery: { meetupId: string; isActive: boolean };
   MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string };
   MeetupHistory: undefined;
+  ReviewForm: { meetupId: string; meetupTitle: string };
   CompleteProfile: undefined;
   Profile: undefined;
 };

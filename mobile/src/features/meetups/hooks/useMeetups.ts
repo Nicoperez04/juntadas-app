@@ -26,6 +26,13 @@ interface OperationResult<T> {
   error: string | null;
 }
 
+/** Variables de la mutación de finalización de juntada */
+interface FinishMeetupVariables {
+  meetupId: string;
+  /** true si los participantes podrán dejar reseñas */
+  reviewsEnabled: boolean;
+}
+
 /** Variables de la mutación de edición: id de la juntada + datos del formulario */
 interface EditMeetupVariables {
   meetupId: string;
@@ -243,15 +250,22 @@ export const useMeetups = () => {
 
   /** Mutación de finalización — solo el organizador puede ejecutarla */
   const finishMeetupMutation = useMutation({
-    mutationFn: async (meetupId: string): Promise<OperationResult<Meetup>> => {
+    mutationFn: async ({
+      meetupId,
+      reviewsEnabled,
+    }: FinishMeetupVariables): Promise<OperationResult<null>> => {
       if (!userId) {
         return { data: null, error: 'No hay usuario autenticado' };
       }
-      return meetupService.finishMeetup(meetupId, userId);
+      return meetupService.finishMeetup(meetupId, userId, reviewsEnabled);
     },
-    onSuccess: async (result) => {
+    onSuccess: async (result, { meetupId }) => {
       if (!result.error) {
-        await invalidateMeetups();
+        await Promise.all([
+          invalidateMeetups(),
+          queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+          queryClient.invalidateQueries({ queryKey: ['pendingReviews'] }),
+        ]);
       }
     },
   });
@@ -314,11 +328,15 @@ export const useMeetups = () => {
    * Finaliza una juntada activa. Solo el organizador puede ejecutar esta acción.
    *
    * @param meetupId - UUID de la juntada a finalizar
-   * @returns La juntada finalizada o mensaje de error
+   * @param reviewsEnabled - true si los participantes podrán dejar reseñas
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
    */
   const finishMeetup = useCallback(
-    (meetupId: string): Promise<OperationResult<Meetup>> =>
-      finishMeetupMutation.mutateAsync(meetupId),
+    (
+      meetupId: string,
+      reviewsEnabled: boolean,
+    ): Promise<OperationResult<null>> =>
+      finishMeetupMutation.mutateAsync({ meetupId, reviewsEnabled }),
     [finishMeetupMutation.mutateAsync],
   );
 

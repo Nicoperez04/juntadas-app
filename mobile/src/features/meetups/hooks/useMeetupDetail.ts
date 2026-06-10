@@ -158,15 +158,19 @@ export const useMeetupDetail = (meetupId: string) => {
    * Finaliza la juntada (acción del organizador) y refresca los datos
    * del detalle si la operación fue exitosa.
    *
+   * @param reviewsEnabled - true si los participantes podrán dejar reseñas
    * @returns Resultado de la operación para feedback en la UI
    */
-  const finish = useCallback(async (): Promise<OperationResult<Meetup>> => {
-    const result = await finishMeetupAction(meetupId);
-    if (!result.error) {
-      await refreshAll();
-    }
-    return result;
-  }, [finishMeetupAction, meetupId, refreshAll]);
+  const finish = useCallback(
+    async (reviewsEnabled: boolean): Promise<OperationResult<null>> => {
+      const result = await finishMeetupAction(meetupId, reviewsEnabled);
+      if (!result.error) {
+        await refreshAll();
+      }
+      return result;
+    },
+    [finishMeetupAction, meetupId, refreshAll],
+  );
 
   /**
    * Abandona la juntada como participante (soft delete).

@@ -47,6 +47,8 @@ interface MeetupRow {
   cancelled_at: string | null;
   /** URL pública de la portada; null si la juntada no tiene foto */
   cover_url: string | null;
+  /** true si el organizador habilitó reseñas al finalizar la juntada */
+  reviews_enabled: boolean;
 }
 
 /** Estructura de una fila de meetup_participants tal como la retorna Supabase */
@@ -146,6 +148,7 @@ const mapMeetupRow = (row: MeetupRow): Meetup => ({
   cancelledAt: row.cancelled_at,
   // Se mantiene snake_case según el contrato definido para este campo
   cover_url: row.cover_url ?? null,
+  reviews_enabled: row.reviews_enabled ?? false,
 });
 
 /**
@@ -615,16 +618,19 @@ export const meetupService = {
 
   /**
    * Finaliza una juntada activa. Solo el organizador puede ejecutar esta acción.
-   * Setea status = 'finished' para moverla al historial sin marcarla como cancelada.
+   * Setea status = 'finished' y opcionalmente reviews_enabled según la elección
+   * del organizador al confirmar la finalización.
    *
    * @param meetupId - UUID de la juntada
    * @param userId - UUID del usuario que intenta finalizar
-   * @returns La juntada finalizada o mensaje de error
+   * @param reviewsEnabled - true si los participantes podrán dejar reseñas
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
    */
   async finishMeetup(
     meetupId: string,
     userId: string,
-  ): Promise<ServiceResult<Meetup>> {
+    reviewsEnabled: boolean,
+  ): Promise<ServiceResult<null>> {
     try {
       const { data: meetup, error: fetchError } = await supabase
         .from('meetups')
@@ -649,16 +655,17 @@ export const meetupService = {
         return { data: null, error: 'La juntada ya está finalizada' };
       }
 
-      const { data: updated, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('meetups')
-        .update({ status: 'finished' })
-        .eq('id', meetupId)
-        .select()
-        .single();
+        .update({
+          status: 'finished',
+          reviews_enabled: reviewsEnabled,
+        })
+        .eq('id', meetupId);
 
       if (updateError) throw updateError;
 
-      return { data: mapMeetupRow(updated as MeetupRow), error: null };
+      return { data: null, error: null };
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
       return {

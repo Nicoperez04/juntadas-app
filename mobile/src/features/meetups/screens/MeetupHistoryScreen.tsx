@@ -80,9 +80,19 @@ const HistoryCard = ({ meetup, onPress }: HistoryCardProps) => {
       onPress={onPress}
     >
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle} numberOfLines={1}>
-          {meetup.title}
-        </Text>
+        <View style={styles.titleWithBadge}>
+          <Text style={styles.cardTitle} numberOfLines={1}>
+            {meetup.title}
+          </Text>
+          {meetup.reviews_enabled && (
+            <Ionicons
+              name="star"
+              size={14}
+              color={theme.colors.warning}
+              style={styles.reviewsBadge}
+            />
+          )}
+        </View>
         <View style={styles.cardBadges}>
           {hasAbandoned && (
             <View style={styles.abandonedBadge}>
@@ -332,6 +342,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: theme.spacing.sm,
     gap: theme.spacing.sm,
+  },
+  titleWithBadge: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  reviewsBadge: {
+    flexShrink: 0,
   },
   cardBadges: {
     flexDirection: 'row',
