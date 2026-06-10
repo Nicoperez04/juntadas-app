@@ -23,12 +23,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { appLogoSource } from '@/shared/assets/appAssets';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useMeetups } from '../hooks/useMeetups';
+import {
+  usePendingReviews,
+  dismissPendingReview,
+} from '@/features/reviews/hooks/usePendingReviews';
+import { PendingReviewCard } from '@/features/reviews/components/PendingReviewCard';
 import type { MeetupWithRole } from '../types';
 import type { MainStackParamList } from '@/navigation/types';
 
@@ -279,8 +285,11 @@ const TABS: TabDefinition[] = [
 
 export const MeetupHomeScreen = () => {
   const navigation = useNavigation<NavProp>();
+  const queryClient = useQueryClient();
   const { meetups, isLoading, error, refresh } = useMeetups();
   const { profile, loadProfile } = useAuth();
+  const pendingReviewsQuery = usePendingReviews();
+  const pendingReviews = pendingReviewsQuery.data ?? [];
 
   // Nombre para el avatar — prioriza el perfil de la tabla profiles
   // sobre los metadatos de Auth para reflejar cambios del ProfileScreen
@@ -295,7 +304,19 @@ export const MeetupHomeScreen = () => {
     useCallback(() => {
       refresh();
       void loadProfile();
-    }, [refresh, loadProfile]),
+      void pendingReviewsQuery.refetch();
+    }, [refresh, loadProfile, pendingReviewsQuery.refetch]),
+  );
+
+  /**
+   * Descarta la card de reseña pendiente y refresca la lista.
+   */
+  const handleDismissPendingReview = useCallback(
+    async (meetupId: string) => {
+      await dismissPendingReview(meetupId);
+      await queryClient.invalidateQueries({ queryKey: ['pendingReviews'] });
+    },
+    [queryClient],
   );
 
   const handleTabPress = useCallback(
@@ -472,6 +493,22 @@ export const MeetupHomeScreen = () => {
             <Text style={styles.quickLabel}>{'Unirse a\njuntada'}</Text>
           </Pressable>
         </View>
+
+        {/* Cards de reseñas pendientes — encima de la lista de juntadas activas */}
+        {pendingReviews.length > 0 &&
+          pendingReviews.map((meetup) => (
+            <PendingReviewCard
+              key={meetup.id}
+              meetup={meetup}
+              onLeaveReview={() =>
+                navigation.navigate(Routes.ReviewForm, {
+                  meetupId: meetup.id,
+                  meetupTitle: meetup.title,
+                })
+              }
+              onDismiss={() => void handleDismissPendingReview(meetup.id)}
+            />
+          ))}
 
         {/* Título de sección con contador */}
         <View style={styles.sectionRow}>

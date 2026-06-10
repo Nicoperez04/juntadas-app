@@ -18,6 +18,7 @@ export const Routes = {
     MemoriesGallery: 'MemoriesGallery',
     MemoryViewer: 'MemoryViewer',
     MeetupHistory: 'MeetupHistory',
+    ReviewForm: 'ReviewForm',
     CompleteProfile: 'CompleteProfile',
     Profile: 'Profile',
   } as const;

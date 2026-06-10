@@ -37,6 +37,9 @@ import { MemoryViewerScreen } from '@/features/memories/screens/MemoryViewerScre
 // Pantallas implementadas — bloque 6 (perfil)
 import { ProfileScreen } from '@/features/auth/screens/ProfileScreen';
 
+// Pantallas implementadas — bloque 2 E2 (reseñas post-juntada)
+import { ReviewFormScreen } from '@/features/reviews/screens/ReviewFormScreen';
+
 // El genérico habilita el chequeo de nombres de ruta y parámetros en compilación
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -72,6 +75,7 @@ export const MainNavigator = ({
       <Stack.Screen name={Routes.EditMeetup} component={EditMeetupScreen} />
       <Stack.Screen name={Routes.ParticipantList} component={ParticipantListScreen} />
       <Stack.Screen name={Routes.MeetupHistory} component={MeetupHistoryScreen} />
+      <Stack.Screen name={Routes.ReviewForm} component={ReviewFormScreen} />
 
       {/* Bloque 4 — impostor */}
       <Stack.Screen name={Routes.Games} component={GamesScreen} />

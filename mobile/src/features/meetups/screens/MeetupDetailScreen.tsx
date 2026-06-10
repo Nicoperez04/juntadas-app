@@ -36,6 +36,7 @@ import { MeetupDetailHeader } from '../components/MeetupDetailHeader';
 import { MeetupParticipantsSummary } from '../components/MeetupParticipantsSummary';
 import { MeetupOrganizerActions } from '../components/MeetupOrganizerActions';
 import { MeetupShareButton } from '../components/MeetupShareButton';
+import { ReviewsSection } from '@/features/reviews/components/ReviewsSection';
 import type { MeetupParticipant, AttendanceStatus } from '../types';
 import type { MainStackParamList } from '@/navigation/types';
 
@@ -91,8 +92,8 @@ export const MeetupDetailScreen = () => {
     isCancelled,
     isFinished,
     canFinish,
+    currentUserId,
     cancel,
-    finish,
     leave,
     updateAttendance,
     updateParticipantAttendance,
@@ -103,8 +104,6 @@ export const MeetupDetailScreen = () => {
   // Estados de UI: visibilidad de modales y operaciones en curso
   const [attendanceModalTarget, setAttendanceModalTarget] =
     useState<AttendanceModalTarget | null>(null);
-  const [isFinishing, setIsFinishing] = useState(false);
-  const [showFinishModal, setShowFinishModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -190,23 +189,6 @@ export const MeetupDetailScreen = () => {
     }
 
     setToast({ message: 'Juntada cancelada', type: 'success' });
-  };
-
-  /**
-   * Ejecuta la finalización de la juntada tras confirmación en el modal.
-   */
-  const confirmFinishMeetup = async () => {
-    setIsFinishing(true);
-    const result = await finish();
-    setIsFinishing(false);
-    setShowFinishModal(false);
-
-    if (result.error) {
-      setToast({ message: result.error, type: 'error' });
-      return;
-    }
-
-    setToast({ message: 'Juntada finalizada', type: 'success' });
   };
 
   /**
@@ -357,6 +339,22 @@ export const MeetupDetailScreen = () => {
           />
         )}
 
+        {/* Reseñas — solo en juntadas finalizadas con reseñas habilitadas */}
+        {isFinished && meetup.reviews_enabled && currentUserId && (
+          <ReviewsSection
+            meetupId={meetupId}
+            currentUserId={currentUserId}
+            reviewsEnabled={meetup.reviews_enabled ?? false}
+            meetupStatus={meetup.status}
+            onAddReview={() =>
+              navigation.navigate(Routes.ReviewForm, {
+                meetupId,
+                meetupTitle: meetup.title,
+              })
+            }
+          />
+        )}
+
         {/* Volver a unirse — solo si abandonó y la juntada sigue activa */}
         {hasAbandoned && isActive && (
           <View style={styles.rejoinSection}>
@@ -397,9 +395,7 @@ export const MeetupDetailScreen = () => {
         <MeetupOrganizerActions
           canFinish={canFinish}
           canCancel={isOrganizer && isActive}
-          isFinishing={isFinishing}
           isCancelling={isCancelling}
-          onFinishPress={() => setShowFinishModal(true)}
           onCancelPress={() => setShowCancelModal(true)}
         />
 
@@ -454,54 +450,6 @@ export const MeetupDetailScreen = () => {
           pendingToastRef.current = '✓ Asistencia actualizada';
         }}
       />
-
-      {/* Modal de confirmación para finalizar juntada */}
-      <Modal
-        transparent
-        animationType="fade"
-        visible={showFinishModal}
-        onRequestClose={() => !isFinishing && setShowFinishModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalIconBox}>
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={32}
-                color={theme.colors.warning}
-              />
-            </View>
-            <Text style={styles.modalTitle}>Finalizar juntada</Text>
-            <Text style={styles.modalSubtitle}>
-              La juntada pasará al historial y ya no se podrán editar sus datos
-              ni modificar acciones de organización.
-            </Text>
-            <View style={styles.modalActions}>
-              <AppButton
-                label="No, volver"
-                variant="ghost"
-                onPress={() => setShowFinishModal(false)}
-                disabled={isFinishing}
-              />
-              <TouchableOpacity
-                style={[
-                  styles.modalWarningBtn,
-                  isFinishing && styles.modalDestructiveBtnDisabled,
-                ]}
-                onPress={confirmFinishMeetup}
-                disabled={isFinishing}
-                activeOpacity={0.8}
-              >
-                {isFinishing ? (
-                  <ActivityIndicator color={theme.colors.surface} />
-                ) : (
-                  <Text style={styles.modalWarningBtnText}>Sí, finalizar</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Modal de confirmación para cancelar juntada */}
       <Modal

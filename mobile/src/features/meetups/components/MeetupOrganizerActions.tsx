@@ -22,6 +22,7 @@ import {
   Modal,
   Image,
   ScrollView,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
@@ -46,12 +47,8 @@ interface MeetupOrganizerActionsProps {
   canFinish: boolean;
   /** true cuando la juntada está activa y puede cancelarse */
   canCancel: boolean;
-  /** true mientras la finalización está en curso — deshabilita el botón */
-  isFinishing: boolean;
   /** true mientras la cancelación está en curso — deshabilita el botón */
   isCancelling: boolean;
-  /** Abre el modal de confirmación de finalización */
-  onFinishPress: () => void;
   /** Abre el modal de confirmación de cancelación */
   onCancelPress: () => void;
 }
@@ -73,9 +70,7 @@ const getInitials = (name: string): string => {
 export const MeetupOrganizerActions = ({
   canFinish,
   canCancel,
-  isFinishing,
   isCancelling,
-  onFinishPress,
   onCancelPress,
 }: MeetupOrganizerActionsProps) => {
   // El componente vive únicamente dentro de MeetupDetailScreen, por lo que
@@ -85,9 +80,13 @@ export const MeetupOrganizerActions = ({
 
   // Datos cacheados del detalle: no disparan fetches duplicados porque
   // comparten las query keys con la pantalla.
-  const { participants, currentUserId, isOrganizer, isActive } =
+  const { participants, currentUserId, isOrganizer, isActive, finish } =
     useMeetupDetail(meetupId);
   const transferMutation = useTransferOrganizer();
+
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [reviewsEnabled, setReviewsEnabled] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
 
   // Un solo modal con pasos internos evita el doble parpadeo de dos Modal
   // montados que alternaban visible al abrir o al elegir un participante.
@@ -125,10 +124,6 @@ export const MeetupOrganizerActions = ({
     }
   };
 
-  /**
-   * Ejecuta la transferencia tras la confirmación. En éxito, las queries
-   * invalidadas recalculan isOrganizer y el componente se oculta solo.
-   */
   const confirmTransfer = async () => {
     if (!transferTarget) return;
 
@@ -146,6 +141,40 @@ export const MeetupOrganizerActions = ({
     pendingToastRef.current = '✓ Organización transferida';
     void triggerSuccessHaptic();
     closeTransferModal();
+  };
+
+  /**
+   * Cierra el modal de finalización y resetea el toggle de reseñas.
+   * Muestra el toast pendiente si la operación fue exitosa.
+   */
+  const closeFinishModal = () => {
+    setShowFinishModal(false);
+    setReviewsEnabled(false);
+
+    if (pendingToastRef.current) {
+      setToast({ message: pendingToastRef.current, type: 'success' });
+      pendingToastRef.current = null;
+    }
+  };
+
+  /**
+   * Ejecuta la finalización con la opción de reseñas elegida por el organizador.
+   */
+  const confirmFinishMeetup = async () => {
+    setIsFinishing(true);
+    const result = await finish(reviewsEnabled);
+    setIsFinishing(false);
+
+    if (result.error) {
+      setShowFinishModal(false);
+      setReviewsEnabled(false);
+      setToast({ message: result.error, type: 'error' });
+      return;
+    }
+
+    pendingToastRef.current = '✓ Juntada finalizada';
+    void triggerSuccessHaptic();
+    closeFinishModal();
   };
 
   const isTransferring = transferMutation.isPending;
@@ -178,7 +207,7 @@ export const MeetupOrganizerActions = ({
         <View style={styles.actionSection}>
           <TouchableOpacity
             style={[styles.finishBtn, isFinishing && styles.btnDisabled]}
-            onPress={onFinishPress}
+            onPress={() => setShowFinishModal(true)}
             disabled={isFinishing}
             activeOpacity={0.8}
           >
@@ -356,6 +385,74 @@ export const MeetupOrganizerActions = ({
         </View>
       </Modal>
 
+      {/* Modal de confirmación para finalizar juntada con toggle de reseñas */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showFinishModal}
+        onRequestClose={() => !isFinishing && closeFinishModal()}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={[styles.modalIconBox, styles.finishModalIconBox]}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={32}
+                color={theme.colors.warning}
+              />
+            </View>
+            <Text style={styles.modalTitle}>Finalizar juntada</Text>
+            <Text style={styles.modalSubtitle}>
+              La juntada pasará al historial y ya no se podrán editar sus datos
+              ni modificar acciones de organización.
+            </Text>
+
+            <View style={styles.reviewsToggleRow}>
+              <Text style={styles.reviewsToggleLabel}>
+                ¿Querés que los participantes puedan dejar una reseña de esta
+                juntada?
+              </Text>
+              <Switch
+                value={reviewsEnabled}
+                onValueChange={setReviewsEnabled}
+                trackColor={{
+                  false: theme.colors.border,
+                  true: theme.colors.primaryLight,
+                }}
+                thumbColor={
+                  reviewsEnabled ? theme.colors.primary : theme.colors.surface
+                }
+                disabled={isFinishing}
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <AppButton
+                label="No, volver"
+                variant="ghost"
+                onPress={closeFinishModal}
+                disabled={isFinishing}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.modalWarningBtn,
+                  isFinishing && styles.btnDisabled,
+                ]}
+                onPress={() => void confirmFinishMeetup()}
+                disabled={isFinishing}
+                activeOpacity={0.8}
+              >
+                {isFinishing ? (
+                  <ActivityIndicator color={theme.colors.surface} />
+                ) : (
+                  <Text style={styles.modalWarningBtnText}>Sí, finalizar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Toast
         message={toast?.message ?? ''}
         type={toast?.type ?? 'success'}
@@ -524,5 +621,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: theme.spacing.md,
+  },
+  finishModalIconBox: {
+    backgroundColor: theme.colors.warningLight,
+  },
+  reviewsToggleRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+  },
+  reviewsToggleLabel: {
+    flex: 1,
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textPrimary,
+    lineHeight: 20,
+  },
+  modalWarningBtn: {
+    height: theme.components.buttonHeight,
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.warning,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  modalWarningBtnText: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.surface,
   },
 });

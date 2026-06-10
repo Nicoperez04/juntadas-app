@@ -32,6 +32,16 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **12** · Fix bug UX: Ver historial en empty state del home → [`conversaciones/bloque-1/cursor-bloque-1-completo.md`](conversaciones/bloque-1/cursor-bloque-1-completo.md) · [`prompts/bloque-1/03_correctivo_expired_meetups.md`](prompts/bloque-1/03_correctivo_expired_meetups.md)
 - **Documentación** · Cierre del Bloque 1 → [`prompts/bloque-1/04_documentar_bloque-1.md`](prompts/bloque-1/04_documentar_bloque-1.md)
 
+### Bloque 2 — Reseñas post-juntada (09/06/2026)
+
+- **13** · Migración meetup_reviews y campo reviews_enabled → [`conversaciones/bloque-2/cursor-bloque-2-completo.md`](conversaciones/bloque-2/cursor-bloque-2-completo.md) · [`prompts/bloque-2/01_resumen_post_juntada.md`](prompts/bloque-2/01_resumen_post_juntada.md)
+- **14** · Módulo reviews: service, hook, schemas → [`conversaciones/bloque-2/cursor-bloque-2-completo.md`](conversaciones/bloque-2/cursor-bloque-2-completo.md) · [`prompts/bloque-2/01_resumen_post_juntada.md`](prompts/bloque-2/01_resumen_post_juntada.md)
+- **15** · Modal de finalizar juntada con toggle de reseñas → [`conversaciones/bloque-2/cursor-bloque-2-completo.md`](conversaciones/bloque-2/cursor-bloque-2-completo.md) · [`prompts/bloque-2/01_resumen_post_juntada.md`](prompts/bloque-2/01_resumen_post_juntada.md)
+- **16** · Pantalla ReviewFormScreen (crear/editar reseña) → [`conversaciones/bloque-2/cursor-bloque-2-completo.md`](conversaciones/bloque-2/cursor-bloque-2-completo.md) · [`prompts/bloque-2/01_resumen_post_juntada.md`](prompts/bloque-2/01_resumen_post_juntada.md)
+- **17** · Componente ReviewsSection en detalle de juntada → [`conversaciones/bloque-2/cursor-bloque-2-completo.md`](conversaciones/bloque-2/cursor-bloque-2-completo.md) · [`prompts/bloque-2/01_resumen_post_juntada.md`](prompts/bloque-2/01_resumen_post_juntada.md)
+- **18** · Card de reseña pendiente en home (PendingReviewCard) → [`conversaciones/bloque-2/cursor-bloque-2-completo.md`](conversaciones/bloque-2/cursor-bloque-2-completo.md) · [`prompts/bloque-2/01_resumen_post_juntada.md`](prompts/bloque-2/01_resumen_post_juntada.md)
+- **19** · Indicador de reseñas en historial → [`conversaciones/bloque-2/cursor-bloque-2-completo.md`](conversaciones/bloque-2/cursor-bloque-2-completo.md) · [`prompts/bloque-2/01_resumen_post_juntada.md`](prompts/bloque-2/01_resumen_post_juntada.md)
+
 ## Skills
 
 - Skills instaladas (base heredada de E1): [`skills_instaladas.md`](skills_instaladas.md)

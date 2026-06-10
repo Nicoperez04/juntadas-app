@@ -42,6 +42,8 @@ export interface Meetup {
   cancelledAt: string | null;
   /** URL pública de la foto de portada; null o undefined si no tiene portada */
   cover_url?: string | null;
+  /** true si el organizador habilitó reseñas al finalizar; no se puede deshabilitar */
+  reviews_enabled?: boolean;
 }
 
 /**
