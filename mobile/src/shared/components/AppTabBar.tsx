@@ -67,7 +67,7 @@ export const AppTabBar = memo(({ activeTab = 'home' }: AppTabBarProps) => {
       if (tabId === 'home') navigation.navigate(Routes.MeetupHome);
       if (tabId === 'create') navigation.navigate(Routes.CreateMeetup);
       if (tabId === 'join') navigation.navigate(Routes.JoinMeetup);
-      if (tabId === 'games') navigation.navigate(Routes.Games);
+      if (tabId === 'games') navigation.navigate(Routes.Games, {});
       if (tabId === 'profile') navigation.navigate(Routes.Profile);
     },
     [navigation],

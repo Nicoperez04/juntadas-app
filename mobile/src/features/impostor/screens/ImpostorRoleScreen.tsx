@@ -116,7 +116,7 @@ export const ImpostorRoleScreen = () => {
       navigation.navigate(Routes.MeetupDetail, { meetupId });
       return;
     }
-    navigation.navigate(Routes.Games);
+    navigation.navigate(Routes.Games, {});
   }, [navigation, meetupId, clearSession]);
 
   if (!session || !currentPlayer) {
