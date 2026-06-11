@@ -25,14 +25,12 @@ import { EditMeetupScreen } from '@/features/meetups/screens/EditMeetupScreen';
 import { MeetupHistoryScreen } from '@/features/meetups/screens/MeetupHistoryScreen';
 import { ParticipantListScreen } from '@/features/participants/screens/ParticipantListScreen';
 
-// Pantallas implementadas — bloque 4 (impostor)
-import { GamesScreen } from '@/features/impostor/screens/GamesScreen';
-import { ImpostorStartScreen } from '@/features/impostor/screens/ImpostorStartScreen';
-import { ImpostorRoleScreen } from '@/features/impostor/screens/ImpostorRoleScreen';
-
-// Pantallas implementadas — bloque 4 E2 (herramientas de juegos)
+// Pantallas implementadas — bloque 4 (juegos e impostor)
+import { GamesScreen } from '@/features/games/screens/GamesScreen';
 import { TimerScreen } from '@/features/games/screens/TimerScreen';
 import { TeamRandomizerScreen } from '@/features/games/screens/TeamRandomizerScreen';
+import { ImpostorStartScreen } from '@/features/impostor/screens/ImpostorStartScreen';
+import { ImpostorRoleScreen } from '@/features/impostor/screens/ImpostorRoleScreen';
 
 // Pantallas implementadas — bloque 5 (recuerdos)
 import { MemoriesGalleryScreen } from '@/features/memories/screens/MemoriesGalleryScreen';

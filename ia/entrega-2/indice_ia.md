@@ -58,9 +58,11 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **28** · TimerScreen: temporizador con cuenta regresiva y cronómetro → [`prompts/bloque-4/01_herramientas.md`](prompts/bloque-4/01_herramientas.md)
 - **29** · TeamRandomizerScreen: equipos aleatorios con configuración flexible → [`prompts/bloque-4/01_herramientas.md`](prompts/bloque-4/01_herramientas.md)
 - **30** · Navegación: rutas Timer y TeamRandomizer → [`prompts/bloque-4/01_herramientas.md`](prompts/bloque-4/01_herramientas.md)
-- **31** · Correctivo cronómetro: milisegundos solo en modo cronómetro → [`prompts/bloque-4/02_correctivo_cronometro_ms.md`](prompts/bloque-4/02_correctivo_cronometro_ms.md)
-- **32** · Correctivo equipos: input numérico y validación de división → [`prompts/bloque-4/03_correctivo_equipos_division.md`](prompts/bloque-4/03_correctivo_equipos_division.md)
-- **33** · Correctivo equipos: scroll de participantes desde el tercero → [`prompts/bloque-4/04_correctivo_equipos_scroll.md`](prompts/bloque-4/04_correctivo_equipos_scroll.md)
+- **31** · Migración GamesScreen de features/impostor a features/games → [`prompts/bloque-4/02_rediseno_pantalla_juegos.md`](prompts/bloque-4/02_rediseno_pantalla_juegos.md)
+- **32** · Rediseño GamesScreen: grid 2 col, cards animadas, secciones Juegos/Herramientas → [`prompts/bloque-4/02_rediseno_pantalla_juegos.md`](prompts/bloque-4/02_rediseno_pantalla_juegos.md)
+- **33** · Correctivo cronómetro: milisegundos solo en modo cronómetro → [`prompts/bloque-4/02_correctivo_cronometro_ms.md`](prompts/bloque-4/02_correctivo_cronometro_ms.md)
+- **34** · Correctivo equipos: input numérico y validación de división → [`prompts/bloque-4/03_correctivo_equipos_division.md`](prompts/bloque-4/03_correctivo_equipos_division.md)
+- **35** · Correctivo equipos: scroll de participantes desde el tercero → [`prompts/bloque-4/04_correctivo_equipos_scroll.md`](prompts/bloque-4/04_correctivo_equipos_scroll.md)
 
 ## Skills
 
