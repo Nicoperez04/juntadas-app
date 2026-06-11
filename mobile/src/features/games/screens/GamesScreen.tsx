@@ -213,7 +213,7 @@ export const GamesScreen = () => {
         icon: 'account-question',
         backgroundColor: '#DBEAFE',
         iconColor: '#2563EB',
-        available: false,
+        available: true,
       },
       {
         id: 'group-questions',
@@ -298,6 +298,9 @@ export const GamesScreen = () => {
       switch (item.id) {
         case 'impostor':
           navigateWithFade(() => navigation.navigate(Routes.ImpostorStart, {}));
+          break;
+        case 'what-am-i':
+          navigateWithFade(() => navigation.navigate(Routes.WhoAmISetup));
           break;
         case 'timer':
           navigateWithFade(() => navigation.navigate(Routes.Timer));

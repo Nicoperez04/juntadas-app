@@ -17,6 +17,8 @@ export const Routes = {
     TeamRandomizer: 'TeamRandomizer',
     ImpostorStart: 'ImpostorStart',
     ImpostorRole: 'ImpostorRole',
+    WhoAmISetup: 'WhoAmISetup',
+    WhoAmIGame: 'WhoAmIGame',
     MemoriesGallery: 'MemoriesGallery',
     MemoryViewer: 'MemoryViewer',
     MeetupHistory: 'MeetupHistory',

@@ -9,6 +9,7 @@
  * constantes de `./routes` — son la fuente de verdad de los strings.
  */
 import type { Memory } from '@/features/memories/types';
+import type { WhoAmICategorySelection } from '@/features/games/data/whoAmIData';
 
 /**
  * Parámetros de cada ruta del flujo de autenticación.
@@ -38,6 +39,8 @@ export type MainStackParamList = {
   TeamRandomizer: undefined;
   ImpostorStart: { meetupId?: string };
   ImpostorRole: { meetupId?: string };
+  WhoAmISetup: undefined;
+  WhoAmIGame: { category: WhoAmICategorySelection };
   MemoriesGallery: { meetupId: string; isActive: boolean };
   MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string };
   MeetupHistory: undefined;

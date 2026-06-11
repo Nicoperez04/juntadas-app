@@ -60,9 +60,13 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **30** · Navegación: rutas Timer y TeamRandomizer → [`prompts/bloque-4/01_herramientas.md`](prompts/bloque-4/01_herramientas.md)
 - **31** · Migración GamesScreen de features/impostor a features/games → [`prompts/bloque-4/02_rediseno_pantalla_juegos.md`](prompts/bloque-4/02_rediseno_pantalla_juegos.md)
 - **32** · Rediseño GamesScreen: grid 2 col, cards animadas, secciones Juegos/Herramientas → [`prompts/bloque-4/02_rediseno_pantalla_juegos.md`](prompts/bloque-4/02_rediseno_pantalla_juegos.md)
-- **33** · Correctivo cronómetro: milisegundos solo en modo cronómetro → [`prompts/bloque-4/02_correctivo_cronometro_ms.md`](prompts/bloque-4/02_correctivo_cronometro_ms.md)
-- **34** · Correctivo equipos: input numérico y validación de división → [`prompts/bloque-4/03_correctivo_equipos_division.md`](prompts/bloque-4/03_correctivo_equipos_division.md)
-- **35** · Correctivo equipos: scroll de participantes desde el tercero → [`prompts/bloque-4/04_correctivo_equipos_scroll.md`](prompts/bloque-4/04_correctivo_equipos_scroll.md)
+- **33** · Dataset whoAmIData.ts: 6 categorías + todas mezcladas → [`prompts/bloque-4/03_que_soy.md`](prompts/bloque-4/03_que_soy.md)
+- **34** · WhoAmISetupScreen: selección de categoría → [`prompts/bloque-4/03_que_soy.md`](prompts/bloque-4/03_que_soy.md)
+- **35** · WhoAmIGameScreen: juego en landscape con animación de cartas → [`prompts/bloque-4/03_que_soy.md`](prompts/bloque-4/03_que_soy.md)
+- **36** · Navegación: rutas WhoAmISetup y WhoAmIGame → [`prompts/bloque-4/03_que_soy.md`](prompts/bloque-4/03_que_soy.md)
+- **37** · Correctivo cronómetro: milisegundos solo en modo cronómetro → [`prompts/bloque-4/02_correctivo_cronometro_ms.md`](prompts/bloque-4/02_correctivo_cronometro_ms.md)
+- **38** · Correctivo equipos: input numérico y validación de división → [`prompts/bloque-4/03_correctivo_equipos_division.md`](prompts/bloque-4/03_correctivo_equipos_division.md)
+- **39** · Correctivo equipos: scroll de participantes desde el tercero → [`prompts/bloque-4/04_correctivo_equipos_scroll.md`](prompts/bloque-4/04_correctivo_equipos_scroll.md)
 
 ## Skills
 
