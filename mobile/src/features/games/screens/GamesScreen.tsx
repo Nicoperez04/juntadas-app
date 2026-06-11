@@ -222,7 +222,7 @@ export const GamesScreen = () => {
         icon: 'comment-question-outline',
         backgroundColor: '#FFEDD5',
         iconColor: '#EA580C',
-        available: false,
+        available: true,
       },
       {
         id: 'scorekeeper',
@@ -301,6 +301,9 @@ export const GamesScreen = () => {
           break;
         case 'what-am-i':
           navigateWithFade(() => navigation.navigate(Routes.WhoAmISetup));
+          break;
+        case 'group-questions':
+          navigateWithFade(() => navigation.navigate(Routes.GroupQuestions));
           break;
         case 'timer':
           navigateWithFade(() => navigation.navigate(Routes.Timer));

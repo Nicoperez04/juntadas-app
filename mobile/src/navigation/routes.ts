@@ -19,6 +19,7 @@ export const Routes = {
     ImpostorRole: 'ImpostorRole',
     WhoAmISetup: 'WhoAmISetup',
     WhoAmIGame: 'WhoAmIGame',
+    GroupQuestions: 'GroupQuestions',
     MemoriesGallery: 'MemoriesGallery',
     MemoryViewer: 'MemoryViewer',
     MeetupHistory: 'MeetupHistory',

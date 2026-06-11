@@ -64,9 +64,12 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **34** · WhoAmISetupScreen: selección de categoría → [`prompts/bloque-4/03_que_soy.md`](prompts/bloque-4/03_que_soy.md)
 - **35** · WhoAmIGameScreen: juego en landscape con animación de cartas → [`prompts/bloque-4/03_que_soy.md`](prompts/bloque-4/03_que_soy.md)
 - **36** · Navegación: rutas WhoAmISetup y WhoAmIGame → [`prompts/bloque-4/03_que_soy.md`](prompts/bloque-4/03_que_soy.md)
-- **37** · Correctivo cronómetro: milisegundos solo en modo cronómetro → [`prompts/bloque-4/02_correctivo_cronometro_ms.md`](prompts/bloque-4/02_correctivo_cronometro_ms.md)
-- **38** · Correctivo equipos: input numérico y validación de división → [`prompts/bloque-4/03_correctivo_equipos_division.md`](prompts/bloque-4/03_correctivo_equipos_division.md)
-- **39** · Correctivo equipos: scroll de participantes desde el tercero → [`prompts/bloque-4/04_correctivo_equipos_scroll.md`](prompts/bloque-4/04_correctivo_equipos_scroll.md)
+- **37** · Dataset groupQuestionsData.ts: 100 preguntas en 5 categorías temáticas → [`prompts/bloque-4/04_preguntas_grupo.md`](prompts/bloque-4/04_preguntas_grupo.md)
+- **38** · GroupQuestionsScreen: juego de preguntas con animación lateral → [`prompts/bloque-4/04_preguntas_grupo.md`](prompts/bloque-4/04_preguntas_grupo.md)
+- **39** · Navegación: ruta GroupQuestions → [`prompts/bloque-4/04_preguntas_grupo.md`](prompts/bloque-4/04_preguntas_grupo.md)
+- **40** · Correctivo cronómetro: milisegundos solo en modo cronómetro → [`prompts/bloque-4/02_correctivo_cronometro_ms.md`](prompts/bloque-4/02_correctivo_cronometro_ms.md)
+- **41** · Correctivo equipos: input numérico y validación de división → [`prompts/bloque-4/03_correctivo_equipos_division.md`](prompts/bloque-4/03_correctivo_equipos_division.md)
+- **42** · Correctivo equipos: scroll de participantes desde el tercero → [`prompts/bloque-4/04_correctivo_equipos_scroll.md`](prompts/bloque-4/04_correctivo_equipos_scroll.md)
 
 ## Skills
 

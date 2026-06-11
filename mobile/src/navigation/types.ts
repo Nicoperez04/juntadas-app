@@ -41,6 +41,7 @@ export type MainStackParamList = {
   ImpostorRole: { meetupId?: string };
   WhoAmISetup: undefined;
   WhoAmIGame: { category: WhoAmICategorySelection };
+  GroupQuestions: undefined;
   MemoriesGallery: { meetupId: string; isActive: boolean };
   MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string };
   MeetupHistory: undefined;
