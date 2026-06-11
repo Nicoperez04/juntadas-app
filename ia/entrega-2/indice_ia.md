@@ -70,6 +70,9 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **40** · Correctivo cronómetro: milisegundos solo en modo cronómetro → [`prompts/bloque-4/02_correctivo_cronometro_ms.md`](prompts/bloque-4/02_correctivo_cronometro_ms.md)
 - **41** · Correctivo equipos: input numérico y validación de división → [`prompts/bloque-4/03_correctivo_equipos_division.md`](prompts/bloque-4/03_correctivo_equipos_division.md)
 - **42** · Correctivo equipos: scroll de participantes desde el tercero → [`prompts/bloque-4/04_correctivo_equipos_scroll.md`](prompts/bloque-4/04_correctivo_equipos_scroll.md)
+- **43** · ScorerSetupScreen: configuración de jugadores y puntaje objetivo → [`prompts/bloque-4/05_anotador_generico.md`](prompts/bloque-4/05_anotador_generico.md)
+- **44** · ScorerGameScreen: anotador con edición inline, mid-game y objetivo → [`prompts/bloque-4/05_anotador_generico.md`](prompts/bloque-4/05_anotador_generico.md)
+- **45** · Navegación: rutas ScorerSetup y ScorerGame → [`prompts/bloque-4/05_anotador_generico.md`](prompts/bloque-4/05_anotador_generico.md)
 
 ## Skills
 

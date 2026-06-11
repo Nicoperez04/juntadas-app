@@ -231,7 +231,7 @@ export const GamesScreen = () => {
         icon: 'counter',
         backgroundColor: theme.colors.successLight,
         iconColor: theme.colors.success,
-        available: false,
+        available: true,
       },
     ],
     [],
@@ -304,6 +304,9 @@ export const GamesScreen = () => {
           break;
         case 'group-questions':
           navigateWithFade(() => navigation.navigate(Routes.GroupQuestions));
+          break;
+        case 'scorekeeper':
+          navigateWithFade(() => navigation.navigate(Routes.ScorerSetup));
           break;
         case 'timer':
           navigateWithFade(() => navigation.navigate(Routes.Timer));

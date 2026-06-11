@@ -20,6 +20,8 @@ export const Routes = {
     WhoAmISetup: 'WhoAmISetup',
     WhoAmIGame: 'WhoAmIGame',
     GroupQuestions: 'GroupQuestions',
+    ScorerSetup: 'ScorerSetup',
+    ScorerGame: 'ScorerGame',
     MemoriesGallery: 'MemoriesGallery',
     MemoryViewer: 'MemoryViewer',
     MeetupHistory: 'MeetupHistory',

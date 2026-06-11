@@ -32,6 +32,8 @@ import { TeamRandomizerScreen } from '@/features/games/screens/TeamRandomizerScr
 import { WhoAmISetupScreen } from '@/features/games/screens/WhoAmISetupScreen';
 import { WhoAmIGameScreen } from '@/features/games/screens/WhoAmIGameScreen';
 import { GroupQuestionsScreen } from '@/features/games/screens/GroupQuestionsScreen';
+import { ScorerSetupScreen } from '@/features/games/screens/ScorerSetupScreen';
+import { ScorerGameScreen } from '@/features/games/screens/ScorerGameScreen';
 import { ImpostorStartScreen } from '@/features/impostor/screens/ImpostorStartScreen';
 import { ImpostorRoleScreen } from '@/features/impostor/screens/ImpostorRoleScreen';
 
@@ -89,6 +91,8 @@ export const MainNavigator = ({
       <Stack.Screen name={Routes.WhoAmISetup} component={WhoAmISetupScreen} />
       <Stack.Screen name={Routes.WhoAmIGame} component={WhoAmIGameScreen} />
       <Stack.Screen name={Routes.GroupQuestions} component={GroupQuestionsScreen} />
+      <Stack.Screen name={Routes.ScorerSetup} component={ScorerSetupScreen} />
+      <Stack.Screen name={Routes.ScorerGame} component={ScorerGameScreen} />
       <Stack.Screen name={Routes.ImpostorStart} component={ImpostorStartScreen} />
       <Stack.Screen name={Routes.ImpostorRole} component={ImpostorRoleScreen} />
 

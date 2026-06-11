@@ -42,6 +42,12 @@ export type MainStackParamList = {
   WhoAmISetup: undefined;
   WhoAmIGame: { category: WhoAmICategorySelection };
   GroupQuestions: undefined;
+  ScorerSetup: undefined;
+  ScorerGame: {
+    players: string[];
+    targetScore?: number;
+    targetType?: 'win' | 'lose';
+  };
   MemoriesGallery: { meetupId: string; isActive: boolean };
   MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string };
   MeetupHistory: undefined;
