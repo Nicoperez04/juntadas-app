@@ -31,8 +31,9 @@ import { theme } from '@/shared/constants/theme';
 import { AppButton } from '@/shared/components/AppButton';
 import { Toast } from '@/shared/components/Toast';
 import { triggerSuccessHaptic } from '@/shared/utils/haptics';
+import { useReviews } from '@/features/reviews/hooks/useReviews';
 import { useMeetupDetail } from '../hooks/useMeetupDetail';
-import { useTransferOrganizer } from '../hooks/useMeetups';
+import { useTransferOrganizer, useReactivateMeetup } from '../hooks/useMeetups';
 import type { MeetupParticipant } from '../types';
 import type { MainStackParamList } from '@/navigation/types';
 
@@ -80,13 +81,17 @@ export const MeetupOrganizerActions = ({
 
   // Datos cacheados del detalle: no disparan fetches duplicados porque
   // comparten las query keys con la pantalla.
-  const { participants, currentUserId, isOrganizer, isActive, finish } =
+  const { participants, currentUserId, isOrganizer, isActive, isFinished, meetup, finish } =
     useMeetupDetail(meetupId);
   const transferMutation = useTransferOrganizer();
+  const reactivateMutation = useReactivateMeetup();
+  const reviewsQuery = useReviews(meetupId);
 
   const [showFinishModal, setShowFinishModal] = useState(false);
+  const [showReactivateModal, setShowReactivateModal] = useState(false);
   const [reviewsEnabled, setReviewsEnabled] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
+  const [isReactivating, setIsReactivating] = useState(false);
 
   // Un solo modal con pasos internos evita el doble parpadeo de dos Modal
   // montados que alternaban visible al abrir o al elegir un participante.
@@ -177,6 +182,43 @@ export const MeetupOrganizerActions = ({
     closeFinishModal();
   };
 
+  /**
+   * Cierra el modal de reactivación y muestra el toast pendiente si la
+   * operación fue exitosa.
+   */
+  const closeReactivateModal = () => {
+    setShowReactivateModal(false);
+
+    if (pendingToastRef.current) {
+      setToast({ message: pendingToastRef.current, type: 'success' });
+      pendingToastRef.current = null;
+    }
+  };
+
+  /**
+   * Reactiva una juntada finalizada volviéndola a status active.
+   * Las reseñas existentes se conservan en la base de datos.
+   */
+  const confirmReactivateMeetup = async () => {
+    setIsReactivating(true);
+    const result = await reactivateMutation.mutateAsync(meetupId);
+    setIsReactivating(false);
+
+    if (result.error) {
+      setShowReactivateModal(false);
+      setToast({ message: result.error, type: 'error' });
+      return;
+    }
+
+    pendingToastRef.current = '✓ Juntada reactivada';
+    void triggerSuccessHaptic();
+    closeReactivateModal();
+  };
+
+  /** true si hay reseñas que mostrar advertencia al reactivar */
+  const hasExistingReviews =
+    !!meetup?.reviews_enabled && (reviewsQuery.data?.length ?? 0) > 0;
+
   const isTransferring = transferMutation.isPending;
   const isTransferModalOpen = transferModalStep !== 'closed';
 
@@ -221,6 +263,33 @@ export const MeetupOrganizerActions = ({
                   color={theme.colors.warning}
                 />
                 <Text style={styles.finishBtnText}>Finalizar juntada</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Reactivar juntada — solo organizador en juntadas finalizadas */}
+      {isOrganizer && isFinished && (
+        <View style={styles.actionSection}>
+          <TouchableOpacity
+            style={[styles.reactivateBtn, isReactivating && styles.btnDisabled]}
+            onPress={() => setShowReactivateModal(true)}
+            disabled={isReactivating}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Reactivar juntada finalizada"
+          >
+            {isReactivating ? (
+              <ActivityIndicator color={theme.colors.primary} />
+            ) : (
+              <>
+                <Ionicons
+                  name="refresh-outline"
+                  size={18}
+                  color={theme.colors.primary}
+                />
+                <Text style={styles.reactivateBtnText}>Reactivar juntada</Text>
               </>
             )}
           </TouchableOpacity>
@@ -453,6 +522,58 @@ export const MeetupOrganizerActions = ({
         </View>
       </Modal>
 
+      {/* Modal de confirmación para reactivar juntada finalizada */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showReactivateModal}
+        onRequestClose={() => !isReactivating && closeReactivateModal()}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconBox}>
+              <Ionicons
+                name="refresh-outline"
+                size={32}
+                color={theme.colors.primary}
+              />
+            </View>
+            <Text style={styles.modalTitle}>
+              ¿Reactivar esta juntada? Volverá a aparecer como activa.
+            </Text>
+            {hasExistingReviews && (
+              <Text style={styles.reactivateWarning}>
+                Esta juntada tiene reseñas. Al reactivarla se conservan, pero no
+                se podrán agregar nuevas hasta que la finalices de nuevo.
+              </Text>
+            )}
+            <View style={styles.modalActions}>
+              <AppButton
+                label="No, volver"
+                variant="ghost"
+                onPress={closeReactivateModal}
+                disabled={isReactivating}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.modalConfirmBtn,
+                  isReactivating && styles.btnDisabled,
+                ]}
+                onPress={() => void confirmReactivateMeetup()}
+                disabled={isReactivating}
+                activeOpacity={0.8}
+              >
+                {isReactivating ? (
+                  <ActivityIndicator color={theme.colors.surface} />
+                ) : (
+                  <Text style={styles.modalConfirmBtnText}>Sí, reactivar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Toast
         message={toast?.message ?? ''}
         type={toast?.type ?? 'success'}
@@ -479,6 +600,22 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   transferBtnText: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.primary,
+  },
+  reactivateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.primaryLight,
+    borderRadius: theme.radius.lg,
+    paddingVertical: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  reactivateBtnText: {
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.primary,
@@ -641,6 +778,17 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.sm,
     color: theme.colors.textPrimary,
     lineHeight: 20,
+  },
+  reactivateWarning: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.warning,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.warningLight,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    width: '100%',
   },
   modalWarningBtn: {
     height: theme.components.buttonHeight,

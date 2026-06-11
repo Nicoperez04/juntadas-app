@@ -947,6 +947,204 @@ export const meetupService = {
    * @param currentOrganizerUserId - UUID del organizador actual autenticado
    * @returns null en data; error si algún paso de la secuencia falla
    */
+  /**
+   * Obtiene TODAS las juntadas del usuario (activas, finalizadas y canceladas),
+   * excluyendo las que ocultó de su historial.
+   * Ordenadas por fecha descendente (más recientes primero).
+   *
+   * @param userId - UUID del usuario autenticado
+   * @returns Lista completa con rol del usuario o mensaje de error
+   */
+  async getAllUserMeetups(
+    userId: string,
+  ): Promise<ServiceResult<MeetupWithRole[]>> {
+    try {
+      // Paso 1: IDs de juntadas que el usuario ocultó de su historial
+      const { data: hiddenRows, error: hiddenError } = await supabase
+        .from('meetup_hidden')
+        .select('meetup_id')
+        .eq('user_id', userId);
+
+      if (hiddenError) throw hiddenError;
+
+      const hiddenMeetupIds = new Set(
+        (hiddenRows ?? []).map((row: { meetup_id: string }) => row.meetup_id),
+      );
+
+      // Paso 2: participaciones del usuario (activas e históricas)
+      const { data: myParticipations, error: parError } = await supabase
+        .from('meetup_participants')
+        .select('meetup_id, role, attendance_status, left_at')
+        .eq('user_id', userId);
+
+      if (parError) throw parError;
+      if (!myParticipations || myParticipations.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const meetupIds = (myParticipations as UserParticipationRow[])
+        .map((p) => p.meetup_id)
+        .filter((id) => !hiddenMeetupIds.has(id));
+
+      if (meetupIds.length === 0) {
+        return { data: [], error: null };
+      }
+
+      // Paso 3: todas las juntadas sin filtrar por status
+      const { data: meetupsData, error: meetupsError } = await supabase
+        .from('meetups')
+        .select('*')
+        .in('id', meetupIds)
+        .order('date', { ascending: false });
+
+      if (meetupsError) throw meetupsError;
+      if (!meetupsData || meetupsData.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const visibleMeetupIds = (meetupsData as MeetupRow[]).map((m) => m.id);
+
+      // Paso 4: conteos de participantes activos por juntada
+      const { data: allParticipants, error: countError } = await supabase
+        .from('meetup_participants')
+        .select('meetup_id, attendance_status')
+        .in('meetup_id', visibleMeetupIds)
+        .is('left_at', null);
+
+      if (countError) throw countError;
+
+      const safeParticipants = (allParticipants ?? []) as AttendanceCountRow[];
+      const safeMyParticipations = myParticipations as UserParticipationRow[];
+
+      const result: MeetupWithRole[] = (meetupsData as MeetupRow[]).map(
+        (meetupRow) => {
+          const myParticipation = safeMyParticipations.find(
+            (p) => p.meetup_id === meetupRow.id,
+          );
+          const participantsForMeetup = safeParticipants.filter(
+            (p) => p.meetup_id === meetupRow.id,
+          );
+
+          return {
+            ...mapMeetupRow(meetupRow),
+            userRole: (myParticipation?.role ?? 'participant') as ParticipantRole,
+            attendanceStatus: (myParticipation?.attendance_status ??
+              'pending') as AttendanceStatus,
+            participantCount: participantsForMeetup.length,
+            confirmedCount: participantsForMeetup.filter(
+              (p) => p.attendance_status === 'confirmed',
+            ).length,
+            leftAt: myParticipation?.left_at ?? null,
+          };
+        },
+      );
+
+      return { data: result, error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return {
+        data: null,
+        error: translateError(message) || 'Error al obtener el historial',
+      };
+    }
+  },
+
+  /**
+   * Oculta una juntada del historial del usuario sin afectar a otros.
+   *
+   * @param meetupId - UUID de la juntada a ocultar
+   * @param userId - UUID del usuario autenticado
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
+   */
+  async hideMeetup(
+    meetupId: string,
+    userId: string,
+  ): Promise<ServiceResult<null>> {
+    try {
+      const { error } = await supabase.from('meetup_hidden').insert({
+        meetup_id: meetupId,
+        user_id: userId,
+      });
+
+      if (error) throw error;
+      return { data: null, error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return {
+        data: null,
+        error: translateError(message) || 'No se pudo ocultar la juntada',
+      };
+    }
+  },
+
+  /**
+   * Elimina una juntada para todos los participantes (hard delete).
+   * Solo debe invocarse si el usuario es organizador; la validación
+   * de rol queda en la capa de UI antes de llamar a este método.
+   *
+   * @param meetupId - UUID de la juntada a eliminar
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
+   */
+  async deleteMeetupForAll(meetupId: string): Promise<ServiceResult<null>> {
+    try {
+      const { error } = await supabase
+        .from('meetups')
+        .delete()
+        .eq('id', meetupId);
+
+      if (error) throw error;
+      return { data: null, error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return {
+        data: null,
+        error: translateError(message) || 'No se pudo eliminar la juntada',
+      };
+    }
+  },
+
+  /**
+   * Reactiva una juntada finalizada volviéndola a status 'active'.
+   * Las reseñas existentes se conservan en la base de datos.
+   *
+   * @param meetupId - UUID de la juntada a reactivar
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
+   */
+  async reactivateMeetup(meetupId: string): Promise<ServiceResult<null>> {
+    try {
+      const { data: meetup, error: fetchError } = await supabase
+        .from('meetups')
+        .select('status')
+        .eq('id', meetupId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!meetup) {
+        return { data: null, error: 'Juntada no encontrada' };
+      }
+      if (meetup.status !== 'finished') {
+        return {
+          data: null,
+          error: 'Solo se pueden reactivar juntadas finalizadas',
+        };
+      }
+
+      const { error: updateError } = await supabase
+        .from('meetups')
+        .update({ status: 'active' })
+        .eq('id', meetupId);
+
+      if (updateError) throw updateError;
+      return { data: null, error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return {
+        data: null,
+        error: translateError(message) || 'No se pudo reactivar la juntada',
+      };
+    }
+  },
+
   async transferOrganizer(
     meetupId: string,
     newOrganizerUserId: string,
