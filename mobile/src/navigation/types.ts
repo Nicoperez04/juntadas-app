@@ -34,15 +34,15 @@ export type MainStackParamList = {
   MeetupDetail: { meetupId: string };
   EditMeetup: { meetupId: string };
   ParticipantList: { meetupId: string };
-  Games: undefined;
+  Games: { meetupId?: string };
   Timer: undefined;
-  TeamRandomizer: undefined;
+  TeamRandomizer: { meetupId?: string };
   ImpostorStart: { meetupId?: string };
   ImpostorRole: { meetupId?: string };
   WhoAmISetup: undefined;
   WhoAmIGame: { category: WhoAmICategorySelection };
   GroupQuestions: undefined;
-  ScorerSetup: undefined;
+  ScorerSetup: { meetupId?: string };
   ScorerGame: {
     players: string[];
     targetScore?: number;

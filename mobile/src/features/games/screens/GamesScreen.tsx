@@ -16,8 +16,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import type { MainStackParamList } from '@/navigation/types';
@@ -26,6 +27,7 @@ import { triggerSelectionHaptic } from '@/shared/utils/haptics';
 import { ImpostorTabBar } from '@/features/impostor/components/ImpostorTabBar';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'Games'>;
+type RouteProps = RouteProp<MainStackParamList, 'Games'>;
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 /** Relación ancho/alto de cada card del grid */
@@ -183,6 +185,8 @@ const GameGrid = ({ items, startIndex, cardWidth, onPress }: GameGridProps) => (
 
 export const GamesScreen = () => {
   const navigation = useNavigation<NavProp>();
+  const route = useRoute<RouteProps>();
+  const meetupId = route.params?.meetupId;
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
     null,
   );
@@ -297,7 +301,9 @@ export const GamesScreen = () => {
 
       switch (item.id) {
         case 'impostor':
-          navigateWithFade(() => navigation.navigate(Routes.ImpostorStart, {}));
+          navigateWithFade(() =>
+            navigation.navigate(Routes.ImpostorStart, meetupId ? { meetupId } : {}),
+          );
           break;
         case 'what-am-i':
           navigateWithFade(() => navigation.navigate(Routes.WhoAmISetup));
@@ -306,19 +312,23 @@ export const GamesScreen = () => {
           navigateWithFade(() => navigation.navigate(Routes.GroupQuestions));
           break;
         case 'scorekeeper':
-          navigateWithFade(() => navigation.navigate(Routes.ScorerSetup));
+          navigateWithFade(() =>
+            navigation.navigate(Routes.ScorerSetup, meetupId ? { meetupId } : {}),
+          );
           break;
         case 'timer':
           navigateWithFade(() => navigation.navigate(Routes.Timer));
           break;
         case 'teams':
-          navigateWithFade(() => navigation.navigate(Routes.TeamRandomizer));
+          navigateWithFade(() =>
+            navigation.navigate(Routes.TeamRandomizer, meetupId ? { meetupId } : {}),
+          );
           break;
         default:
           break;
       }
     },
-    [navigateWithFade, navigation],
+    [meetupId, navigateWithFade, navigation],
   );
 
   return (

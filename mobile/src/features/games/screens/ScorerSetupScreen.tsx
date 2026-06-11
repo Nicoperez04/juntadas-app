@@ -6,6 +6,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
   Platform,
@@ -19,16 +20,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import type { MainStackParamList } from '@/navigation/types';
 import { AppButton } from '@/shared/components/AppButton';
 import { Toast } from '@/shared/components/Toast';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
+import { impostorService } from '@/features/impostor/services/impostorService';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'ScorerSetup'>;
+type RouteProps = RouteProp<MainStackParamList, 'ScorerSetup'>;
 
 /** Tipo de condición de victoria/derrota al alcanzar el puntaje límite */
 type TargetType = 'win' | 'lose';
@@ -81,14 +85,46 @@ const PlayerRow = ({ name, onRemove }: PlayerRowProps) => {
 
 export const ScorerSetupScreen = () => {
   const navigation = useNavigation<NavProp>();
+  const route = useRoute<RouteProps>();
+  const meetupId = route.params?.meetupId;
 
   const [players, setPlayers] = useState<string[]>([]);
   const [nameInput, setNameInput] = useState('');
   const [hasTargetScore, setHasTargetScore] = useState(false);
   const [targetScoreInput, setTargetScoreInput] = useState('');
   const [targetType, setTargetType] = useState<TargetType>('win');
+  const [isLoadingParticipants, setIsLoadingParticipants] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
     null,
+  );
+
+  /**
+   * Al enfocar la pantalla: carga participantes confirmados de la juntada
+   * si se llegó con meetupId, siguiendo el mismo patrón que ImpostorStartScreen.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      if (!meetupId) {
+        setIsLoadingParticipants(false);
+        return;
+      }
+
+      const loadParticipants = async () => {
+        setIsLoadingParticipants(true);
+        const { data, error } = await impostorService.getParticipantsForGame(meetupId);
+
+        if (error) {
+          setToast({ message: error, type: 'error' });
+          setPlayers([]);
+        } else if (data) {
+          setPlayers(data.map((player) => player.name));
+        }
+
+        setIsLoadingParticipants(false);
+      };
+
+      void loadParticipants();
+    }, [meetupId]),
   );
 
   /** Agrega un jugador validando vacío y duplicados (case-insensitive) */
@@ -185,6 +221,10 @@ export const ScorerSetupScreen = () => {
           {/* ── Jugadores ── */}
           <Text style={styles.sectionTitle}>Jugadores</Text>
 
+          {meetupId ? (
+            <Text style={styles.meetupHint}>Sugeridos desde la juntada</Text>
+          ) : null}
+
           <View style={styles.addRow}>
             <TextInput
               style={styles.nameInput}
@@ -204,7 +244,12 @@ export const ScorerSetupScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {players.length > 0 ? (
+          {isLoadingParticipants ? (
+            <ActivityIndicator
+              color={theme.colors.primary}
+              style={styles.participantsLoader}
+            />
+          ) : players.length > 0 ? (
             <View style={styles.playersListContainer}>
               <View style={styles.playersBadge}>
                 <MaterialCommunityIcons
@@ -366,6 +411,15 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
+  },
+  meetupHint: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textSecondary,
+    marginTop: -theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  participantsLoader: {
+    marginVertical: theme.spacing.lg,
   },
   addRow: {
     flexDirection: 'row',

@@ -73,6 +73,7 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **43** · ScorerSetupScreen: configuración de jugadores y puntaje objetivo → [`prompts/bloque-4/05_anotador_generico.md`](prompts/bloque-4/05_anotador_generico.md)
 - **44** · ScorerGameScreen: anotador con edición inline, mid-game y objetivo → [`prompts/bloque-4/05_anotador_generico.md`](prompts/bloque-4/05_anotador_generico.md)
 - **45** · Navegación: rutas ScorerSetup y ScorerGame → [`prompts/bloque-4/05_anotador_generico.md`](prompts/bloque-4/05_anotador_generico.md)
+- **46** · Corrección: juegos desde juntada con prellenado de participantes en TeamRandomizer y ScorerSetup → [`prompts/bloque-4/06_correctivo_juegos_desde_juntada.md`](prompts/bloque-4/06_correctivo_juegos_desde_juntada.md)
 
 ## Skills
 

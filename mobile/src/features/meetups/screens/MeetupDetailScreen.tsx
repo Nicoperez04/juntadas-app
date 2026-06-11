@@ -356,7 +356,7 @@ export const MeetupDetailScreen = () => {
                 label="Jugar"
                 color={theme.colors.primary}
                 onPress={() =>
-                  navigation.navigate(Routes.ImpostorStart, { meetupId })
+                  navigation.navigate(Routes.Games, { meetupId })
                 }
               />
             )}

@@ -15,19 +15,23 @@ import {
   Easing,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
 import { AppButton } from '@/shared/components/AppButton';
 import { Toast } from '@/shared/components/Toast';
 import { triggerSelectionHaptic, triggerSuccessHaptic } from '@/shared/utils/haptics';
 import type { MainStackParamList } from '@/navigation/types';
+import { impostorService } from '@/features/impostor/services/impostorService';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'TeamRandomizer'>;
+type RouteProps = RouteProp<MainStackParamList, 'TeamRandomizer'>;
 
 /**
  * Altura visible de la lista de participantes: exactamente 2 chips.
@@ -193,6 +197,8 @@ const formatTeamsForClipboard = (teams: Team[]): string =>
 
 export const TeamRandomizerScreen = () => {
   const navigation = useNavigation<NavProp>();
+  const route = useRoute<RouteProps>();
+  const meetupId = route.params?.meetupId;
 
   const [step, setStep] = useState<Step>('config');
   const [names, setNames] = useState<string[]>([]);
@@ -200,9 +206,39 @@ export const TeamRandomizerScreen = () => {
   const [divisionMode, setDivisionMode] = useState<DivisionMode>('teamCount');
   const [divisionValue, setDivisionValue] = useState('2');
   const [teams, setTeams] = useState<Team[]>([]);
+  const [isLoadingParticipants, setIsLoadingParticipants] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  /**
+   * Al enfocar la pantalla: carga participantes confirmados de la juntada
+   * si se llegó con meetupId, siguiendo el mismo patrón que ImpostorStartScreen.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      if (!meetupId) {
+        setIsLoadingParticipants(false);
+        return;
+      }
+
+      const loadParticipants = async () => {
+        setIsLoadingParticipants(true);
+        const { data, error } = await impostorService.getParticipantsForGame(meetupId);
+
+        if (error) {
+          setToast({ message: error, type: 'error' });
+          setNames([]);
+        } else if (data) {
+          setNames(data.map((player) => player.name));
+        }
+
+        setIsLoadingParticipants(false);
+      };
+
+      void loadParticipants();
+    }, [meetupId]),
+  );
 
   /**
    * Transición limpia entre pasos: fade out → aplica el nuevo estado en el
@@ -368,6 +404,10 @@ export const TeamRandomizerScreen = () => {
               {/* ── Participantes ── */}
               <Text style={styles.sectionTitle}>Participantes</Text>
 
+              {meetupId ? (
+                <Text style={styles.meetupHint}>Sugeridos desde la juntada</Text>
+              ) : null}
+
               <View style={styles.addNameRow}>
                 <TextInput
                   style={styles.nameInput}
@@ -387,7 +427,12 @@ export const TeamRandomizerScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              {names.length > 0 ? (
+              {isLoadingParticipants ? (
+                <ActivityIndicator
+                  color={theme.colors.primary}
+                  style={styles.participantsLoader}
+                />
+              ) : names.length > 0 ? (
                 <View>
                   {/* Badge con el conteo — siempre visible, indica scroll cuando hay 3+ */}
                   <View style={styles.namesHeader}>
@@ -605,6 +650,14 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.textPrimary,
     marginTop: theme.spacing.sm,
+  },
+  meetupHint: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
+  },
+  participantsLoader: {
+    marginVertical: theme.spacing.lg,
   },
   addNameRow: {
     flexDirection: 'row',
