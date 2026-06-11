@@ -13,6 +13,8 @@ export const Routes = {
     EditMeetup: 'EditMeetup',
     ParticipantList: 'ParticipantList',
     Games: 'Games',
+    Timer: 'Timer',
+    TeamRandomizer: 'TeamRandomizer',
     ImpostorStart: 'ImpostorStart',
     ImpostorRole: 'ImpostorRole',
     MemoriesGallery: 'MemoriesGallery',

@@ -53,6 +53,15 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **26** · Corrección diseño historial: buscador, bottom sheet, selección múltiple y animaciones → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/02_correctivo_diseno_historial.md`](prompts/bloque-3/02_correctivo_diseno_historial.md)
 - **27** · Documentación y cierre del Bloque 3 → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/03_documentar_bloque-3.md`](prompts/bloque-3/03_documentar_bloque-3.md)
 
+### Bloque 4 — Herramientas de juegos (11/06/2026)
+
+- **28** · TimerScreen: temporizador con cuenta regresiva y cronómetro → [`prompts/bloque-4/01_herramientas.md`](prompts/bloque-4/01_herramientas.md)
+- **29** · TeamRandomizerScreen: equipos aleatorios con configuración flexible → [`prompts/bloque-4/01_herramientas.md`](prompts/bloque-4/01_herramientas.md)
+- **30** · Navegación: rutas Timer y TeamRandomizer → [`prompts/bloque-4/01_herramientas.md`](prompts/bloque-4/01_herramientas.md)
+- **31** · Correctivo cronómetro: milisegundos solo en modo cronómetro → [`prompts/bloque-4/02_correctivo_cronometro_ms.md`](prompts/bloque-4/02_correctivo_cronometro_ms.md)
+- **32** · Correctivo equipos: input numérico y validación de división → [`prompts/bloque-4/03_correctivo_equipos_division.md`](prompts/bloque-4/03_correctivo_equipos_division.md)
+- **33** · Correctivo equipos: scroll de participantes desde el tercero → [`prompts/bloque-4/04_correctivo_equipos_scroll.md`](prompts/bloque-4/04_correctivo_equipos_scroll.md)
+
 ## Skills
 
 - Skills instaladas (base heredada de E1): [`skills_instaladas.md`](skills_instaladas.md)

@@ -34,6 +34,16 @@ export const GamesScreen = () => {
     navigation.navigate(Routes.ImpostorStart, {});
   };
 
+  const handleOpenTimer = () => {
+    void triggerSelectionHaptic();
+    navigation.navigate(Routes.Timer);
+  };
+
+  const handleOpenTeamRandomizer = () => {
+    void triggerSelectionHaptic();
+    navigation.navigate(Routes.TeamRandomizer);
+  };
+
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.topSafe} edges={['top']}>
@@ -75,6 +85,21 @@ export const GamesScreen = () => {
             <AppButton label="Jugar ahora" onPress={handlePlayImpostor} />
           </View>
         </View>
+
+        {/* Herramientas provisorias — rediseño final en bloque 4b */}
+        <Text style={styles.sectionTitle}>Herramientas</Text>
+
+        <TouchableOpacity style={styles.toolButton} onPress={handleOpenTimer}>
+          <Ionicons name="timer-outline" size={22} color={theme.colors.primary} />
+          <Text style={styles.toolButtonText}>Temporizador</Text>
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.textDisabled} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.toolButton} onPress={handleOpenTeamRandomizer}>
+          <Ionicons name="people-outline" size={22} color={theme.colors.primary} />
+          <Text style={styles.toolButtonText}>Equipos aleatorios</Text>
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.textDisabled} />
+        </TouchableOpacity>
 
         {/* Sección próximamente */}
         <Text style={styles.sectionTitle}>Más juegos próximamente</Text>
@@ -194,6 +219,23 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: theme.typography.sizes.lg,
     fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textPrimary,
+  },
+  toolButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    borderWidth: theme.components.borderWidth,
+    borderColor: theme.colors.border,
+    ...theme.shadows.sm,
+  },
+  toolButtonText: {
+    flex: 1,
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.medium,
     color: theme.colors.textPrimary,
   },
   comingSoonCard: {

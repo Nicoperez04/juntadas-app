@@ -34,6 +34,8 @@ export type MainStackParamList = {
   EditMeetup: { meetupId: string };
   ParticipantList: { meetupId: string };
   Games: undefined;
+  Timer: undefined;
+  TeamRandomizer: undefined;
   ImpostorStart: { meetupId?: string };
   ImpostorRole: { meetupId?: string };
   MemoriesGallery: { meetupId: string; isActive: boolean };

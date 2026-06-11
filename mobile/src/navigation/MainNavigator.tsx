@@ -30,6 +30,10 @@ import { GamesScreen } from '@/features/impostor/screens/GamesScreen';
 import { ImpostorStartScreen } from '@/features/impostor/screens/ImpostorStartScreen';
 import { ImpostorRoleScreen } from '@/features/impostor/screens/ImpostorRoleScreen';
 
+// Pantallas implementadas — bloque 4 E2 (herramientas de juegos)
+import { TimerScreen } from '@/features/games/screens/TimerScreen';
+import { TeamRandomizerScreen } from '@/features/games/screens/TeamRandomizerScreen';
+
 // Pantallas implementadas — bloque 5 (recuerdos)
 import { MemoriesGalleryScreen } from '@/features/memories/screens/MemoriesGalleryScreen';
 import { MemoryViewerScreen } from '@/features/memories/screens/MemoryViewerScreen';
@@ -79,6 +83,8 @@ export const MainNavigator = ({
 
       {/* Bloque 4 — impostor */}
       <Stack.Screen name={Routes.Games} component={GamesScreen} />
+      <Stack.Screen name={Routes.Timer} component={TimerScreen} />
+      <Stack.Screen name={Routes.TeamRandomizer} component={TeamRandomizerScreen} />
       <Stack.Screen name={Routes.ImpostorStart} component={ImpostorStartScreen} />
       <Stack.Screen name={Routes.ImpostorRole} component={ImpostorRoleScreen} />
 
