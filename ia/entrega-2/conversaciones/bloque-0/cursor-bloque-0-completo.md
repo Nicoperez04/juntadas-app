@@ -39,6 +39,3 @@
 - Pantallas auth sin tipar con AuthStackParamList
 - MemoriesGalleryScreen y ParticipantListScreen con getMeetupById manual
 - leaveMeetup sin invalidación de participantes
-
-## Conversación completa
-[Pegar acá la conversación exportada de Cursor]

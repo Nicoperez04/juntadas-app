@@ -42,6 +42,17 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **18** · Card de reseña pendiente en home (PendingReviewCard) → [`conversaciones/bloque-2/cursor-bloque-2-completo.md`](conversaciones/bloque-2/cursor-bloque-2-completo.md) · [`prompts/bloque-2/01_resumen_post_juntada.md`](prompts/bloque-2/01_resumen_post_juntada.md)
 - **19** · Indicador de reseñas en historial → [`conversaciones/bloque-2/cursor-bloque-2-completo.md`](conversaciones/bloque-2/cursor-bloque-2-completo.md) · [`prompts/bloque-2/01_resumen_post_juntada.md`](prompts/bloque-2/01_resumen_post_juntada.md)
 
+### Bloque 3 — Historial mejorado (10/06/2026)
+
+- **20** · Instalación @gorhom/bottom-sheet + setup Reanimated y GestureHandler → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/01_historial_mejorado.md`](prompts/bloque-3/01_historial_mejorado.md)
+- **21** · Migración meetup_hidden para ocultar juntadas individuales → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/01_historial_mejorado.md`](prompts/bloque-3/01_historial_mejorado.md)
+- **22** · getAllUserMeetups, hideMeetup, deleteMeetupForAll, reactivateMeetup → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/01_historial_mejorado.md`](prompts/bloque-3/01_historial_mejorado.md)
+- **23** · Rediseño MeetupHistoryScreen: búsqueda, filtros, chips, swipe actions → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/01_historial_mejorado.md`](prompts/bloque-3/01_historial_mejorado.md)
+- **24** · Acciones ocultar y eliminar para todos desde historial → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/01_historial_mejorado.md`](prompts/bloque-3/01_historial_mejorado.md)
+- **25** · Reactivar juntada finalizada desde MeetupOrganizerActions → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/01_historial_mejorado.md`](prompts/bloque-3/01_historial_mejorado.md)
+- **26** · Corrección diseño historial: buscador, bottom sheet, selección múltiple y animaciones → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/02_correctivo_diseno_historial.md`](prompts/bloque-3/02_correctivo_diseno_historial.md)
+- **27** · Documentación y cierre del Bloque 3 → [`conversaciones/bloque-3/cursor-bloque-3-completo.md`](conversaciones/bloque-3/cursor-bloque-3-completo.md) · [`prompts/bloque-3/03_documentar_bloque-3.md`](prompts/bloque-3/03_documentar_bloque-3.md)
+
 ## Skills
 
 - Skills instaladas (base heredada de E1): [`skills_instaladas.md`](skills_instaladas.md)

@@ -47,6 +47,3 @@
 - Archivos huérfanos en Storage al reemplazar portada (mejora futura)
 - CoverPickerSection duplicado en Create/Edit (candidato a componente compartido)
 - Picker 16:9 no fuerza recorte en iOS (limitación de la plataforma)
-
-## Conversación completa
-[Pegar acá la conversación exportada de Cursor]

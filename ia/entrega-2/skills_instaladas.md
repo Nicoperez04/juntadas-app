@@ -152,6 +152,16 @@ Al pedir diseñar una app, crear pantallas, listar proyectos Sleek o generar scr
 
 ---
 
+## Dependencias npm instaladas en Bloque 3 (E2)
+
+| Paquete | Uso en el proyecto |
+|---------|-------------------|
+| `@gorhom/bottom-sheet` | Bottom sheet con animación fluida para filtros del historial. Instalada en Bloque 3. |
+| `react-native-reanimated` | Peer dep de bottom-sheet, animaciones nativas |
+| `react-native-gesture-handler` | Peer dep de bottom-sheet, gestos nativos |
+
+---
+
 ## Alineación con el stack del proyecto
 
 | Capa del proyecto | Skills relevantes |
@@ -160,6 +170,7 @@ Al pedir diseñar una app, crear pantallas, listar proyectos Sleek o generar scr
 | Supabase (Auth, DB, Storage, RLS) | `supabase`, `supabase-postgres-best-practices` |
 | UI / diseño de pantallas | `building-native-ui`, `sleek-design-mobile-apps` |
 | Migraciones SQL (`001_initial_schema.sql`) | `supabase-postgres-best-practices`, `supabase` |
+| Bottom sheets y gestos (Bloque 3) | `vercel-react-native-skills`, `building-native-ui` |
 
 ---
 

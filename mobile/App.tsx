@@ -1,4 +1,7 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppNavigator } from '@/navigation/AppNavigator';
 
@@ -20,11 +23,21 @@ const queryClient = new QueryClient({
   },
 });
 
-// Punto de entrada de la app: provee la caché de queries y monta la navegación.
+// Punto de entrada de la app: provee gestos, bottom sheets y la caché de queries.
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AppNavigator />
-    </QueryClientProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <BottomSheetModalProvider>
+        <QueryClientProvider client={queryClient}>
+          <AppNavigator />
+        </QueryClientProvider>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});

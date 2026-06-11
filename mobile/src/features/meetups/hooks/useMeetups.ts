@@ -430,3 +430,108 @@ export const useMeetups = () => {
     refresh,
   };
 };
+
+/**
+ * Query de todas las juntadas del usuario para el historial completo.
+ * Incluye activas, finalizadas y canceladas, excluyendo las ocultas.
+ *
+ * @param userId - UUID del usuario; la query se deshabilita si es null
+ * @returns Query con lista de juntadas con rol del usuario
+ */
+export const useAllUserMeetups = (userId: string | null) => {
+  return useQuery({
+    queryKey: ['allMeetups', userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<MeetupWithRole[]> => {
+      if (!userId) return [];
+      const { data, error } = await meetupService.getAllUserMeetups(userId);
+      if (error) throw new Error(error);
+      return data ?? [];
+    },
+  });
+};
+
+/**
+ * Mutación para ocultar una juntada del historial del usuario.
+ * Invalida el historial completo al tener éxito.
+ *
+ * @returns Mutación de TanStack Query; data es siempre null
+ */
+export const useHideMeetup = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async (meetupId: string): Promise<OperationResult<null>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.hideMeetup(meetupId, userId);
+    },
+    onSuccess: async (result) => {
+      if (!result.error) {
+        await queryClient.invalidateQueries({
+          queryKey: ['allMeetups', userId],
+        });
+      }
+    },
+  });
+};
+
+/**
+ * Mutación para eliminar una juntada para todos los participantes.
+ * Solo debe invocarse si el usuario es organizador.
+ * Invalida historial y lista del home al tener éxito.
+ *
+ * @returns Mutación de TanStack Query; data es siempre null
+ */
+export const useDeleteMeetupForAll = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async (meetupId: string): Promise<OperationResult<null>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.deleteMeetupForAll(meetupId);
+    },
+    onSuccess: async (result) => {
+      if (!result.error) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['allMeetups', userId] }),
+          queryClient.invalidateQueries({ queryKey: ['meetups', userId] }),
+        ]);
+      }
+    },
+  });
+};
+
+/**
+ * Mutación para reactivar una juntada finalizada.
+ * Invalida historial y lista del home al tener éxito.
+ *
+ * @returns Mutación de TanStack Query; data es siempre null
+ */
+export const useReactivateMeetup = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async (meetupId: string): Promise<OperationResult<null>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.reactivateMeetup(meetupId);
+    },
+    onSuccess: async (result, meetupId) => {
+      if (!result.error) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['allMeetups', userId] }),
+          queryClient.invalidateQueries({ queryKey: ['meetups', userId] }),
+          queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+        ]);
+      }
+    },
+  });
+};

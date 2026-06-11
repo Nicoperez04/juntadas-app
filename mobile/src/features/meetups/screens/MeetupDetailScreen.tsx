@@ -32,6 +32,11 @@ import { Toast } from '@/shared/components/Toast';
 import { ModifyAttendanceScreen } from '@/features/participants/screens/ModifyAttendanceScreen';
 import { getParticipantDisplayName } from '@/features/participants/utils/participantDisplay';
 import { useMeetupDetail } from '../hooks/useMeetupDetail';
+import {
+  useHideMeetup,
+  useDeleteMeetupForAll,
+} from '../hooks/useMeetups';
+import { triggerSuccessHaptic } from '@/shared/utils/haptics';
 import { MeetupDetailHeader } from '../components/MeetupDetailHeader';
 import { MeetupParticipantsSummary } from '../components/MeetupParticipantsSummary';
 import { MeetupOrganizerActions } from '../components/MeetupOrganizerActions';
@@ -112,6 +117,15 @@ export const MeetupDetailScreen = () => {
     message: string;
     type: 'success' | 'error';
   } | null>(null);
+  const [pendingHistoryAction, setPendingHistoryAction] = useState<
+    'hide' | 'delete' | null
+  >(null);
+  /** Navega al historial tras mostrar el toast de ocultar/eliminar */
+  const [shouldNavigateBackAfterToast, setShouldNavigateBackAfterToast] =
+    useState(false);
+
+  const hideMutation = useHideMeetup();
+  const deleteMutation = useDeleteMeetupForAll();
 
   /**
    * Transporta el mensaje de Toast entre onSave y onClose del modal de
@@ -206,6 +220,47 @@ export const MeetupDetailScreen = () => {
     }
 
     navigation.navigate(Routes.MeetupHome);
+  };
+
+  const isHistoryActionLoading =
+    hideMutation.isPending || deleteMutation.isPending;
+
+  /**
+   * Confirma ocultar o eliminar la juntada desde el detalle.
+   * Reutiliza la misma lógica del historial (swipe) para mantener consistencia.
+   */
+  const confirmHistoryAction = async () => {
+    if (!pendingHistoryAction) return;
+
+    if (pendingHistoryAction === 'hide') {
+      const result = await hideMutation.mutateAsync(meetupId);
+      setPendingHistoryAction(null);
+
+      if (result.error) {
+        setToast({ message: result.error, type: 'error' });
+        return;
+      }
+
+      void triggerSuccessHaptic();
+      setToast({
+        message: '✓ Juntada ocultada de tu historial',
+        type: 'success',
+      });
+      setShouldNavigateBackAfterToast(true);
+      return;
+    }
+
+    const result = await deleteMutation.mutateAsync(meetupId);
+    setPendingHistoryAction(null);
+
+    if (result.error) {
+      setToast({ message: result.error, type: 'error' });
+      return;
+    }
+
+    void triggerSuccessHaptic();
+    setToast({ message: '✓ Juntada eliminada', type: 'success' });
+    setShouldNavigateBackAfterToast(true);
   };
 
   return (
@@ -424,6 +479,59 @@ export const MeetupDetailScreen = () => {
           </View>
         )}
 
+        {/* Zona destructiva — visible en juntadas finalizadas o canceladas */}
+        {(isFinished || isCancelled) && (
+          <View style={styles.destructiveSection}>
+            <Text style={styles.destructiveSectionTitle}>
+              Acciones del historial
+            </Text>
+            <Text style={styles.destructiveSectionHint}>
+              {isOrganizer
+                ? 'Podés eliminar la juntada para todos los participantes'
+                : 'Podés ocultar esta juntada solo de tu historial'}
+            </Text>
+            {isOrganizer ? (
+              <TouchableOpacity
+                style={[
+                  styles.destructiveBtn,
+                  isHistoryActionLoading && styles.destructiveBtnDisabled,
+                ]}
+                onPress={() => setPendingHistoryAction('delete')}
+                disabled={isHistoryActionLoading}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={20}
+                  color={theme.colors.error}
+                />
+                <Text style={styles.destructiveBtnText}>
+                  Eliminar juntada para todos
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.destructiveBtn,
+                  isHistoryActionLoading && styles.destructiveBtnDisabled,
+                ]}
+                onPress={() => setPendingHistoryAction('hide')}
+                disabled={isHistoryActionLoading}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="eye-off-outline"
+                  size={20}
+                  color={theme.colors.error}
+                />
+                <Text style={styles.destructiveBtnText}>
+                  Ocultar de mi historial
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         <View style={styles.bottomSpace} />
       </ScrollView>
 
@@ -497,6 +605,90 @@ export const MeetupDetailScreen = () => {
         </View>
       </Modal>
 
+      {/* Modal de confirmación para ocultar o eliminar del historial */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={pendingHistoryAction !== null}
+        onRequestClose={() =>
+          !isHistoryActionLoading && setPendingHistoryAction(null)
+        }
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View
+              style={[
+                styles.modalIconBox,
+                pendingHistoryAction === 'delete' &&
+                  styles.modalIconBoxDanger,
+              ]}
+            >
+              <Ionicons
+                name={
+                  pendingHistoryAction === 'delete'
+                    ? 'trash-outline'
+                    : 'eye-off-outline'
+                }
+                size={32}
+                color={
+                  pendingHistoryAction === 'delete'
+                    ? theme.colors.error
+                    : theme.colors.primary
+                }
+              />
+            </View>
+
+            {pendingHistoryAction === 'hide' ? (
+              <>
+                <Text style={styles.modalTitle}>
+                  ¿Querés ocultar esta juntada de tu historial?
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  Solo desaparecerá para vos.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalTitle}>
+                  ¿Eliminar esta juntada para todos los participantes?
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  Esta acción no se puede deshacer.
+                </Text>
+              </>
+            )}
+
+            <View style={styles.modalActions}>
+              <AppButton
+                label="Cancelar"
+                variant="ghost"
+                onPress={() => setPendingHistoryAction(null)}
+                disabled={isHistoryActionLoading}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.modalDestructiveBtn,
+                  isHistoryActionLoading && styles.modalDestructiveBtnDisabled,
+                ]}
+                onPress={() => void confirmHistoryAction()}
+                disabled={isHistoryActionLoading}
+                activeOpacity={0.8}
+              >
+                {isHistoryActionLoading ? (
+                  <ActivityIndicator color={theme.colors.surface} />
+                ) : (
+                  <Text style={styles.modalDestructiveBtnText}>
+                    {pendingHistoryAction === 'hide'
+                      ? 'Sí, ocultar'
+                      : 'Sí, eliminar'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal de confirmación para abandonar juntada */}
       <Modal
         transparent
@@ -553,7 +745,13 @@ export const MeetupDetailScreen = () => {
         message={toast?.message ?? ''}
         type={toast?.type ?? 'success'}
         visible={!!toast}
-        onHide={() => setToast(null)}
+        onHide={() => {
+          setToast(null);
+          if (shouldNavigateBackAfterToast) {
+            setShouldNavigateBackAfterToast(false);
+            navigation.goBack();
+          }
+        }}
       />
     </View>
   );
@@ -710,6 +908,49 @@ const styles = StyleSheet.create({
   },
   leaveSection: {
     marginBottom: theme.spacing.md,
+  },
+  destructiveSection: {
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    paddingTop: theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    gap: theme.spacing.sm,
+  },
+  destructiveSectionTitle: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  destructiveSectionHint: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
+    marginBottom: theme.spacing.xs,
+  },
+  destructiveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.errorLight,
+    borderRadius: theme.radius.lg,
+    paddingVertical: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.error,
+  },
+  destructiveBtnDisabled: {
+    opacity: 0.6,
+  },
+  destructiveBtnText: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.error,
+  },
+  modalIconBoxDanger: {
+    backgroundColor: theme.colors.errorLight,
   },
   leaveBtn: {
     flexDirection: 'row',
