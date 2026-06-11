@@ -39,7 +39,3 @@
 - `usePendingReviews` hace N+1 queries (getUserReview por juntada candidata); aceptable para MVP, optimizable con query batch
 - Badge de historial no distingue juntadas con 0 reseñas vs con reseñas (limitación por no cargar conteo)
 - Reactivar juntada (status active → finished) no está implementado en la app; RLS ya contempla el caso de negocio
-
-## Conversación completa
-
-[Pegar acá la conversación exportada de Cursor]

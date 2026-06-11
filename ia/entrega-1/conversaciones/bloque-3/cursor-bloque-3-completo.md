@@ -2525,9 +2525,6 @@ markdown# Conversación Bloque 3 — Participantes y acciones sobre juntadas
 - Tipado genérico en createNativeStackNavigator
 - Errores RLS genéricos caen en "error inesperado"
 
-## Conversación completa
-
-[Pegar acá la conversación exportada de Cursor]
 3. Actualizá ia/entrega-1/indice_ia.md
 Agregá bajo la sección Cursor:
 18 - Implementación del módulo de participantes
@@ -2940,8 +2937,6 @@ markdown# Conversación Bloque 4 — Juego Impostor
 - Fondo claro en GamesScreen e ImpostorStartScreen, fondo oscuro solo en revelación
 - Zustand para compartir estado de sesión entre pantallas
 
-## Conversación completa
-[Pegar acá la conversación exportada de Cursor]
 Actualizá ia/entrega-1/indice_ia.md agregando:
 23 - Implementación del juego Impostor (GamesScreen, ImpostorStartScreen, ImpostorRoleScreen)
 24 - Rediseño y correcciones del Impostor (palabra aleatoria, diseño integrado, standalone)
