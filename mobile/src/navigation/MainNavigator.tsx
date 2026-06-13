@@ -43,6 +43,7 @@ import { MemoryViewerScreen } from '@/features/memories/screens/MemoryViewerScre
 
 // Pantallas implementadas — bloque 6 (perfil)
 import { ProfileScreen } from '@/features/auth/screens/ProfileScreen';
+import { ChangePasswordScreen } from '@/features/auth/screens/ChangePasswordScreen';
 
 // Pantallas implementadas — bloque 2 E2 (reseñas post-juntada)
 import { ReviewFormScreen } from '@/features/reviews/screens/ReviewFormScreen';
@@ -106,6 +107,7 @@ export const MainNavigator = ({
 
       {/* Bloque 6 — perfil de usuario */}
       <Stack.Screen name={Routes.Profile} component={ProfileScreen} />
+      <Stack.Screen name={Routes.ChangePassword} component={ChangePasswordScreen} />
 
       {/* Bloque 1 — completar perfil post-registro */}
       <Stack.Screen name={Routes.CompleteProfile} component={CompleteProfileScreen} />

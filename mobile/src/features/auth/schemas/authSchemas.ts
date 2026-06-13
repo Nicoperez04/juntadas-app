@@ -29,6 +29,35 @@ export const forgotPasswordSchema = z.object({
 });
 
 /**
+ * Valida la nueva contraseña en el flujo de recuperación por deep link
+ * y en el cambio de contraseña desde el perfil (sin contraseña actual).
+ */
+export const resetPasswordSchema = z
+  .object({
+    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+    confirmPassword: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Las contraseñas no coinciden',
+    path: ['confirmPassword'],
+  });
+
+/**
+ * Valida el cambio de contraseña estando logueado.
+ * Exige la contraseña actual para evitar cambios no autorizados en dispositivos compartidos.
+ */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+    confirmPassword: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Las contraseñas no coinciden',
+    path: ['confirmPassword'],
+  });
+
+/**
  * Valida el username del paso de completar perfil.
  *
  * Las restricciones de formato (solo [a-z0-9_]) facilitan el uso del username

@@ -230,6 +230,36 @@ export const useAuth = () => {
     return { error: null };
   }, []);
 
+  /**
+   * Elimina la cuenta del usuario autenticado.
+   * Para E2 cierra sesión y limpia el push token — el soft delete real
+   * requiere migración de deleted_at pendiente de aprobación.
+   */
+  const deleteAccount = useCallback(async (): Promise<ActionResult> => {
+    setIsLoading(true);
+    setError(null);
+
+    const { data: user, error: userError } = await authService.getCurrentUser();
+    if (userError || !user) {
+      const msg = userError ?? 'No hay usuario autenticado';
+      setError(msg);
+      setIsLoading(false);
+      return { error: msg };
+    }
+
+    const { error: err } = await authService.deleteAccount(user.id);
+    if (err) {
+      setError(err);
+      setIsLoading(false);
+      return { error: err };
+    }
+
+    setProfile(null);
+    setStats(EMPTY_STATS);
+    setIsLoading(false);
+    return { error: null };
+  }, []);
+
   return {
     login,
     register,
@@ -239,6 +269,7 @@ export const useAuth = () => {
     loadProfile,
     updateProfile,
     uploadAvatar,
+    deleteAccount,
     profile,
     stats,
     isLoading,

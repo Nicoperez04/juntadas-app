@@ -25,6 +25,19 @@ export interface ForgotPasswordFormData {
   email: string;
 }
 
+/** Datos del formulario de nueva contraseña tras abrir el deep link de recuperación */
+export interface ResetPasswordFormData {
+  password: string;
+  confirmPassword: string;
+}
+
+/** Datos del formulario de cambio de contraseña desde el perfil autenticado */
+export interface ChangePasswordFormData {
+  currentPassword: string;
+  password: string;
+  confirmPassword: string;
+}
+
 /**
  * Datos del paso de completar perfil post-registro.
  * Se persiste en la tabla `profiles` y debe ser único en la base de datos.

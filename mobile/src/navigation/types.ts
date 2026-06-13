@@ -20,6 +20,7 @@ export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  ResetPassword: undefined;
 };
 
 /**
@@ -54,4 +55,5 @@ export type MainStackParamList = {
   ReviewForm: { meetupId: string; meetupTitle: string };
   CompleteProfile: undefined;
   Profile: undefined;
+  ChangePassword: undefined;
 };

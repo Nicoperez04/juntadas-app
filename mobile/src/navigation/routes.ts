@@ -4,6 +4,7 @@ export const Routes = {
     Login: 'Login',
     Register: 'Register',
     ForgotPassword: 'ForgotPassword',
+    ResetPassword: 'ResetPassword',
   
     // Main
     MeetupHome: 'MeetupHome',
@@ -28,6 +29,7 @@ export const Routes = {
     ReviewForm: 'ReviewForm',
     CompleteProfile: 'CompleteProfile',
     Profile: 'Profile',
+    ChangePassword: 'ChangePassword',
   } as const;
   
   export type RouteNames = typeof Routes[keyof typeof Routes];
