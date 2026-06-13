@@ -275,12 +275,6 @@ export const authService = {
       const refreshToken = params.get('refresh_token');
       const recoveryType = params.get('type');
 
-      // TODO: remover — logs temporales para diagnosticar tokens en adb logcat
-      console.log('[Recovery] accessToken:', !!accessToken);
-      console.log('[Recovery] refreshToken:', !!refreshToken);
-      console.log('[Recovery] paramString:', paramString);
-      console.log('[Recovery] type:', recoveryType);
-
       if (accessToken && refreshToken) {
         const { error } = await supabase.auth.setSession({
           access_token: accessToken,
@@ -293,34 +287,18 @@ export const authService = {
 
       // Fallback: algunos links de Supabase traen solo access_token con type=recovery
       if (accessToken && recoveryType === 'recovery') {
-        // TODO: remover
-        console.log(
-          '[Recovery] Sin refresh_token — intentando setSession solo con access_token',
-        );
-
         const { error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken ?? '',
         });
 
         if (error) {
-          // TODO: remover
-          console.log('[Recovery] setSession sin refresh_token falló:', error.message);
           return { data: null, error: mapAuthError(error.message) };
         }
 
         return { data: null, error: null };
       }
 
-      // TODO: remover
-      console.log(
-        '[Recovery] Tokens insuficientes — accessToken:',
-        !!accessToken,
-        'refreshToken:',
-        !!refreshToken,
-        'type:',
-        recoveryType,
-      );
       return { data: null, error: 'Enlace de recuperación inválido' };
     } catch {
       return { data: null, error: 'Error al procesar el enlace de recuperación' };

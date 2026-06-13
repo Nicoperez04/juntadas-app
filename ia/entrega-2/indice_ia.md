@@ -94,11 +94,15 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 
 ### Bloque 6 — Perfil mejorado (13/06/2026)
 
-- **61** · Deep links: scheme rondaapp, intentFilters, redirectTo en resetPasswordForEmail → [`prompts/bloque-6/01_perfil_mejorado.md`](prompts/bloque-6/01_perfil_mejorado.md)
-- **62** · ResetPasswordScreen: nueva contraseña via deep link → [`prompts/bloque-6/01_perfil_mejorado.md`](prompts/bloque-6/01_perfil_mejorado.md)
-- **63** · Handler PASSWORD_RECOVERY en AppNavigator → [`prompts/bloque-6/01_perfil_mejorado.md`](prompts/bloque-6/01_perfil_mejorado.md)
-- **64** · ChangePasswordScreen: cambio de contraseña logueado → [`prompts/bloque-6/01_perfil_mejorado.md`](prompts/bloque-6/01_perfil_mejorado.md)
-- **65** · Eliminar cuenta desde perfil → [`prompts/bloque-6/01_perfil_mejorado.md`](prompts/bloque-6/01_perfil_mejorado.md)
+- **61** · Deep links: scheme rondaapp, intentFilters, redirectTo en resetPasswordForEmail → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/01_perfil_mejorado.md`](prompts/bloque-6/01_perfil_mejorado.md)
+- **62** · ResetPasswordScreen: nueva contraseña via deep link → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/01_perfil_mejorado.md`](prompts/bloque-6/01_perfil_mejorado.md)
+- **63** · Handler PASSWORD_RECOVERY en AppNavigator → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/01_perfil_mejorado.md`](prompts/bloque-6/01_perfil_mejorado.md)
+- **64** · ChangePasswordScreen: cambio de contraseña logueado → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/01_perfil_mejorado.md`](prompts/bloque-6/01_perfil_mejorado.md)
+- **65** · Eliminar cuenta desde perfil → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/01_perfil_mejorado.md`](prompts/bloque-6/01_perfil_mejorado.md)
+- **66** · Correctivo perfil: mensaje español contraseña repetida + input modal eliminar cuenta → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/02_correctivo_perfil.md`](prompts/bloque-6/02_correctivo_perfil.md)
+- **67** · Fix deep link PASSWORD_RECOVERY: navigationRef + logs adb logcat → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md)
+- **68** · Toast ✓ + haptic en ResetPasswordScreen al guardar → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md)
+- **69** · Documentación y cierre del Bloque 6 → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/03_documentar_bloque-6.md`](prompts/bloque-6/03_documentar_bloque-6.md)
 
 ## Skills
 

@@ -71,17 +71,10 @@ export const AppNavigator = () => {
    * detectSessionInUrl está desactivado en el cliente, por eso se hace manualmente.
    */
   const handleRecoveryDeepLink = async (url: string | null) => {
-    // TODO: remover — log temporal para diagnosticar deep links en adb logcat
-    console.log('[Recovery] URL recibida:', url);
-
     if (!url?.includes(RECOVERY_DEEP_LINK_PREFIX)) return;
 
     const result = await authService.setSessionFromRecoveryUrl(url);
-    if (result.error) {
-      // TODO: remover
-      console.log('[Recovery] Error al setear sesión:', result.error);
-      return;
-    }
+    if (result.error) return;
 
     activatePasswordRecovery();
   };
