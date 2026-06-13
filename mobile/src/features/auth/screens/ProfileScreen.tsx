@@ -20,7 +20,9 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
@@ -35,6 +37,10 @@ import { AppTabBar, APP_TAB_BAR_OFFSET } from '@/shared/components/AppTabBar';
 import { profileEditSchema } from '../schemas/authSchemas';
 import { useAuth } from '../hooks/useAuth';
 import { ProfileEditFormData } from '../types';
+import { notificationService } from '@/features/notifications/services/notificationService';
+
+/** Key de AsyncStorage para la preferencia local de notificaciones push */
+const NOTIFICATIONS_ENABLED_KEY = 'notifications_enabled';
 
 /** Tamaño del avatar principal según el mockup de Figma */
 const AVATAR_SIZE = 80;
@@ -196,6 +202,8 @@ export const ProfileScreen = () => {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
     null,
   );
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
 
   const {
     control,
@@ -212,6 +220,13 @@ export const ProfileScreen = () => {
   useFocusEffect(
     useCallback(() => {
       void loadProfile();
+      void AsyncStorage.getItem(NOTIFICATIONS_ENABLED_KEY).then((value) => {
+        if (value === null) {
+          setNotificationsEnabled(true);
+          return;
+        }
+        setNotificationsEnabled(value === 'true');
+      });
     }, [loadProfile]),
   );
 
@@ -326,6 +341,40 @@ export const ProfileScreen = () => {
     setShowLogoutModal(false);
     if (result.error) {
       setToast({ message: result.error, type: 'error' });
+    }
+  };
+
+  /**
+   * Activa o desactiva las notificaciones push del dispositivo.
+   * Persiste la preferencia localmente y sincroniza push_token en Supabase.
+   */
+  const handleToggleNotifications = async (enabled: boolean) => {
+    if (!profile?.id || isUpdatingNotifications) return;
+
+    setIsUpdatingNotifications(true);
+    setNotificationsEnabled(enabled);
+
+    try {
+      if (enabled) {
+        const result = await notificationService.registerPushToken(profile.id);
+        if (result.error) {
+          setNotificationsEnabled(false);
+          setToast({ message: result.error, type: 'error' });
+          return;
+        }
+        await AsyncStorage.setItem(NOTIFICATIONS_ENABLED_KEY, 'true');
+        return;
+      }
+
+      const result = await notificationService.clearPushToken(profile.id);
+      if (result.error) {
+        setNotificationsEnabled(true);
+        setToast({ message: result.error, type: 'error' });
+        return;
+      }
+      await AsyncStorage.setItem(NOTIFICATIONS_ENABLED_KEY, 'false');
+    } finally {
+      setIsUpdatingNotifications(false);
     }
   };
 
@@ -501,6 +550,31 @@ export const ProfileScreen = () => {
                 <ProfileField label="Username" value={`@${profile.username}`} />
               </>
             )}
+          </View>
+
+          {/* Preferencias de notificaciones push */}
+          <View style={styles.infoCard}>
+            <Text style={styles.sectionTitle}>Notificaciones</Text>
+            <View style={styles.notificationRow}>
+              <View style={styles.notificationText}>
+                <Text style={styles.notificationLabel}>Notificaciones push</Text>
+                <Text style={styles.notificationHint}>
+                  Recibí alertas de juntadas y confirmaciones
+                </Text>
+              </View>
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={(value) => void handleToggleNotifications(value)}
+                disabled={isUpdatingNotifications || !profile}
+                trackColor={{
+                  false: theme.colors.border,
+                  true: theme.colors.primaryLight,
+                }}
+                thumbColor={
+                  notificationsEnabled ? theme.colors.primary : theme.colors.textDisabled
+                }
+              />
+            </View>
           </View>
 
           {/* Acciones de cuenta */}
@@ -876,6 +950,26 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
+  },
+  notificationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+  },
+  notificationText: {
+    flex: 1,
+  },
+  notificationLabel: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.textPrimary,
+    marginBottom: 2,
+  },
+  notificationHint: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textSecondary,
+    lineHeight: 16,
   },
   actionsSection: {
     marginTop: theme.spacing.xs,

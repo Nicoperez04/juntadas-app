@@ -11,6 +11,8 @@
  * Supabase JS v2 no soporta transacciones desde el cliente.
  */
 import { supabase } from '@/lib/supabase/client';
+import { notificationService } from '@/features/notifications/services/notificationService';
+import { NotificationType } from '@/features/notifications/types';
 import type {
   Meetup,
   MeetupWithRole,
@@ -460,6 +462,30 @@ export const meetupService = {
           return { data: null, error: 'No se pudo volver a unirte' };
         }
 
+        // Notificar al organizador (fire-and-forget)
+        void (async () => {
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('id', userId)
+              .single();
+
+            const username = profile?.username ?? 'Alguien';
+            const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
+
+            await notificationService.sendNotification({
+              recipientUserId: meetup.created_by,
+              type: NotificationType.Joined,
+              title: 'Nueva confirmación 🎉',
+              body: `${username} se unió a ${mappedMeetup.title}`,
+              meetupId: mappedMeetup.id,
+            });
+          } catch {
+            // Error en la notificación: no afecta el flujo principal
+          }
+        })();
+
         return { data: mapMeetupRow(meetup as MeetupRow), error: null };
       }
 
@@ -474,6 +500,31 @@ export const meetupService = {
         });
 
       if (insertError) throw insertError;
+
+      // Notificar al organizador que alguien se unió (fire-and-forget)
+      void (async () => {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', userId)
+            .single();
+
+          const username = profile?.username ?? 'Alguien';
+          const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
+
+          await notificationService.sendNotification({
+            recipientUserId: meetup.created_by,
+            type: NotificationType.Joined,
+            title: 'Nueva confirmación 🎉',
+            body: `${username} se unió a ${mappedMeetup.title}`,
+            meetupId: mappedMeetup.id,
+          });
+        } catch {
+          // Error en la notificación: no afecta el flujo principal
+        }
+      })();
+
       return { data: mapMeetupRow(meetup as MeetupRow), error: null };
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
@@ -664,6 +715,38 @@ export const meetupService = {
         .eq('id', meetupId);
 
       if (updateError) throw updateError;
+
+      // Si se habilitaron reseñas, notificar a todos los participantes excepto al organizador (fire-and-forget)
+      if (reviewsEnabled) {
+        void (async () => {
+          try {
+            const { data: participants } = await supabase
+              .from('meetup_participants')
+              .select('user_id')
+              .eq('meetup_id', meetupId)
+              .is('left_at', null)
+              .neq('user_id', userId);
+
+            const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
+            const recipients = (participants ?? []) as { user_id: string }[];
+
+            // Enviar una notificación por cada participante
+            await Promise.allSettled(
+              recipients.map((p) =>
+                notificationService.sendNotification({
+                  recipientUserId: p.user_id,
+                  type: NotificationType.ReviewEnabled,
+                  title: '¿Cómo estuvo? ⭐',
+                  body: `Dejá tu reseña de ${mappedMeetup.title}`,
+                  meetupId: mappedMeetup.id,
+                }),
+              ),
+            );
+          } catch {
+            // Error en las notificaciones: no afecta el resultado de la finalización
+          }
+        })();
+      }
 
       return { data: null, error: null };
     } catch (err) {
@@ -1151,6 +1234,13 @@ export const meetupService = {
     currentOrganizerUserId: string,
   ): Promise<ServiceResult<null>> {
     try {
+      // Leer el título de la juntada para incluirlo en la notificación
+      const { data: meetupData } = await supabase
+        .from('meetups')
+        .select('title')
+        .eq('id', meetupId)
+        .single();
+
       // Paso 1: degradar al organizador actual
       const { error: demoteError } = await supabase
         .from('meetup_participants')
@@ -1188,6 +1278,22 @@ export const meetupService = {
           error: 'No se pudo transferir la organización de la juntada',
         };
       }
+
+      // Notificar al nuevo organizador (fire-and-forget)
+      void (async () => {
+        try {
+          const meetupTitle = meetupData?.title ?? 'la juntada';
+          await notificationService.sendNotification({
+            recipientUserId: newOrganizerUserId,
+            type: NotificationType.Transferred,
+            title: 'Ahora sos el organizador 👑',
+            body: `Sos el nuevo organizador de ${meetupTitle}`,
+            meetupId,
+          });
+        } catch {
+          // Error en la notificación: no afecta la transferencia
+        }
+      })();
 
       return { data: null, error: null };
     } catch {
