@@ -22,7 +22,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '@/shared/components/AppButton';
 import { AppInput } from '@/shared/components/AppInput';
-import { Toast } from '@/shared/components/Toast';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { theme } from '@/shared/constants/theme';
 import { changePasswordSchema } from '../schemas/authSchemas';
 import { authService } from '../services/authService';
@@ -35,9 +35,8 @@ export const ChangePasswordScreen = () => {
   const navigation = useNavigation<NavProp>();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
-    null,
-  );
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [shouldGoBack, setShouldGoBack] = useState(false);
 
   const {
@@ -77,7 +76,8 @@ export const ChangePasswordScreen = () => {
     }
 
     setShouldGoBack(true);
-    setToast({ message: '✓ Contraseña actualizada', type: 'success' });
+    setSuccessMessage('✓ Contraseña actualizada');
+    setShowSuccess(true);
   };
 
   return (
@@ -196,12 +196,11 @@ export const ChangePasswordScreen = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
         onHide={() => {
-          setToast(null);
+          setShowSuccess(false);
           if (shouldGoBack) {
             setShouldGoBack(false);
             navigation.goBack();

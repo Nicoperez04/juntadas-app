@@ -34,7 +34,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { theme } from '@/shared/constants/theme';
 import { AppInput } from '@/shared/components/AppInput';
 import { AppButton } from '@/shared/components/AppButton';
-import { Toast } from '@/shared/components/Toast';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { AppTabBar, APP_TAB_BAR_OFFSET } from '@/shared/components/AppTabBar';
 import { profileEditSchema } from '../schemas/authSchemas';
 import { useAuth } from '../hooks/useAuth';
@@ -213,9 +214,10 @@ export const ProfileScreen = () => {
   /** Controla la visibilidad del modal de selección de fuente de foto */
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [usernameServerError, setUsernameServerError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
-    null,
-  );
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
 
@@ -293,7 +295,8 @@ export const ProfileScreen = () => {
       if (result.error.includes('usuario ya está en uso')) {
         setUsernameServerError(result.error);
       } else {
-        setToast({ message: result.error, type: 'error' });
+        setErrorMessage(result.error);
+        setShowError(true);
       }
       return;
     }
@@ -301,14 +304,16 @@ export const ProfileScreen = () => {
     if (pendingAvatarUri) {
       const uploadResult = await uploadAvatar(pendingAvatarUri);
       if (uploadResult.error) {
-        setToast({ message: uploadResult.error, type: 'error' });
+        setErrorMessage(uploadResult.error);
+        setShowError(true);
         return;
       }
       setPendingAvatarUri(null);
     }
 
     setIsEditing(false);
-    setToast({ message: 'Perfil actualizado', type: 'success' });
+    setSuccessMessage('Perfil actualizado');
+    setShowSuccess(true);
   };
 
   /**
@@ -321,10 +326,8 @@ export const ProfileScreen = () => {
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      setToast({
-        message: 'Necesitamos permiso para acceder a tus fotos',
-        type: 'error',
-      });
+      setErrorMessage('Necesitamos permiso para acceder a tus fotos');
+      setShowError(true);
       return;
     }
 
@@ -358,7 +361,8 @@ export const ProfileScreen = () => {
     const result = await logout();
     setShowLogoutModal(false);
     if (result.error) {
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
     }
   };
 
@@ -393,11 +397,13 @@ export const ProfileScreen = () => {
     setShowDeleteConfirmModal(false);
 
     if (result.error) {
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
       return;
     }
 
-    setToast({ message: 'Tu cuenta ha sido eliminada', type: 'success' });
+    setSuccessMessage('Tu cuenta ha sido eliminada');
+    setShowSuccess(true);
   };
 
   /**
@@ -415,7 +421,8 @@ export const ProfileScreen = () => {
         const result = await notificationService.registerPushToken(profile.id);
         if (result.error) {
           setNotificationsEnabled(false);
-          setToast({ message: result.error, type: 'error' });
+          setErrorMessage(result.error);
+        setShowError(true);
           return;
         }
         await AsyncStorage.setItem(NOTIFICATIONS_ENABLED_KEY, 'true');
@@ -425,7 +432,8 @@ export const ProfileScreen = () => {
       const result = await notificationService.clearPushToken(profile.id);
       if (result.error) {
         setNotificationsEnabled(true);
-        setToast({ message: result.error, type: 'error' });
+        setErrorMessage(result.error);
+        setShowError(true);
         return;
       }
       await AsyncStorage.setItem(NOTIFICATIONS_ENABLED_KEY, 'false');
@@ -934,11 +942,16 @@ export const ProfileScreen = () => {
         </View>
       </Modal>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );

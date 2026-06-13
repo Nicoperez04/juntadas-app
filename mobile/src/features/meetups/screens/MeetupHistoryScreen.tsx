@@ -44,8 +44,8 @@ import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppTabBar } from '@/shared/components/AppTabBar';
 import { AppButton } from '@/shared/components/AppButton';
-import { Toast } from '@/shared/components/Toast';
-import { triggerSuccessHaptic } from '@/shared/utils/haptics';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import {
   useAllUserMeetups,
@@ -467,10 +467,10 @@ export const MeetupHistoryScreen = () => {
   const [selectedMeetup, setSelectedMeetup] = useState<MeetupWithRole | null>(
     null,
   );
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const allMeetups = allMeetupsQuery.data ?? [];
   const isLoading =
@@ -656,25 +656,24 @@ export const MeetupHistoryScreen = () => {
       const result = await hideMutation.mutateAsync(selectedMeetup.id);
       closeConfirmModal();
       if (result.error) {
-        setToast({ message: result.error, type: 'error' });
+        setErrorMessage(result.error);
+        setShowError(true);
         return;
       }
-      void triggerSuccessHaptic();
-      setToast({
-        message: '✓ Juntada ocultada de tu historial',
-        type: 'success',
-      });
+      setSuccessMessage('✓ Juntada ocultada de tu historial');
+      setShowSuccess(true);
       return;
     }
 
     const result = await deleteMutation.mutateAsync(selectedMeetup.id);
     closeConfirmModal();
     if (result.error) {
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
       return;
     }
-    void triggerSuccessHaptic();
-    setToast({ message: '✓ Juntada eliminada', type: 'success' });
+    setSuccessMessage('✓ Juntada eliminada');
+    setShowSuccess(true);
   };
 
   const isActionLoading = hideMutation.isPending || deleteMutation.isPending;
@@ -1139,11 +1138,16 @@ export const MeetupHistoryScreen = () => {
         </View>
       </Modal>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );

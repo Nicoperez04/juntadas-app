@@ -22,8 +22,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
 import { AppButton } from '@/shared/components/AppButton';
-import { Toast } from '@/shared/components/Toast';
-import { triggerSuccessHaptic } from '@/shared/utils/haptics';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import {
   useUserReview,
@@ -89,10 +88,9 @@ export const ReviewFormScreen = () => {
   const [comment, setComment] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [shouldGoBack, setShouldGoBack] = useState(false);
 
   const existingReview = userReviewQuery.data;
   const isEditing = !!existingReview;
@@ -142,9 +140,9 @@ export const ReviewFormScreen = () => {
       }
     }
 
-    void triggerSuccessHaptic();
-    setToast({ message: '✓ Reseña guardada', type: 'success' });
-    setTimeout(() => navigation.goBack(), 900);
+    setShouldGoBack(true);
+    setSuccessMessage('✓ Reseña guardada');
+    setShowSuccess(true);
   };
 
   /**
@@ -161,9 +159,9 @@ export const ReviewFormScreen = () => {
       return;
     }
 
-    void triggerSuccessHaptic();
-    setToast({ message: '✓ Reseña eliminada', type: 'success' });
-    setTimeout(() => navigation.goBack(), 900);
+    setShouldGoBack(true);
+    setSuccessMessage('✓ Reseña eliminada');
+    setShowSuccess(true);
   };
 
   if (userReviewQuery.isLoading) {
@@ -292,11 +290,16 @@ export const ReviewFormScreen = () => {
         </View>
       </Modal>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => {
+          setShowSuccess(false);
+          if (shouldGoBack) {
+            setShouldGoBack(false);
+            navigation.goBack();
+          }
+        }}
       />
     </View>
   );

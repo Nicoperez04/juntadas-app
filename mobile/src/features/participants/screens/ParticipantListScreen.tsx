@@ -25,7 +25,7 @@ import { theme } from '@/shared/constants/theme';
 import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { Routes } from '@/navigation/routes';
 import { ModifyAttendanceLink } from '@/shared/components/ModifyAttendanceLink';
-import { Toast } from '@/shared/components/Toast';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { useParticipants } from '../hooks/useParticipants';
 import { ModifyAttendanceScreen } from './ModifyAttendanceScreen';
 import { getParticipantDisplayName } from '../utils/participantDisplay';
@@ -197,10 +197,8 @@ export const ParticipantListScreen = () => {
   const [attendanceModalTarget, setAttendanceModalTarget] =
     useState<AttendanceModalTarget | null>(null);
   const [isLeaving, setIsLeaving] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   /**
    * Transporta el mensaje de Toast entre onSave y onClose del modal de
@@ -415,7 +413,8 @@ export const ParticipantListScreen = () => {
             void refresh();
           }
           if (pendingToastRef.current) {
-            setToast({ message: pendingToastRef.current, type: 'success' });
+            setSuccessMessage(pendingToastRef.current);
+            setShowSuccess(true);
             pendingToastRef.current = null;
           }
         }}
@@ -440,11 +439,10 @@ export const ParticipantListScreen = () => {
         }}
       />
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
       />
     </SafeAreaView>
   );

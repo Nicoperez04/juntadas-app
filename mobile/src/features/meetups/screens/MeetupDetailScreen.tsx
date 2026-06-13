@@ -28,7 +28,8 @@ import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
 import { AppTabBar } from '@/shared/components/AppTabBar';
-import { Toast } from '@/shared/components/Toast';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { ModifyAttendanceScreen } from '@/features/participants/screens/ModifyAttendanceScreen';
 import { getParticipantDisplayName } from '@/features/participants/utils/participantDisplay';
 import { useMeetupDetail } from '../hooks/useMeetupDetail';
@@ -36,7 +37,6 @@ import {
   useHideMeetup,
   useDeleteMeetupForAll,
 } from '../hooks/useMeetups';
-import { triggerSuccessHaptic } from '@/shared/utils/haptics';
 import { MeetupDetailHeader } from '../components/MeetupDetailHeader';
 import { MeetupParticipantsSummary } from '../components/MeetupParticipantsSummary';
 import { MeetupOrganizerActions } from '../components/MeetupOrganizerActions';
@@ -113,14 +113,14 @@ export const MeetupDetailScreen = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [pendingHistoryAction, setPendingHistoryAction] = useState<
     'hide' | 'delete' | null
   >(null);
-  /** Navega al historial tras mostrar el toast de ocultar/eliminar */
+  /** Navega al historial tras la animación de ocultar/eliminar */
   const [shouldNavigateBackAfterToast, setShouldNavigateBackAfterToast] =
     useState(false);
 
@@ -135,6 +135,20 @@ export const MeetupDetailScreen = () => {
   const pendingToastRef = useRef<string | null>(null);
 
   /**
+   * Muestra feedback de éxito o error delegado desde componentes hijos
+   * (p. ej. MeetupShareButton) sin mezclar ambos tipos en un solo estado.
+   */
+  const handleFeedback = (message: string, type: 'success' | 'error') => {
+    if (type === 'success') {
+      setSuccessMessage(message);
+      setShowSuccess(true);
+      return;
+    }
+    setErrorMessage(message);
+    setShowError(true);
+  };
+
+  /**
    * Cierra el modal de asistencia y recarga datos solo si hubo cambios guardados.
    */
   const handleAttendanceClose = useCallback(async (wasUpdated = false) => {
@@ -143,7 +157,8 @@ export const MeetupDetailScreen = () => {
       await refreshAll();
     }
     if (pendingToastRef.current) {
-      setToast({ message: pendingToastRef.current, type: 'success' });
+      setSuccessMessage(pendingToastRef.current);
+      setShowSuccess(true);
       pendingToastRef.current = null;
     }
   }, [refreshAll]);
@@ -199,11 +214,13 @@ export const MeetupDetailScreen = () => {
     setShowCancelModal(false);
 
     if (result.error) {
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
       return;
     }
 
-    setToast({ message: 'Juntada cancelada', type: 'success' });
+    setSuccessMessage('Juntada cancelada');
+    setShowSuccess(true);
   };
 
   /**
@@ -216,7 +233,8 @@ export const MeetupDetailScreen = () => {
     setShowLeaveModal(false);
 
     if (result.error) {
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
       return;
     }
 
@@ -238,15 +256,13 @@ export const MeetupDetailScreen = () => {
       setPendingHistoryAction(null);
 
       if (result.error) {
-        setToast({ message: result.error, type: 'error' });
+        setErrorMessage(result.error);
+      setShowError(true);
         return;
       }
 
-      void triggerSuccessHaptic();
-      setToast({
-        message: '✓ Juntada ocultada de tu historial',
-        type: 'success',
-      });
+      setSuccessMessage('✓ Juntada ocultada de tu historial');
+      setShowSuccess(true);
       setShouldNavigateBackAfterToast(true);
       return;
     }
@@ -255,12 +271,13 @@ export const MeetupDetailScreen = () => {
     setPendingHistoryAction(null);
 
     if (result.error) {
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
       return;
     }
 
-    void triggerSuccessHaptic();
-    setToast({ message: '✓ Juntada eliminada', type: 'success' });
+    setSuccessMessage('✓ Juntada eliminada');
+    setShowSuccess(true);
     setShouldNavigateBackAfterToast(true);
   };
 
@@ -440,7 +457,7 @@ export const MeetupDetailScreen = () => {
                 <MeetupShareButton
                   meetupTitle={meetup.title}
                   joinCode={meetup.joinCode}
-                  onFeedback={(message, type) => setToast({ message, type })}
+                  onFeedback={handleFeedback}
                 />
               </View>
             </View>
@@ -742,17 +759,22 @@ export const MeetupDetailScreen = () => {
 
       <AppTabBar activeTab="home" />
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
         onHide={() => {
-          setToast(null);
+          setShowSuccess(false);
           if (shouldNavigateBackAfterToast) {
             setShouldNavigateBackAfterToast(false);
             navigation.goBack();
           }
         }}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );

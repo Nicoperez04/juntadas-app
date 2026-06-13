@@ -32,8 +32,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
-import { Toast } from '@/shared/components/Toast';
-import { triggerSuccessHaptic } from '@/shared/utils/haptics';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import {
   useMeetups,
   useUploadMeetupCover,
@@ -313,8 +312,8 @@ export const EditMeetupScreen = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<Date>(new Date());
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
-  const [successToastMessage, setSuccessToastMessage] =
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] =
     useState('✓ Juntada actualizada');
 
   // Estado de la portada: la URL actual viene de la DB; la URI nueva es
@@ -510,9 +509,8 @@ export const EditMeetupScreen = () => {
       toastMessage = '✓ Portada eliminada';
     }
 
-    void triggerSuccessHaptic();
-    setSuccessToastMessage(toastMessage);
-    setShowSuccessToast(true);
+    setSuccessMessage(toastMessage);
+    setShowSuccess(true);
   };
 
   if (isLoadingMeetup) {
@@ -792,12 +790,11 @@ export const EditMeetupScreen = () => {
         </View>
       </Modal>
 
-      <Toast
-        message={successToastMessage}
-        type="success"
-        visible={showSuccessToast}
+      <SuccessAnimation
+        message={successMessage}
+        visible={showSuccess}
         onHide={() => {
-          setShowSuccessToast(false);
+          setShowSuccess(false);
           navigation.goBack();
         }}
       />

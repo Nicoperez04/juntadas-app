@@ -33,8 +33,7 @@ import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
 import { AppTabBar } from '@/shared/components/AppTabBar';
-import { Toast } from '@/shared/components/Toast';
-import { triggerSuccessHaptic } from '@/shared/utils/haptics';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { useMeetups, useUploadMeetupCover } from '../hooks/useMeetups';
 import { createMeetupSchema } from '../schemas/meetupSchemas';
 import type { CreateMeetupFormData } from '../types';
@@ -254,7 +253,7 @@ export const CreateMeetupScreen = () => {
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [coverError, setCoverError] = useState<string | null>(null);
   const [showCoverModal, setShowCoverModal] = useState(false);
-  const [showCoverSuccessToast, setShowCoverSuccessToast] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   /** meetupId pendiente de navegación tras el toast de portada subida */
   const [pendingMeetupId, setPendingMeetupId] = useState<string | null>(null);
 
@@ -351,9 +350,8 @@ export const CreateMeetupScreen = () => {
           fileUri: coverUri,
         });
         if (!uploadResult.error) {
-          void triggerSuccessHaptic();
           setPendingMeetupId(result.data.id);
-          setShowCoverSuccessToast(true);
+          setShowSuccess(true);
           return;
         }
         // La portada es opcional: un fallo en la subida no bloquea la navegación
@@ -624,12 +622,11 @@ export const CreateMeetupScreen = () => {
 
       <AppTabBar activeTab="create" />
 
-      <Toast
+      <SuccessAnimation
         message="✓ Portada agregada"
-        type="success"
-        visible={showCoverSuccessToast}
+        visible={showSuccess}
         onHide={() => {
-          setShowCoverSuccessToast(false);
+          setShowSuccess(false);
           if (pendingMeetupId) {
             navigation.replace(Routes.MeetupDetail, { meetupId: pendingMeetupId });
             setPendingMeetupId(null);

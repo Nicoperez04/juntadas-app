@@ -30,7 +30,8 @@ import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
 import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { Routes } from '@/navigation/routes';
-import { Toast } from '@/shared/components/Toast';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { AppButton } from '@/shared/components/AppButton';
 import { meetupService } from '@/features/meetups/services/meetupService';
 import type { MainStackParamList } from '@/navigation/types';
@@ -241,10 +242,10 @@ export const MemoriesGalleryScreen = () => {
   const [showDeleteTip, setShowDeleteTip] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [removedMemoryIds, setRemovedMemoryIds] = useState<string[]>([]);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const {
     memories,
@@ -334,13 +335,12 @@ export const MemoriesGalleryScreen = () => {
           : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
-        setToast({
-          message:
-            source === 'camera'
-              ? 'Necesitamos permiso para usar la cámara'
-              : 'Necesitamos acceso a tu galería para subir fotos',
-          type: 'error',
-        });
+        setErrorMessage(
+          source === 'camera'
+            ? 'Necesitamos permiso para usar la cámara'
+            : 'Necesitamos acceso a tu galería para subir fotos',
+        );
+        setShowError(true);
         return;
       }
 
@@ -363,10 +363,10 @@ export const MemoriesGalleryScreen = () => {
       const imageUris = pickerResult.assets.map((asset) => asset.uri);
       const count = await uploadPhotosFromUris(imageUris);
       if (count && count > 0) {
-        setToast({
-          message: `✓ ${count} foto${count > 1 ? 's' : ''} agregada${count > 1 ? 's' : ''}`,
-          type: 'success',
-        });
+        setSuccessMessage(
+          `✓ ${count} foto${count > 1 ? 's' : ''} agregada${count > 1 ? 's' : ''}`,
+        );
+        setShowSuccess(true);
       }
     },
     [uploadPhotosFromUris],
@@ -407,7 +407,8 @@ export const MemoriesGalleryScreen = () => {
     setMemoryToDelete(null);
 
     if (success) {
-      setToast({ message: '✓ Foto eliminada', type: 'success' });
+      setSuccessMessage('✓ Foto eliminada');
+      setShowSuccess(true);
     }
   };
 
@@ -732,11 +733,16 @@ export const MemoriesGalleryScreen = () => {
         </View>
       )}
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </SafeAreaView>
   );
