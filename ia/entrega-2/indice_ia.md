@@ -78,18 +78,19 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 
 ### Bloque 5 — Notificaciones y EAS Build (11/06/2026)
 
-- **48** · EAS Build setup: eas.json, android.package, perfil preview, APK E2 → [`prompts/bloque-5/01_eas_build_setup.md`](prompts/bloque-5/01_eas_build_setup.md)
-- **49** · Migración 009_notifications: tabla notifications, enum notification_type, push_token en profiles, RLS → [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
-- **50** · Edge Function send-push-notification (Deno): persistencia in-app + Expo Push API → [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
-- **51** · expo-notifications + expo-device: instalación, plugin en app.json, permisos Android → [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
-- **52** · notificationService (registerPushToken, sendNotification, schedule/cancelReminder) y useNotifications hook → [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
-- **53** · Registro de push token en App.tsx (onAuthStateChange) y eventos integrados: joined, transferred, review_enabled, reminder → [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
-- **54** · Fix: expo-notifications compatible con Expo Go (guard isExpoGo en registerPushToken y setNotificationHandler) → [`prompts/bloque-5/03_fix_expo_go_notifications.md`](prompts/bloque-5/03_fix_expo_go_notifications.md)
-- **55** · useRealtimeNotifications + notificationStore Zustand → [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
-- **56** · NotificationBanner: banner flotante animado → [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
-- **57** · Badge de notificaciones en campana del home → [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
-- **58** · NotificationPanel: panel con lista y swipe → [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
-- **59** · Toggle de notificaciones en perfil → [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
+- **48** · EAS Build setup: eas.json, android.package, perfil preview, APK E2 → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/01_eas_build_setup.md`](prompts/bloque-5/01_eas_build_setup.md)
+- **49** · Migración 009_notifications: tabla notifications, enum notification_type, push_token en profiles, RLS → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
+- **50** · Edge Function send-push-notification (Deno): persistencia in-app + Expo Push API → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
+- **51** · expo-notifications + expo-device: instalación, plugin en app.json, permisos Android → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
+- **52** · notificationService (registerPushToken, sendNotification, schedule/cancelReminder) y useNotifications hook → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
+- **53** · Registro de push token en App.tsx (onAuthStateChange) y eventos integrados: joined, transferred, review_enabled, reminder → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
+- **54** · Fix: expo-notifications compatible con Expo Go (guard isExpoGo en registerPushToken y setNotificationHandler) → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/03_fix_expo_go_notifications.md`](prompts/bloque-5/03_fix_expo_go_notifications.md)
+- **55** · useRealtimeNotifications + notificationStore Zustand → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
+- **56** · NotificationBanner: banner flotante animado → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
+- **57** · Badge de notificaciones en campana del home → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
+- **58** · NotificationPanel: panel con lista y swipe → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
+- **59** · Toggle de notificaciones en perfil → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
+- **60** · Documentación y cierre del Bloque 5 → [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md) · [`prompts/bloque-5/05_documentar_bloque-5.md`](prompts/bloque-5/05_documentar_bloque-5.md)
 
 ## Skills
 
