@@ -443,6 +443,7 @@ export const MeetupHomeScreen = () => {
               activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Ver mi perfil"
+              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
             >
               {profile?.avatarUrl ? (
                 <Image
@@ -667,8 +668,8 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   notificationBtn: {
-    width: 38,
-    height: 38,
+    width: 48,
+    height: 48,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.background,
     alignItems: 'center',
@@ -700,6 +701,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   headerAvatarText: {
     fontSize: theme.typography.sizes.sm,
@@ -707,8 +709,8 @@ const styles = StyleSheet.create({
     color: theme.colors.surface,
   },
   headerAvatarImage: {
-    width: '100%',
-    height: '100%',
+    width: 38,
+    height: 38,
     borderRadius: theme.radius.full,
   },
   scroll: {
@@ -875,7 +877,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   countText: {
-    fontSize: theme.typography.sizes.xs,
+    fontSize: theme.typography.sizes.sm,
     color: theme.colors.textSecondary,
     fontWeight: theme.typography.weights.medium,
   },

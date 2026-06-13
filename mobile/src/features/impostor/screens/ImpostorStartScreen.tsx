@@ -29,7 +29,7 @@ import { appConfig } from '@/config/appConfig';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
 import { APP_TAB_BAR_OFFSET } from '@/shared/components/AppTabBar';
-import { Toast } from '@/shared/components/Toast';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
 import type { MainStackParamList } from '@/navigation/types';
 import { ImpostorTabBar } from '../components/ImpostorTabBar';
@@ -98,7 +98,8 @@ export const ImpostorStartScreen = () => {
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [playersManuallyCleared, setPlayersManuallyCleared] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Usuario autenticado resuelto desde la caché compartida de sesión
   const { userId: currentUserId } = useCurrentUser();
@@ -160,7 +161,8 @@ export const ImpostorStartScreen = () => {
         const { data, error } = await impostorService.getParticipantsForGame(meetupId);
 
         if (error) {
-          setToast({ message: error, type: 'error' });
+          setErrorMessage(error);
+          setShowError(true);
         } else if (data) {
           setPlayers(data);
           setPlayersManuallyCleared(false);
@@ -225,7 +227,8 @@ export const ImpostorStartScreen = () => {
     );
 
     if (isDuplicate) {
-      setToast({ message: 'Ya existe un jugador con ese nombre', type: 'error' });
+      setErrorMessage('Ya existe un jugador con ese nombre');
+      setShowError(true);
       return;
     }
 
@@ -247,15 +250,14 @@ export const ImpostorStartScreen = () => {
 
   const handleStartGame = useCallback(async () => {
     if (players.length < appConfig.impostor.minPlayers) {
-      setToast({
-        message: `Necesitás al menos ${appConfig.impostor.minPlayers} jugadores`,
-        type: 'error',
-      });
+      setErrorMessage(`Necesitás al menos ${appConfig.impostor.minPlayers} jugadores`);
+      setShowError(true);
       return;
     }
 
     if (!hasWordSelected || !pendingWord) {
-      setToast({ message: 'Esperá a que se seleccione una palabra', type: 'error' });
+      setErrorMessage('Esperá a que se seleccione una palabra');
+      setShowError(true);
       return;
     }
 
@@ -592,11 +594,10 @@ export const ImpostorStartScreen = () => {
         </View>
       </Modal>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'error'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );

@@ -27,7 +27,7 @@ import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import type { MainStackParamList } from '@/navigation/types';
 import { AppButton } from '@/shared/components/AppButton';
-import { Toast } from '@/shared/components/Toast';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
 import { impostorService } from '@/features/impostor/services/impostorService';
 
@@ -94,9 +94,8 @@ export const ScorerSetupScreen = () => {
   const [targetScoreInput, setTargetScoreInput] = useState('');
   const [targetType, setTargetType] = useState<TargetType>('win');
   const [isLoadingParticipants, setIsLoadingParticipants] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
-    null,
-  );
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   /**
    * Al enfocar la pantalla: carga participantes confirmados de la juntada
@@ -114,7 +113,8 @@ export const ScorerSetupScreen = () => {
         const { data, error } = await impostorService.getParticipantsForGame(meetupId);
 
         if (error) {
-          setToast({ message: error, type: 'error' });
+          setErrorMessage(error);
+          setShowError(true);
           setPlayers([]);
         } else if (data) {
           setPlayers(data.map((player) => player.name));
@@ -135,7 +135,8 @@ export const ScorerSetupScreen = () => {
     }
 
     if (players.some((p) => p.toLowerCase() === trimmed.toLowerCase())) {
-      setToast({ message: 'Ese nombre ya está en la lista', type: 'error' });
+      setErrorMessage('Ese nombre ya está en la lista');
+      setShowError(true);
       return;
     }
 
@@ -352,11 +353,10 @@ export const ScorerSetupScreen = () => {
         </View>
       </KeyboardAvoidingView>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'error'}
-        visible={toast !== null}
-        onHide={() => setToast(null)}
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );

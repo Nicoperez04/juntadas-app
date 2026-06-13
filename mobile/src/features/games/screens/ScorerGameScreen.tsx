@@ -25,7 +25,8 @@ import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import type { MainStackParamList } from '@/navigation/types';
 import { AppButton } from '@/shared/components/AppButton';
-import { Toast } from '@/shared/components/Toast';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'ScorerGame'>;
@@ -244,9 +245,10 @@ export const ScorerGameScreen = () => {
   const [playerToRemove, setPlayerToRemove] = useState<string | null>(null);
   const [visibleBanners, setVisibleBanners] = useState<string[]>([]);
   const [triggeredPlayers, setTriggeredPlayers] = useState<Set<string>>(new Set());
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
-    null,
-  );
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [isExiting, setIsExiting] = useState(false);
 
   /** Actualiza el puntaje de un jugador */
@@ -323,13 +325,15 @@ export const ScorerGameScreen = () => {
 
     const trimmed = editScoreInput.trim();
     if (!trimmed) {
-      setToast({ message: 'Ingresá un número válido', type: 'error' });
+      setErrorMessage('Ingresá un número válido');
+      setShowError(true);
       return;
     }
 
     const parsed = parseInt(trimmed, 10);
     if (Number.isNaN(parsed)) {
-      setToast({ message: 'Ingresá un número válido', type: 'error' });
+      setErrorMessage('Ingresá un número válido');
+      setShowError(true);
       return;
     }
 
@@ -356,7 +360,8 @@ export const ScorerGameScreen = () => {
     }
 
     if (players.some((p) => p.toLowerCase() === trimmed.toLowerCase())) {
-      setToast({ message: 'Ese nombre ya está en la lista', type: 'error' });
+      setErrorMessage('Ese nombre ya está en la lista');
+      setShowError(true);
       return;
     }
 
@@ -400,10 +405,10 @@ export const ScorerGameScreen = () => {
     closeModal();
 
     if (remaining.length < 2) {
-      setToast({
-        message: 'Quedan menos de 2 jugadores. Podés seguir anotando o agregar más.',
-        type: 'success',
-      });
+      setSuccessMessage(
+        'Quedan menos de 2 jugadores. Podés seguir anotando o agregar más.',
+      );
+      setShowSuccess(true);
     }
   }, [closeModal, playerToRemove, players]);
 
@@ -657,11 +662,16 @@ export const ScorerGameScreen = () => {
         </View>
       </Modal>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={toast !== null}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );

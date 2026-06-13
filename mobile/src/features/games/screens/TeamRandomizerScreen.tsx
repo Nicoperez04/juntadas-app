@@ -3,7 +3,7 @@
  * configuración de nombres y modo de división, luego resultado con opciones
  * de mezclar, copiar o volver a configurar.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,8 +26,9 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
 import { AppButton } from '@/shared/components/AppButton';
-import { Toast } from '@/shared/components/Toast';
-import { triggerSelectionHaptic, triggerSuccessHaptic } from '@/shared/utils/haptics';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
+import { triggerSelectionHaptic } from '@/shared/utils/haptics';
 import type { MainStackParamList } from '@/navigation/types';
 import { impostorService } from '@/features/impostor/services/impostorService';
 
@@ -40,8 +42,14 @@ type RouteProps = RouteProp<MainStackParamList, 'TeamRandomizer'>;
 const NAME_CHIP_HEIGHT = 46;
 const NAMES_LIST_MAX_HEIGHT = NAME_CHIP_HEIGHT * 2 + theme.spacing.sm;
 
-/** Paso actual del flujo interno */
-type Step = 'config' | 'result';
+/** Ancho de pantalla para calcular desplazamientos horizontales entre pasos */
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+/** Duración estándar de transición entre pasos de configuración y resultado */
+const STEP_TRANSITION_MS = 300;
+
+/** Duración de la animación al mezclar equipos de nuevo */
+const REMIX_TRANSITION_MS = 400;
 
 /** Modo de división: por cantidad de equipos o por personas por equipo */
 type DivisionMode = 'teamCount' | 'peoplePerTeam';
@@ -200,16 +208,21 @@ export const TeamRandomizerScreen = () => {
   const route = useRoute<RouteProps>();
   const meetupId = route.params?.meetupId;
 
-  const [step, setStep] = useState<Step>('config');
   const [names, setNames] = useState<string[]>([]);
   const [nameInput, setNameInput] = useState('');
   const [divisionMode, setDivisionMode] = useState<DivisionMode>('teamCount');
   const [divisionValue, setDivisionValue] = useState('2');
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoadingParticipants, setIsLoadingParticipants] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  /** 0 = paso configuración visible; 1 = paso resultado visible */
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  /** Opacidad/escala de la lista de equipos al mezclar de nuevo */
+  const remixAnim = useRef(new Animated.Value(1)).current;
 
   /**
    * Al enfocar la pantalla: carga participantes confirmados de la juntada
@@ -227,7 +240,8 @@ export const TeamRandomizerScreen = () => {
         const { data, error } = await impostorService.getParticipantsForGame(meetupId);
 
         if (error) {
-          setToast({ message: error, type: 'error' });
+          setErrorMessage(error);
+          setShowError(true);
           setNames([]);
         } else if (data) {
           setNames(data.map((player) => player.name));
@@ -241,32 +255,21 @@ export const TeamRandomizerScreen = () => {
   );
 
   /**
-   * Transición limpia entre pasos: fade out → aplica el nuevo estado en el
-   * siguiente frame de animación para no trabarse → fade in.
-   * El backgroundColor explícito en el Animated.View evita el flash gris.
+   * Desliza horizontalmente entre pasos con easing suave.
+   * `toResult` define la dirección: adelante (config→result) o atrás.
    */
-  const animateStepTransition = useCallback(
-    (applyState: () => void) => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 160,
-        easing: Easing.out(Easing.quad),
+  const animateStepSlide = useCallback(
+    (toResult: boolean, onComplete?: () => void) => {
+      Animated.timing(slideAnim, {
+        toValue: toResult ? 1 : 0,
+        duration: STEP_TRANSITION_MS,
+        easing: Easing.inOut(Easing.ease),
         useNativeDriver: true,
-      }).start(() => {
-        // Diferimos el setState al siguiente frame para no interferir con el
-        // hilo de animación nativo al arrancar la segunda mitad.
-        requestAnimationFrame(() => {
-          applyState();
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 220,
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: true,
-          }).start();
-        });
+      }).start(({ finished }) => {
+        if (finished) onComplete?.();
       });
     },
-    [fadeAnim],
+    [slideAnim],
   );
 
   /** Agrega un nombre si no está vacío ni duplicado */
@@ -275,7 +278,8 @@ export const TeamRandomizerScreen = () => {
     if (!trimmed) return;
 
     if (names.some((n) => n.toLowerCase() === trimmed.toLowerCase())) {
-      setToast({ message: 'Ese nombre ya está en la lista', type: 'error' });
+      setErrorMessage('Ese nombre ya está en la lista');
+      setShowError(true);
       return;
     }
 
@@ -300,7 +304,8 @@ export const TeamRandomizerScreen = () => {
       );
 
       if (!validation.valid || validation.effectiveValue === undefined) {
-        setToast({ message: validation.error ?? 'Configuración inválida', type: 'error' });
+        setErrorMessage(validation.error ?? 'Configuración inválida');
+        setShowError(true);
         return null;
       }
 
@@ -320,11 +325,9 @@ export const TeamRandomizerScreen = () => {
     if (!formed) return;
 
     void triggerSelectionHaptic();
-    animateStepTransition(() => {
-      setTeams(formed);
-      setStep('result');
-    });
-  }, [names, buildTeams, animateStepTransition]);
+    setTeams(formed);
+    animateStepSlide(true);
+  }, [names, buildTeams, animateStepSlide]);
 
   /** Redistribuye aleatoriamente con la misma configuración */
   const handleRemix = useCallback(() => {
@@ -332,25 +335,39 @@ export const TeamRandomizerScreen = () => {
     if (!formed) return;
 
     void triggerSelectionHaptic();
-    animateStepTransition(() => {
+
+    Animated.timing(remixAnim, {
+      toValue: 0,
+      duration: REMIX_TRANSITION_MS / 2,
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (!finished) return;
+
       setTeams(formed);
+      remixAnim.setValue(0);
+
+      Animated.timing(remixAnim, {
+        toValue: 1,
+        duration: REMIX_TRANSITION_MS / 2,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }).start();
     });
-  }, [names, buildTeams, animateStepTransition]);
+  }, [names, buildTeams, remixAnim]);
 
   /** Copia el resultado al portapapeles */
   const handleCopyTeams = useCallback(async () => {
     await Clipboard.setStringAsync(formatTeamsForClipboard(teams));
-    void triggerSuccessHaptic();
-    setToast({ message: 'Equipos copiados', type: 'success' });
+    setSuccessMessage('Equipos copiados');
+    setShowSuccess(true);
   }, [teams]);
 
   /** Vuelve al paso de configuración */
   const handleBackToConfig = useCallback(() => {
     void triggerSelectionHaptic();
-    animateStepTransition(() => {
-      setStep('config');
-    });
-  }, [animateStepTransition]);
+    animateStepSlide(false);
+  }, [animateStepSlide]);
 
   const divisionValidation =
     names.length >= 2
@@ -365,9 +382,15 @@ export const TeamRandomizerScreen = () => {
   const canFormTeams = names.length >= 2 && divisionValidation.valid;
   const showScrollHint = names.length > 2;
 
-  useEffect(() => {
-    fadeAnim.setValue(1);
-  }, [fadeAnim]);
+  const slideTranslateX = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -SCREEN_WIDTH],
+  });
+
+  const remixScale = remixAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.85, 1],
+  });
 
   return (
     <View style={styles.root}>
@@ -389,14 +412,15 @@ export const TeamRandomizerScreen = () => {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/*
-         * backgroundColor explícito: evita que cuando opacity llega a 0 se
-         * vea el fondo gris del layout subyacente.
-         */}
-        <Animated.View style={[styles.flex, styles.animatedContainer, { opacity: fadeAnim }]}>
-          {step === 'config' ? (
+        <View style={[styles.flex, styles.stepViewport]}>
+          <Animated.View
+            style={[
+              styles.stepsRow,
+              { transform: [{ translateX: slideTranslateX }] },
+            ]}
+          >
             <ScrollView
-              style={styles.flex}
+              style={[styles.flex, styles.stepPanel]}
               contentContainerStyle={styles.configContent}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
@@ -552,7 +576,17 @@ export const TeamRandomizerScreen = () => {
                 disabled={!canFormTeams}
               />
             </ScrollView>
-          ) : (
+
+            <Animated.View
+              style={[
+                styles.stepPanel,
+                styles.flex,
+                {
+                  opacity: remixAnim,
+                  transform: [{ scale: remixScale }],
+                },
+              ]}
+            >
             <ScrollView
               style={styles.flex}
               contentContainerStyle={styles.resultContent}
@@ -586,15 +620,21 @@ export const TeamRandomizerScreen = () => {
                 />
               </View>
             </ScrollView>
-          )}
-        </Animated.View>
+            </Animated.View>
+          </Animated.View>
+        </View>
       </KeyboardAvoidingView>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={toast !== null}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );
@@ -612,10 +652,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   /**
-   * Fondo explícito para que al llegar a opacity 0 el Animated.View no deje
-   * ver el fondo gris de los contenedores subyacentes.
+   * Contenedor con overflow oculto para que solo se vea un paso a la vez
+   * mientras el carril horizontal se desplaza.
    */
-  animatedContainer: {
+  stepViewport: {
+    overflow: 'hidden',
+    backgroundColor: theme.colors.background,
+  },
+  /** Fila de dos paneles (config + resultado) que se deslizan horizontalmente */
+  stepsRow: {
+    flexDirection: 'row',
+    width: SCREEN_WIDTH * 2,
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  /** Cada paso ocupa exactamente el ancho visible de la pantalla */
+  stepPanel: {
+    width: SCREEN_WIDTH,
     backgroundColor: theme.colors.background,
   },
   header: {

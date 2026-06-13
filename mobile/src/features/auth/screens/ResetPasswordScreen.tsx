@@ -21,9 +21,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton } from '@/shared/components/AppButton';
 import { AppInput } from '@/shared/components/AppInput';
-import { Toast } from '@/shared/components/Toast';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { theme } from '@/shared/constants/theme';
-import { triggerSuccessHaptic } from '@/shared/utils/haptics';
 import { resetPasswordSchema } from '../schemas/authSchemas';
 import { authService } from '../services/authService';
 import { ResetPasswordFormData } from '../types';
@@ -31,9 +30,8 @@ import { ResetPasswordFormData } from '../types';
 export const ResetPasswordScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
-    null,
-  );
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const {
     control,
@@ -61,8 +59,8 @@ export const ResetPasswordScreen = () => {
       return;
     }
 
-    void triggerSuccessHaptic();
-    setToast({ message: '✓ Contraseña actualizada correctamente', type: 'success' });
+    setSuccessMessage('✓ Contraseña actualizada correctamente');
+    setShowSuccess(true);
   };
 
   return (
@@ -147,11 +145,10 @@ export const ResetPasswordScreen = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
       />
     </SafeAreaView>
   );

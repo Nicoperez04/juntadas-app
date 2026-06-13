@@ -22,7 +22,8 @@ import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import type { MainStackParamList } from '@/navigation/types';
-import { Toast } from '@/shared/components/Toast';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
 import { ImpostorTabBar } from '@/features/impostor/components/ImpostorTabBar';
 
@@ -187,9 +188,10 @@ export const GamesScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProps>();
   const meetupId = route.params?.meetupId;
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
-    null,
-  );
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const screenOpacity = useRef(new Animated.Value(1)).current;
 
   const cardWidth = useMemo(() => {
@@ -293,7 +295,8 @@ export const GamesScreen = () => {
     (item: GameHubCard) => {
       if (!item.available) {
         void triggerSelectionHaptic();
-        setToast({ message: 'Próximamente', type: 'success' });
+        setSuccessMessage('Próximamente');
+        setShowSuccess(true);
         return;
       }
 
@@ -365,11 +368,16 @@ export const GamesScreen = () => {
 
       <ImpostorTabBar activeTabId="games" />
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={toast !== null}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );

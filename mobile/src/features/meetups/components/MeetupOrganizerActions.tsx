@@ -29,8 +29,8 @@ import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
 import { AppButton } from '@/shared/components/AppButton';
-import { Toast } from '@/shared/components/Toast';
-import { triggerSuccessHaptic } from '@/shared/utils/haptics';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { useReviews } from '@/features/reviews/hooks/useReviews';
 import { useMeetupDetail } from '../hooks/useMeetupDetail';
 import { useTransferOrganizer, useReactivateMeetup } from '../hooks/useMeetups';
@@ -99,10 +99,10 @@ export const MeetupOrganizerActions = ({
     useState<TransferModalStep>('closed');
   const [transferTarget, setTransferTarget] =
     useState<MeetupParticipant | null>(null);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   /**
    * Diferimos el toast de éxito hasta que el modal termine de cerrarse,
@@ -124,7 +124,8 @@ export const MeetupOrganizerActions = ({
     setTransferTarget(null);
 
     if (pendingToastRef.current) {
-      setToast({ message: pendingToastRef.current, type: 'success' });
+      setSuccessMessage(pendingToastRef.current);
+      setShowSuccess(true);
       pendingToastRef.current = null;
     }
   };
@@ -139,12 +140,12 @@ export const MeetupOrganizerActions = ({
 
     if (result.error) {
       closeTransferModal();
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
       return;
     }
 
     pendingToastRef.current = '✓ Organización transferida';
-    void triggerSuccessHaptic();
     closeTransferModal();
   };
 
@@ -157,7 +158,8 @@ export const MeetupOrganizerActions = ({
     setReviewsEnabled(false);
 
     if (pendingToastRef.current) {
-      setToast({ message: pendingToastRef.current, type: 'success' });
+      setSuccessMessage(pendingToastRef.current);
+      setShowSuccess(true);
       pendingToastRef.current = null;
     }
   };
@@ -173,12 +175,12 @@ export const MeetupOrganizerActions = ({
     if (result.error) {
       setShowFinishModal(false);
       setReviewsEnabled(false);
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
       return;
     }
 
     pendingToastRef.current = '✓ Juntada finalizada';
-    void triggerSuccessHaptic();
     closeFinishModal();
   };
 
@@ -190,7 +192,8 @@ export const MeetupOrganizerActions = ({
     setShowReactivateModal(false);
 
     if (pendingToastRef.current) {
-      setToast({ message: pendingToastRef.current, type: 'success' });
+      setSuccessMessage(pendingToastRef.current);
+      setShowSuccess(true);
       pendingToastRef.current = null;
     }
   };
@@ -206,12 +209,12 @@ export const MeetupOrganizerActions = ({
 
     if (result.error) {
       setShowReactivateModal(false);
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
       return;
     }
 
     pendingToastRef.current = '✓ Juntada reactivada';
-    void triggerSuccessHaptic();
     closeReactivateModal();
   };
 
@@ -574,11 +577,16 @@ export const MeetupOrganizerActions = ({
         </View>
       </Modal>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </>
   );

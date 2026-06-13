@@ -27,7 +27,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
 import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
-import { Toast } from '@/shared/components/Toast';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import type { MainStackParamList } from '@/navigation/types';
 import { memoriesService } from '../services/memoriesService';
 import { notifyMemoryDeleted } from '../utils/memoryGallerySync';
@@ -146,10 +147,10 @@ export const MemoryViewerScreen = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [localMemories, setLocalMemories] = useState(memories);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const flatListRef = useRef<FlatList<Memory>>(null);
 
@@ -197,11 +198,13 @@ export const MemoryViewerScreen = () => {
     setShowDeleteModal(false);
 
     if (result.error) {
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
       return;
     }
 
-    setToast({ message: '✓ Foto eliminada', type: 'success' });
+    setSuccessMessage('✓ Foto eliminada');
+    setShowSuccess(true);
 
     // Notifica a la galería montada sin pasar callbacks por navigation state
     notifyMemoryDeleted(currentMemory.id);
@@ -349,11 +352,16 @@ export const MemoryViewerScreen = () => {
         </View>
       </Modal>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );

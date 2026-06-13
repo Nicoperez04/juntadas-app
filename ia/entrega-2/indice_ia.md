@@ -104,6 +104,14 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **68** · Toast ✓ + haptic en ResetPasswordScreen al guardar → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md)
 - **69** · Documentación y cierre del Bloque 6 → [`conversaciones/bloque-6/cursor-bloque-6-completo.md`](conversaciones/bloque-6/cursor-bloque-6-completo.md) · [`prompts/bloque-6/03_documentar_bloque-6.md`](prompts/bloque-6/03_documentar_bloque-6.md)
 
+### Bloque 7 — Animaciones y UX (13/06/2026)
+
+- **70** · Bloque 7a: correcciones funcionales y UX (foto recuerdos con cámara, organizador elimina fotos, haptic long press, fix refresh asistencia, perfil visual, accesibilidad WCAG AA básica) → [`conversaciones/bloque-7/cursor-bloque-7-completo.md`](conversaciones/bloque-7/cursor-bloque-7-completo.md) · [`prompts/bloque-7/01_correcciones_funcionales_ux.md`](prompts/bloque-7/01_correcciones_funcionales_ux.md)
+- **71** · Bloque 7b: SuccessAnimation global, íconos de app, animaciones TeamRandomizer → [`conversaciones/bloque-7/cursor-bloque-7-completo.md`](conversaciones/bloque-7/cursor-bloque-7-completo.md) · [`prompts/bloque-7/03_animaciones_visual.md`](prompts/bloque-7/03_animaciones_visual.md)
+- **72** · Correctivo 7a: allowsEditing revertido, portada cámara/galería, avatar al Guardar, tab bar consistente → [`conversaciones/bloque-7/cursor-bloque-7-completo.md`](conversaciones/bloque-7/cursor-bloque-7-completo.md) · [`prompts/bloque-7/02_correctivo_7a.md`](prompts/bloque-7/02_correctivo_7a.md)
+- **73** · Correctivo animaciones: SuccessAnimation 2.5s, ErrorAnimation, reemplazo toasts error → [`conversaciones/bloque-7/cursor-bloque-7-completo.md`](conversaciones/bloque-7/cursor-bloque-7-completo.md) · [`prompts/bloque-7/04_correctivo_animaciones.md`](prompts/bloque-7/04_correctivo_animaciones.md)
+- **74** · Documentación y cierre del Bloque 7 → [`conversaciones/bloque-7/cursor-bloque-7-completo.md`](conversaciones/bloque-7/cursor-bloque-7-completo.md)
+
 ## Skills
 
 - Skills instaladas (base heredada de E1): [`skills_instaladas.md`](skills_instaladas.md)
