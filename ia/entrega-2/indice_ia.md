@@ -85,6 +85,11 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **52** · notificationService (registerPushToken, sendNotification, schedule/cancelReminder) y useNotifications hook → [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
 - **53** · Registro de push token en App.tsx (onAuthStateChange) y eventos integrados: joined, transferred, review_enabled, reminder → [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
 - **54** · Fix: expo-notifications compatible con Expo Go (guard isExpoGo en registerPushToken y setNotificationHandler) → [`prompts/bloque-5/03_fix_expo_go_notifications.md`](prompts/bloque-5/03_fix_expo_go_notifications.md)
+- **55** · useRealtimeNotifications + notificationStore Zustand → [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
+- **56** · NotificationBanner: banner flotante animado → [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
+- **57** · Badge de notificaciones en campana del home → [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
+- **58** · NotificationPanel: panel con lista y swipe → [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
+- **59** · Toggle de notificaciones en perfil → [`prompts/bloque-5/04_frontend_notificaciones.md`](prompts/bloque-5/04_frontend_notificaciones.md)
 
 ## Skills
 

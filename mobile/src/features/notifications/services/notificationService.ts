@@ -126,6 +126,27 @@ export const notificationService = {
   },
 
   /**
+   * Elimina el push token del perfil cuando el usuario desactiva notificaciones.
+   * Evita envíos push hasta que vuelva a registrarse con registerPushToken.
+   *
+   * @param userId - UUID del usuario autenticado
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
+   */
+  async clearPushToken(userId: string): Promise<ServiceResult<null>> {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ push_token: null })
+        .eq('id', userId);
+
+      if (error) throw error;
+      return { data: null, error: null };
+    } catch {
+      return { data: null, error: 'No se pudo desactivar el token de notificaciones' };
+    }
+  },
+
+  /**
    * Envía una notificación al destinatario invocando la Edge Function.
    *
    * La Edge Function se encarga de persistir la notificación in-app y de

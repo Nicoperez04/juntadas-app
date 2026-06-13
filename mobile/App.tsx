@@ -3,9 +3,13 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase/client';
 import { notificationService } from '@/features/notifications/services/notificationService';
+import { NotificationBanner } from '@/features/notifications/components/NotificationBanner';
+import { useRealtimeNotifications } from '@/features/notifications/hooks/useNotifications';
+import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { AppNavigator } from '@/navigation/AppNavigator';
 
 /**
@@ -25,6 +29,16 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+/**
+ * Inicializa la suscripción Realtime de notificaciones cuando hay sesión activa.
+ * Vive dentro del QueryClientProvider para poder invalidar queries.
+ */
+const AppNotificationsBootstrap = () => {
+  const { userId } = useCurrentUser();
+  useRealtimeNotifications(userId);
+  return null;
+};
 
 // Punto de entrada de la app: provee gestos, bottom sheets y la caché de queries.
 export default function App() {
@@ -77,13 +91,17 @@ export default function App() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <BottomSheetModalProvider>
-        <QueryClientProvider client={queryClient}>
-          <AppNavigator />
-        </QueryClientProvider>
-      </BottomSheetModalProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={styles.root}>
+        <BottomSheetModalProvider>
+          <QueryClientProvider client={queryClient}>
+            <AppNotificationsBootstrap />
+            <NotificationBanner />
+            <AppNavigator />
+          </QueryClientProvider>
+        </BottomSheetModalProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
 

@@ -6,10 +6,28 @@
  * query ['notifications', userId] para que la UI se actualice
  * automáticamente tras cada operación.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase/client';
 import { notificationService } from '../services/notificationService';
-import type { Notification } from '../types';
+import { useNotificationStore } from '../store/notificationStore';
+import type { Notification, NotificationRow } from '../types';
+
+/**
+ * Convierte una fila de Realtime (snake_case) al tipo de dominio Notification.
+ * Duplicado aquí para no acoplar el hook al servicio privado de mapeo.
+ */
+const mapNotificationRow = (row: NotificationRow): Notification => ({
+  id: row.id,
+  userId: row.user_id,
+  type: row.type as Notification['type'],
+  title: row.title,
+  body: row.body,
+  meetupId: row.meetup_id,
+  read: row.read,
+  createdAt: row.created_at,
+});
 
 /**
  * Query principal de notificaciones del usuario.
@@ -110,4 +128,53 @@ export const useDeleteNotification = (userId: string | null) => {
       await queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
     },
   });
+};
+
+/**
+ * Suscripción Realtime a INSERTs en la tabla notifications del usuario.
+ * Invalida la query de notificaciones y dispara el banner vía Zustand.
+ *
+ * @param userId - UUID del usuario autenticado; no suscribe si es null
+ * @returns La suscripción activa de Supabase Realtime o null si no hay sesión
+ */
+export const useRealtimeNotifications = (userId: string | null): RealtimeChannel | null => {
+  const queryClient = useQueryClient();
+  const setPendingBanner = useNotificationStore((state) => state.setPendingBanner);
+  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      setChannel(null);
+      return;
+    }
+
+    const subscription = supabase
+      .channel(`notifications:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const row = payload.new as NotificationRow;
+          const notification = mapNotificationRow(row);
+
+          void queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+          setPendingBanner(notification);
+        },
+      )
+      .subscribe();
+
+    setChannel(subscription);
+
+    return () => {
+      void supabase.removeChannel(subscription);
+      setChannel(null);
+    };
+  }, [userId, queryClient, setPendingBanner]);
+
+  return channel;
 };

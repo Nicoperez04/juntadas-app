@@ -9,7 +9,7 @@
  * El skeleton de carga evita la pantalla en blanco mientras se obtienen
  * los datos del servidor.
  */
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,9 @@ import { appLogoSource } from '@/shared/assets/appAssets';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
+import { useUnreadCount } from '@/features/notifications/hooks/useNotifications';
+import { NotificationPanel } from '@/features/notifications/components/NotificationPanel';
 import { useMeetups } from '../hooks/useMeetups';
 import {
   usePendingReviews,
@@ -286,6 +289,9 @@ const TABS: TabDefinition[] = [
 export const MeetupHomeScreen = () => {
   const navigation = useNavigation<NavProp>();
   const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+  const unreadCount = useUnreadCount(userId);
+  const [panelVisible, setPanelVisible] = useState(false);
   const { meetups, isLoading, error, refresh } = useMeetups();
   const { profile, loadProfile } = useAuth();
   const pendingReviewsQuery = usePendingReviews();
@@ -414,12 +420,22 @@ export const MeetupHomeScreen = () => {
             <TouchableOpacity
               style={styles.notificationBtn}
               activeOpacity={0.7}
+              onPress={() => setPanelVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Ver notificaciones"
             >
               <Ionicons
                 name="notifications-outline"
                 size={22}
                 color={theme.colors.textPrimary}
               />
+              {unreadCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.headerAvatar, { backgroundColor: profile?.avatarUrl ? 'transparent' : avatarBgColor }]}
@@ -593,6 +609,14 @@ export const MeetupHomeScreen = () => {
           })}
         </View>
       </SafeAreaView>
+
+      {userId && (
+        <NotificationPanel
+          visible={panelVisible}
+          onClose={() => setPanelVisible(false)}
+          userId={userId}
+        />
+      )}
     </View>
   );
 };
@@ -649,6 +673,26 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: theme.colors.surface,
+  },
+  notificationBadgeText: {
+    fontSize: 10,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.surface,
   },
   headerAvatar: {
     width: 38,
