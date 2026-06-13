@@ -6,11 +6,13 @@
  * errores sin try/catch en componentes.
  */
 import { supabase } from '@/lib/supabase/client';
+import { notificationService } from '@/features/notifications/services/notificationService';
 import type {
   MeetupParticipant,
   AttendanceStatus,
   ParticipantRole,
   MeetupStatus,
+  Meetup,
 } from '@/features/meetups/types';
 
 /** Contrato de retorno uniforme de todas las operaciones del servicio */
@@ -178,6 +180,48 @@ export const participantService = {
         .single();
 
       if (reloadError) throw reloadError;
+
+      // Al confirmar asistencia: programar un recordatorio local 2hs antes (fire-and-forget)
+      if (status === 'confirmed') {
+        void (async () => {
+          try {
+            const { data: meetupData } = await supabase
+              .from('meetups')
+              .select('id, title, date, time, description, estimated_cost, status, join_code, created_by, created_at, updated_at, cancelled_at, cover_url, reviews_enabled')
+              .eq('id', meetupId)
+              .single();
+
+            if (meetupData) {
+              // Mapeo manual a Meetup para no introducir dependencia circular con meetupService
+              const meetup: Meetup = {
+                id: meetupData.id,
+                title: meetupData.title,
+                description: meetupData.description,
+                date: meetupData.date,
+                time: meetupData.time,
+                location: '',
+                estimatedCost: meetupData.estimated_cost,
+                status: meetupData.status,
+                joinCode: meetupData.join_code,
+                createdBy: meetupData.created_by,
+                createdAt: meetupData.created_at,
+                updatedAt: meetupData.updated_at,
+                cancelledAt: meetupData.cancelled_at,
+                cover_url: meetupData.cover_url,
+                reviews_enabled: meetupData.reviews_enabled,
+              };
+
+              const { data: notifId } = await notificationService.scheduleReminderNotification(meetup);
+
+              if (notifId) {
+                await notificationService.saveReminderIdForMeetup(meetupId, notifId);
+              }
+            }
+          } catch {
+            // Error al programar el recordatorio: no afecta la confirmación de asistencia
+          }
+        })();
+      }
 
       return {
         data: mapParticipantRow(updated as unknown as ParticipantWithProfileRow),

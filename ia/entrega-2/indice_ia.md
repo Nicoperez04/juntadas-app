@@ -76,6 +76,16 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **46** · Corrección: juegos desde juntada con prellenado de participantes en TeamRandomizer y ScorerSetup → [`conversaciones/bloque-4/cursor-bloque-4-completo.md`](conversaciones/bloque-4/cursor-bloque-4-completo.md) · [`prompts/bloque-4/06_correctivo_juegos_desde_juntada.md`](prompts/bloque-4/06_correctivo_juegos_desde_juntada.md)
 - **47** · Documentación y cierre del Bloque 4 → [`conversaciones/bloque-4/cursor-bloque-4-completo.md`](conversaciones/bloque-4/cursor-bloque-4-completo.md) · [`prompts/bloque-4/07_documentar_bloque-4.md`](prompts/bloque-4/07_documentar_bloque-4.md)
 
+### Bloque 5 — Notificaciones y EAS Build (11/06/2026)
+
+- **48** · EAS Build setup: eas.json, android.package, perfil preview, APK E2 → [`prompts/bloque-5/01_eas_build_setup.md`](prompts/bloque-5/01_eas_build_setup.md)
+- **49** · Migración 009_notifications: tabla notifications, enum notification_type, push_token en profiles, RLS → [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
+- **50** · Edge Function send-push-notification (Deno): persistencia in-app + Expo Push API → [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
+- **51** · expo-notifications + expo-device: instalación, plugin en app.json, permisos Android → [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
+- **52** · notificationService (registerPushToken, sendNotification, schedule/cancelReminder) y useNotifications hook → [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
+- **53** · Registro de push token en App.tsx (onAuthStateChange) y eventos integrados: joined, transferred, review_enabled, reminder → [`prompts/bloque-5/02_backend_notificaciones.md`](prompts/bloque-5/02_backend_notificaciones.md)
+- **54** · Fix: expo-notifications compatible con Expo Go (guard isExpoGo en registerPushToken y setNotificationHandler) → [`prompts/bloque-5/03_fix_expo_go_notifications.md`](prompts/bloque-5/03_fix_expo_go_notifications.md)
+
 ## Skills
 
 - Skills instaladas (base heredada de E1): [`skills_instaladas.md`](skills_instaladas.md)
