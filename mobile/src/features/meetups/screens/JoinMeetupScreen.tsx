@@ -286,8 +286,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',

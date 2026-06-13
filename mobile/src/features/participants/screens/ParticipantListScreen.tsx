@@ -409,10 +409,11 @@ export const ParticipantListScreen = () => {
         visible={attendanceModalTarget !== null}
         currentStatus={modalCurrentStatus}
         participantName={modalParticipantName}
-        onClose={() => {
+        onClose={(wasUpdated) => {
           setAttendanceModalTarget(null);
-          // Recargar datos después del cierre para no bloquear la animación
-          void refresh();
+          if (wasUpdated) {
+            void refresh();
+          }
           if (pendingToastRef.current) {
             setToast({ message: pendingToastRef.current, type: 'success' });
             pendingToastRef.current = null;
@@ -476,8 +477,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',

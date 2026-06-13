@@ -18,6 +18,8 @@ import {
   Platform,
   TextInput,
   Image,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -201,27 +203,36 @@ const CoverPickerSection = ({
 );
 
 /**
- * Abre la galería con las opciones acordadas para portadas
- * (solo imágenes, recorte 16:9, calidad 0.8) y retorna la URI elegida.
+ * Abre cámara o galería con recorte 16:9 para la portada de la juntada.
  *
- * @returns URI local de la imagen o null si se canceló o faltan permisos
+ * @returns URI local, permiso denegado o null si se canceló
  */
-const pickCoverFromGallery = async (): Promise<
-  { uri: string } | { permissionDenied: true } | null
-> => {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+const pickCoverFromSource = async (
+  source: 'camera' | 'gallery',
+): Promise<{ uri: string } | { permissionDenied: true } | null> => {
+  const permission =
+    source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
   if (!permission.granted) {
     return { permissionDenied: true };
   }
 
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    // El recorte con aspect solo aplica con allowsEditing en Android;
-    // en iOS el usuario recorta libre pero la UI muestra siempre 16:9
-    allowsEditing: true,
-    aspect: [16, 9],
-    quality: 0.8,
-  });
+  const result =
+    source === 'camera'
+      ? await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          aspect: [16, 9],
+          quality: 0.8,
+        })
+      : await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          aspect: [16, 9],
+          quality: 0.8,
+        });
 
   if (result.canceled || result.assets.length === 0) {
     return null;
@@ -242,6 +253,7 @@ export const CreateMeetupScreen = () => {
   // existe el meetupId. No forma parte del schema de Zod a propósito.
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [coverError, setCoverError] = useState<string | null>(null);
+  const [showCoverModal, setShowCoverModal] = useState(false);
   const [showCoverSuccessToast, setShowCoverSuccessToast] = useState(false);
   /** meetupId pendiente de navegación tras el toast de portada subida */
   const [pendingMeetupId, setPendingMeetupId] = useState<string | null>(null);
@@ -301,15 +313,18 @@ export const CreateMeetupScreen = () => {
   };
 
   /**
-   * Abre la galería y guarda la URI elegida para el preview.
-   * El error de permisos se muestra debajo del área de portada.
+   * Abre cámara o galería según la opción del modal y guarda la URI para el preview.
    */
-  const handlePickCover = async () => {
+  const handlePickCoverFromSource = async (source: 'camera' | 'gallery') => {
     setCoverError(null);
-    const result = await pickCoverFromGallery();
+    const result = await pickCoverFromSource(source);
     if (result === null) return;
     if ('permissionDenied' in result) {
-      setCoverError('Necesitamos acceso a tu galería para elegir la portada');
+      setCoverError(
+        source === 'camera'
+          ? 'Necesitamos permiso para usar la cámara'
+          : 'Necesitamos acceso a tu galería para elegir la portada',
+      );
       return;
     }
     setCoverUri(result.uri);
@@ -382,7 +397,7 @@ export const CreateMeetupScreen = () => {
           {/* Portada opcional — se sube después de crear la juntada */}
           <CoverPickerSection
             coverUri={coverUri}
-            onPick={() => void handlePickCover()}
+            onPick={() => setShowCoverModal(true)}
             onRemove={() => setCoverUri(null)}
             error={coverError}
           />
@@ -550,6 +565,63 @@ export const CreateMeetupScreen = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      <Modal
+        transparent
+        animationType="slide"
+        visible={showCoverModal}
+        onRequestClose={() => setShowCoverModal(false)}
+        statusBarTranslucent
+      >
+        <View style={coverModalStyles.overlay}>
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setShowCoverModal(false)}
+          />
+          <View style={coverModalStyles.sheet}>
+            <View style={coverModalStyles.handle} />
+            <Text style={coverModalStyles.title}>Elegir portada</Text>
+
+            <TouchableOpacity
+              style={coverModalStyles.option}
+              onPress={() => {
+                setShowCoverModal(false);
+                void handlePickCoverFromSource('camera');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={coverModalStyles.optionIcon}>
+                <Ionicons name="camera-outline" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={coverModalStyles.optionLabel}>Tomar foto</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={coverModalStyles.option}
+              onPress={() => {
+                setShowCoverModal(false);
+                void handlePickCoverFromSource('gallery');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={coverModalStyles.optionIcon}>
+                <Ionicons name="images-outline" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={coverModalStyles.optionLabel}>Elegir de galería</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={coverModalStyles.cancel}
+              onPress={() => setShowCoverModal(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={coverModalStyles.cancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <AppTabBar activeTab="create" />
 
       <Toast
@@ -715,8 +787,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -798,5 +870,69 @@ const styles = StyleSheet.create({
   },
   bottomSpace: {
     height: theme.spacing.xl,
+  },
+});
+
+const coverModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    paddingTop: theme.spacing.sm,
+    ...theme.shadows.md,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.radius.full,
+    alignSelf: 'center',
+    marginVertical: theme.spacing.sm,
+  },
+  title: {
+    fontSize: theme.typography.sizes.lg,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+    marginTop: theme.spacing.xs,
+  },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  optionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionLabel: {
+    flex: 1,
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.textPrimary,
+  },
+  cancel: {
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  cancelText: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textSecondary,
   },
 });

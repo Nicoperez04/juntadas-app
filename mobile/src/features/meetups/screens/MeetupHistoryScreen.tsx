@@ -247,7 +247,7 @@ const ActiveFilterChip = ({ label, onRemove }: ActiveFilterChipProps) => (
     <Text style={styles.activeFilterChipText}>{label}</Text>
     <Pressable
       onPress={onRemove}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       accessibilityLabel={`Quitar filtro ${label}`}
       style={({ pressed }) => pressed && styles.activeFilterChipRemovePressed}
     >
@@ -1178,8 +1178,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',

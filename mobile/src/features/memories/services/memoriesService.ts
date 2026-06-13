@@ -229,22 +229,25 @@ export const memoriesService = {
   },
 
   /**
-   * Elimina una foto verificando que el usuario sea quien la subió.
+   * Elimina una foto verificando permisos: el autor siempre puede;
+   * el organizador de la juntada puede eliminar cualquier foto.
    * Primero borra el archivo de Storage y luego el registro de la tabla.
    *
    * @param memoryId - UUID del registro en `memories`
-   * @param userId - UUID del usuario autenticado (debe coincidir con uploaded_by)
+   * @param userId - UUID del usuario autenticado
    * @param filePath - Ruta del archivo en Storage
+   * @param options - meetupId e isOrganizer para validar permiso de organizador
    */
   async deleteMemory(
     memoryId: string,
     userId: string,
     filePath: string,
+    options?: { meetupId?: string; isOrganizer?: boolean },
   ): Promise<ServiceResult<null>> {
     try {
       const { data: existing, error: fetchError } = await supabase
         .from('memories')
-        .select('uploaded_by')
+        .select('uploaded_by, meetup_id')
         .eq('id', memoryId)
         .single();
 
@@ -252,7 +255,24 @@ export const memoriesService = {
         return { data: null, error: 'No se encontró la foto' };
       }
 
-      if (existing.uploaded_by !== userId) {
+      const isOwner = existing.uploaded_by === userId;
+      let canDeleteAsOrganizer = false;
+
+      if (!isOwner && options?.isOrganizer && options.meetupId) {
+        const { data: meetup, error: meetupError } = await supabase
+          .from('meetups')
+          .select('created_by')
+          .eq('id', options.meetupId)
+          .single();
+
+        if (meetupError || !meetup) {
+          return { data: null, error: 'No se pudo verificar el organizador' };
+        }
+
+        canDeleteAsOrganizer = meetup.created_by === userId;
+      }
+
+      if (!isOwner && !canDeleteAsOrganizer) {
         return { data: null, error: 'No tenés permiso para eliminar esta foto' };
       }
 

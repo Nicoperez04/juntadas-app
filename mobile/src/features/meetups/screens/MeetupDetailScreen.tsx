@@ -135,12 +135,13 @@ export const MeetupDetailScreen = () => {
   const pendingToastRef = useRef<string | null>(null);
 
   /**
-   * Cierra el modal de asistencia y recarga datos en paralelo para evitar
-   * re-renders intermedios por llamadas secuenciales.
+   * Cierra el modal de asistencia y recarga datos solo si hubo cambios guardados.
    */
-  const handleAttendanceClose = useCallback(async () => {
+  const handleAttendanceClose = useCallback(async (wasUpdated = false) => {
     setAttendanceModalTarget(null);
-    await refreshAll();
+    if (wasUpdated) {
+      await refreshAll();
+    }
     if (pendingToastRef.current) {
       setToast({ message: pendingToastRef.current, type: 'success' });
       pendingToastRef.current = null;
@@ -539,8 +540,8 @@ export const MeetupDetailScreen = () => {
         visible={attendanceModalTarget !== null}
         currentStatus={modalCurrentStatus}
         participantName={modalParticipantName}
-        onClose={() => {
-          void handleAttendanceClose();
+        onClose={(wasUpdated) => {
+          void handleAttendanceClose(wasUpdated);
         }}
         onSave={async (status) => {
           if (attendanceModalTarget?.mode === 'organizer') {
@@ -805,8 +806,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',

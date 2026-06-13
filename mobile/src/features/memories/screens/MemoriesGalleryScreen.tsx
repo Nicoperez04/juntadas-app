@@ -22,6 +22,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -148,7 +150,8 @@ const SkeletonCell = ({ index }: { index: number }) => {
 interface MemoryGridItemProps {
   memory: Memory;
   index: number;
-  isOwn: boolean;
+  /** true si el usuario puede eliminar esta foto (propia o organizador) */
+  canDelete: boolean;
   isDeleteMode: boolean;
   onPress: () => void;
   onLongPress: () => void;
@@ -159,7 +162,7 @@ interface MemoryGridItemProps {
 const MemoryGridItem = ({
   memory,
   index,
-  isOwn,
+  canDelete,
   isDeleteMode,
   onPress,
   onLongPress,
@@ -176,7 +179,7 @@ const MemoryGridItem = ({
         !isLastInRow && styles.gridCellGapRight,
       ]}
       onPress={onPress}
-      onLongPress={isOwn ? onLongPress : undefined}
+      onLongPress={canDelete ? onLongPress : undefined}
       delayLongPress={400}
     >
       <Image source={{ uri: memory.fileUrl }} style={styles.gridImage} />
@@ -204,7 +207,7 @@ const MemoryGridItem = ({
         </Text>
       </View>
 
-      {isOwn && isDeleteMode && (
+      {canDelete && isDeleteMode && (
         <TouchableOpacity
           style={styles.deleteIconBtn}
           onPress={onDeletePress}
@@ -229,6 +232,8 @@ export const MemoriesGalleryScreen = () => {
   const [meetupTitle, setMeetupTitle] = useState('');
   const [meetupDate, setMeetupDate] = useState('');
   const [meetupTime, setMeetupTime] = useState('');
+  const [isOrganizer, setIsOrganizer] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [deleteModeId, setDeleteModeId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [memoryToDelete, setMemoryToDelete] = useState<Memory | null>(null);
@@ -247,10 +252,10 @@ export const MemoriesGalleryScreen = () => {
     isUploading,
     uploadProgress,
     error,
-    uploadPhotos,
+    uploadPhotosFromUris,
     deletePhoto,
     refresh,
-  } = useMemories(meetupId, currentUserId);
+  } = useMemories(meetupId, currentUserId, isOrganizer);
 
   /**
    * Lista visible en el grid: excluye fotos eliminadas desde el viewer
@@ -285,9 +290,12 @@ export const MemoriesGalleryScreen = () => {
         setMeetupTitle(data.title);
         setMeetupDate(formatDate(data.date));
         setMeetupTime(data.time);
+        setIsOrganizer(
+          !!currentUserId && data.createdBy === currentUserId,
+        );
       }
     });
-  }, [meetupId]);
+  }, [meetupId, currentUserId]);
 
   /**
    * Muestra el tip de eliminación solo la primera vez que hay fotos en la galería.
@@ -315,22 +323,65 @@ export const MemoriesGalleryScreen = () => {
   }, [showDeleteTip]);
 
   /**
-   * Abre el picker y muestra toast de éxito con la cantidad subida.
+   * Abre el selector de cámara o galería según la opción elegida.
+   * Mismo patrón que la foto de perfil en ProfileScreen.
    */
-  const handleUpload = useCallback(async () => {
-    const count = await uploadPhotos();
-    if (count && count > 0) {
-      setToast({
-        message: `✓ ${count} foto${count > 1 ? 's' : ''} agregada${count > 1 ? 's' : ''}`,
-        type: 'success',
-      });
-    }
-  }, [uploadPhotos]);
+  const handlePickAndUpload = useCallback(
+    async (source: 'camera' | 'gallery') => {
+      const permission =
+        source === 'camera'
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permission.granted) {
+        setToast({
+          message:
+            source === 'camera'
+              ? 'Necesitamos permiso para usar la cámara'
+              : 'Necesitamos acceso a tu galería para subir fotos',
+          type: 'error',
+        });
+        return;
+      }
+
+      const pickerResult =
+        source === 'camera'
+          ? await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'],
+              quality: 0.8,
+            })
+          : await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsMultipleSelection: true,
+              quality: 0.8,
+            });
+
+      if (pickerResult.canceled || pickerResult.assets.length === 0) {
+        return;
+      }
+
+      const imageUris = pickerResult.assets.map((asset) => asset.uri);
+      const count = await uploadPhotosFromUris(imageUris);
+      if (count && count > 0) {
+        setToast({
+          message: `✓ ${count} foto${count > 1 ? 's' : ''} agregada${count > 1 ? 's' : ''}`,
+          type: 'success',
+        });
+      }
+    },
+    [uploadPhotosFromUris],
+  );
+
+  /** Muestra el modal de selección de fuente antes de subir fotos */
+  const handleUploadPress = useCallback(() => {
+    setShowUploadModal(true);
+  }, []);
 
   /**
-   * Activa el modo eliminar en la celda propia tras long-press.
+   * Activa el modo eliminar tras long-press con feedback háptico.
    */
   const handleLongPress = useCallback((memory: Memory) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setDeleteModeId(memory.id);
   }, []);
 
@@ -360,27 +411,32 @@ export const MemoriesGalleryScreen = () => {
     }
   };
 
-  const renderGridItem = ({ item, index }: { item: Memory; index: number }) => (
-    <MemoryGridItem
-      memory={item}
-      index={index}
-      isOwn={item.uploadedBy === currentUserId}
-      isDeleteMode={deleteModeId === item.id}
-      onPress={() => {
-        if (deleteModeId === item.id) {
-          setDeleteModeId(null);
-          return;
-        }
-        navigation.navigate(Routes.MemoryViewer, {
-          memories: displayMemories,
-          initialIndex: index,
-          meetupId,
-        });
-      }}
-      onLongPress={() => handleLongPress(item)}
-      onDeletePress={() => handleDeletePress(item)}
-    />
-  );
+  const renderGridItem = ({ item, index }: { item: Memory; index: number }) => {
+    const canDelete =
+      item.uploadedBy === currentUserId || isOrganizer;
+
+    return (
+      <MemoryGridItem
+        memory={item}
+        index={index}
+        canDelete={canDelete}
+        isDeleteMode={deleteModeId === item.id}
+        onPress={() => {
+          if (deleteModeId === item.id) {
+            setDeleteModeId(null);
+            return;
+          }
+          navigation.navigate(Routes.MemoryViewer, {
+            memories: displayMemories,
+            initialIndex: index,
+            meetupId,
+          });
+        }}
+        onLongPress={() => handleLongPress(item)}
+        onDeletePress={() => handleDeletePress(item)}
+      />
+    );
+  };
 
   const skeletonData = Array.from({ length: 9 }, (_, i) => i);
 
@@ -415,7 +471,7 @@ export const MemoriesGalleryScreen = () => {
           </TouchableOpacity>
           {isActive && (
             <TouchableOpacity
-              onPress={() => void handleUpload()}
+              onPress={handleUploadPress}
               style={styles.headerIconBtn}
               activeOpacity={0.7}
               disabled={isUploading}
@@ -478,7 +534,7 @@ export const MemoriesGalleryScreen = () => {
             <View style={styles.emptyButton}>
               <AppButton
                 label="Subir la primera foto"
-                onPress={() => void handleUpload()}
+                onPress={handleUploadPress}
                 isLoading={isUploading}
               />
             </View>
@@ -515,13 +571,71 @@ export const MemoriesGalleryScreen = () => {
       {isActive && displayMemories.length > 0 && !isLoading && (
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => void handleUpload()}
+          onPress={handleUploadPress}
           activeOpacity={0.85}
           disabled={isUploading}
         >
           <Ionicons name="add" size={28} color={theme.colors.surface} />
         </TouchableOpacity>
       )}
+
+      {/* Modal de selección de fuente para subir recuerdos */}
+      <Modal
+        transparent
+        animationType="slide"
+        visible={showUploadModal}
+        onRequestClose={() => setShowUploadModal(false)}
+        statusBarTranslucent
+      >
+        <View style={styles.uploadModalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setShowUploadModal(false)}
+          />
+          <View style={styles.uploadModalSheet}>
+            <View style={styles.uploadModalHandle} />
+            <Text style={styles.uploadModalTitle}>Subir recuerdo</Text>
+
+            <TouchableOpacity
+              style={styles.uploadModalOption}
+              onPress={() => {
+                setShowUploadModal(false);
+                void handlePickAndUpload('camera');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.uploadModalOptionIcon}>
+                <Ionicons name="camera-outline" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.uploadModalOptionLabel}>Tomar foto</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.uploadModalOption}
+              onPress={() => {
+                setShowUploadModal(false);
+                void handlePickAndUpload('gallery');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.uploadModalOptionIcon}>
+                <Ionicons name="images-outline" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.uploadModalOptionLabel}>Elegir de galería</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.uploadModalCancel}
+              onPress={() => setShowUploadModal(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.uploadModalCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal de confirmación de eliminación */}
       <Modal
@@ -578,6 +692,8 @@ export const MemoriesGalleryScreen = () => {
               <TouchableOpacity
                 onPress={() => setShowHelpModal(false)}
                 activeOpacity={0.7}
+                style={styles.helpModalCloseBtn}
+                accessibilityLabel="Cerrar ayuda"
               >
                 <Ionicons
                   name="close"
@@ -639,8 +755,8 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    minWidth: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -659,8 +775,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   headerIconBtn: {
-    width: 40,
-    height: 40,
+    minWidth: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -893,6 +1009,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  helpModalCloseBtn: {
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   helpModalTitle: {
     fontSize: theme.typography.sizes.xl,
     fontWeight: theme.typography.weights.bold,
@@ -947,5 +1069,66 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weights.medium,
     color: theme.colors.surface,
     textAlign: 'center',
+  },
+  uploadModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  uploadModalSheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    paddingTop: theme.spacing.sm,
+    ...theme.shadows.md,
+  },
+  uploadModalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.radius.full,
+    alignSelf: 'center',
+    marginVertical: theme.spacing.sm,
+  },
+  uploadModalTitle: {
+    fontSize: theme.typography.sizes.lg,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+    marginTop: theme.spacing.xs,
+  },
+  uploadModalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  uploadModalOptionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadModalOptionLabel: {
+    flex: 1,
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.textPrimary,
+  },
+  uploadModalCancel: {
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  uploadModalCancelText: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textSecondary,
   },
 });

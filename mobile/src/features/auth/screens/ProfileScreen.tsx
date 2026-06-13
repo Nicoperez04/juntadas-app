@@ -29,7 +29,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { theme } from '@/shared/constants/theme';
 import { AppInput } from '@/shared/components/AppInput';
@@ -208,6 +208,8 @@ export const ProfileScreen = () => {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [deleteEmailInput, setDeleteEmailInput] = useState('');
   const [deleteEmailError, setDeleteEmailError] = useState<string | null>(null);
+  /** URI local de foto elegida en edición; se sube solo al presionar Guardar */
+  const [pendingAvatarUri, setPendingAvatarUri] = useState<string | null>(null);
   /** Controla la visibilidad del modal de selección de fuente de foto */
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [usernameServerError, setUsernameServerError] = useState<string | null>(null);
@@ -260,6 +262,7 @@ export const ProfileScreen = () => {
    */
   const enterEditMode = () => {
     setUsernameServerError(null);
+    setPendingAvatarUri(null);
     setIsEditing(true);
   };
 
@@ -274,6 +277,7 @@ export const ProfileScreen = () => {
       });
     }
     setUsernameServerError(null);
+    setPendingAvatarUri(null);
     setIsEditing(false);
   };
 
@@ -294,13 +298,21 @@ export const ProfileScreen = () => {
       return;
     }
 
+    if (pendingAvatarUri) {
+      const uploadResult = await uploadAvatar(pendingAvatarUri);
+      if (uploadResult.error) {
+        setToast({ message: uploadResult.error, type: 'error' });
+        return;
+      }
+      setPendingAvatarUri(null);
+    }
+
     setIsEditing(false);
     setToast({ message: 'Perfil actualizado', type: 'success' });
   };
 
   /**
-   * Abre la cámara o galería según la opción elegida por el usuario.
-   * Solo disponible en modo edición.
+   * Guarda la URI local como preview; la subida a Storage ocurre al presionar Guardar.
    */
   const handlePickImage = async (source: 'camera' | 'gallery') => {
     const permission =
@@ -333,13 +345,7 @@ export const ProfileScreen = () => {
 
     if (result.canceled || !result.assets[0]?.uri) return;
 
-    const uploadResult = await uploadAvatar(result.assets[0].uri);
-    if (uploadResult.error) {
-      setToast({ message: uploadResult.error, type: 'error' });
-      return;
-    }
-
-    setToast({ message: 'Foto actualizada', type: 'success' });
+    setPendingAvatarUri(result.assets[0].uri);
   };
 
   /** Abre el modal custom de selección de fuente de foto */
@@ -431,6 +437,8 @@ export const ProfileScreen = () => {
   const avatarColor = AVATAR_PALETTE[getAvatarColorIndex(profile?.id ?? 'user')];
   const displayName = profile?.fullName?.trim() || 'Usuario';
   const initials = getInitials(displayName);
+  /** Preview en edición: prioriza la foto pendiente sobre la del servidor */
+  const displayAvatarUri = pendingAvatarUri ?? profile?.avatarUrl ?? null;
 
   const renderContent = () => {
     if (isLoadingProfile && !profile) {
@@ -496,8 +504,8 @@ export const ProfileScreen = () => {
               disabled={!isEditing || isLoading}
             >
               <View style={styles.avatarRing}>
-                {profile.avatarUrl ? (
-                  <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+                {displayAvatarUri ? (
+                  <Image source={{ uri: displayAvatarUri }} style={styles.avatarImage} />
                 ) : (
                   <View style={[styles.avatarPlaceholder, { backgroundColor: avatarColor }]}>
                     <Text style={styles.avatarInitials}>{initials}</Text>
@@ -607,7 +615,7 @@ export const ProfileScreen = () => {
             <Text style={styles.sectionTitle}>Notificaciones</Text>
             <View style={styles.notificationRow}>
               <View style={styles.notificationText}>
-                <Text style={styles.notificationLabel}>Notificaciones push</Text>
+                <Text style={styles.notificationLabel}>Notificaciones</Text>
                 <Text style={styles.notificationHint}>
                   Recibí alertas de juntadas y confirmaciones
                 </Text>
@@ -643,26 +651,26 @@ export const ProfileScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Acciones de cuenta */}
+          {/* Acciones de cuenta — cerrar sesión (secundaria) y eliminar (destructiva) */}
           <View style={styles.actionsSection}>
-            <TouchableOpacity
-              style={styles.deleteAccountBtn}
-              onPress={openDeleteAccountFlow}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
-              <Text style={styles.deleteAccountBtnText}>Eliminar cuenta</Text>
-            </TouchableOpacity>
-
-            <View style={styles.actionsDivider} />
-
             <TouchableOpacity
               style={styles.logoutBtn}
               onPress={() => setShowLogoutModal(true)}
               activeOpacity={0.8}
             >
-              <Ionicons name="log-out-outline" size={20} color={theme.colors.error} />
+              <Ionicons name="log-out-outline" size={20} color={theme.colors.textSecondary} />
               <Text style={styles.logoutBtnText}>Cerrar sesión</Text>
+            </TouchableOpacity>
+
+            <View style={styles.actionsDivider} />
+
+            <TouchableOpacity
+              style={styles.deleteAccountBtn}
+              onPress={openDeleteAccountFlow}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="trash-outline" size={20} color={theme.colors.surface} />
+              <Text style={styles.deleteAccountBtnText}>Eliminar cuenta</Text>
             </TouchableOpacity>
           </View>
 
@@ -708,9 +716,14 @@ export const ProfileScreen = () => {
               onPress={enterEditMode}
               disabled={!profile || isLoadingProfile}
               activeOpacity={0.7}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              accessibilityLabel="Editar perfil"
             >
-              <Ionicons name="pencil" size={20} color={theme.colors.primary} />
+              <MaterialCommunityIcons
+                name="pencil"
+                size={22}
+                color={theme.colors.primary}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -959,8 +972,8 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   editBtn: {
-    width: 40,
-    height: 40,
+    minWidth: 44,
+    minHeight: 44,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
@@ -1035,9 +1048,9 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   incompleteBannerSubtitle: {
-    fontSize: theme.typography.sizes.xs,
+    fontSize: theme.typography.sizes.sm,
     color: theme.colors.textSecondary,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   incompleteBannerBtn: {
     backgroundColor: theme.colors.warning,
@@ -1142,13 +1155,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   notificationHint: {
-    fontSize: theme.typography.sizes.xs,
+    fontSize: theme.typography.sizes.sm,
     color: theme.colors.textSecondary,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   actionsSection: {
     marginTop: theme.spacing.xs,
-    gap: theme.spacing.md,
+    gap: theme.spacing.lg,
   },
   securityRow: {
     flexDirection: 'row',
@@ -1181,14 +1194,12 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     height: theme.components.buttonHeight,
     borderRadius: theme.radius.lg,
-    borderWidth: theme.components.inputBorderWidth,
-    borderColor: theme.colors.error,
-    backgroundColor: 'transparent',
+    backgroundColor: theme.colors.error,
   },
   deleteAccountBtnText: {
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.error,
+    color: theme.colors.surface,
   },
   logoutBtn: {
     flexDirection: 'row',
@@ -1198,13 +1209,13 @@ const styles = StyleSheet.create({
     height: theme.components.buttonHeight,
     borderRadius: theme.radius.lg,
     borderWidth: theme.components.inputBorderWidth,
-    borderColor: theme.colors.error,
+    borderColor: theme.colors.border,
     backgroundColor: 'transparent',
   },
   logoutBtnText: {
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.error,
+    color: theme.colors.textSecondary,
   },
   modalOverlay: {
     flex: 1,

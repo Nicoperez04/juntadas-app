@@ -69,7 +69,8 @@ interface ModifyAttendanceProps {
   currentStatus: AttendanceStatus;
   /** Se invoca al confirmar con Guardar; puede ser async */
   onSave: (status: AttendanceStatus) => void | Promise<void>;
-  onClose: () => void;
+  /** Se invoca al cerrar el modal; wasUpdated indica si hubo cambios guardados */
+  onClose: (wasUpdated?: boolean) => void;
   /** Nombre del participante cuando el organizador edita a otro */
   participantName?: string;
 }
@@ -155,8 +156,9 @@ export const ModifyAttendanceScreen = ({
 
   /**
    * Cierra con animación y recién entonces notifica al padre vía onClose.
+   * @param wasUpdated - true si el usuario guardó cambios antes de cerrar
    */
-  const closeModal = useCallback(async () => {
+  const closeModal = useCallback(async (wasUpdated = false) => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
     dragOffsetY.setValue(0);
@@ -164,7 +166,7 @@ export const ModifyAttendanceScreen = ({
     await runAnimation(0, SHEET_OFFSET);
     setModalVisible(false);
     isClosingRef.current = false;
-    onClose();
+    onClose(wasUpdated);
   }, [dragOffsetY, onClose, runAnimation]);
 
   /**
@@ -248,7 +250,7 @@ export const ModifyAttendanceScreen = ({
     try {
       await onSave(selectedStatus);
       await triggerSuccessHaptic();
-      await closeModal();
+      await closeModal(true);
     } catch (error) {
       const message =
         error instanceof Error
@@ -460,7 +462,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   optionDescription: {
-    fontSize: theme.typography.sizes.xs,
+    fontSize: theme.typography.sizes.sm,
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
