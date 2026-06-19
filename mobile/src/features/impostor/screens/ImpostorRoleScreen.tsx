@@ -70,6 +70,7 @@ export const ImpostorRoleScreen = () => {
     currentIsImpostor,
     revealedCount,
     clearSession,
+    resetRound,
   } = useImpostor(meetupId);
 
   const [isRevealed, setIsRevealed] = useState(false);
@@ -84,7 +85,7 @@ export const ImpostorRoleScreen = () => {
   useEffect(() => {
     flipAnim.setValue(0);
     setIsRevealed(false);
-  }, [session?.currentPlayerIndex, flipAnim]);
+  }, [session?.currentPlayerIndex, session?.phase, flipAnim]);
 
   const flipCard = useCallback(() => {
     if (isRevealed) return;
@@ -104,19 +105,13 @@ export const ImpostorRoleScreen = () => {
   }, [nextPlayer]);
 
   const handleNewRound = useCallback(() => {
-    navigation.navigate(Routes.ImpostorStart, { meetupId });
-  }, [navigation, meetupId]);
+    void triggerSuccessHaptic();
+    resetRound();
+  }, [resetRound]);
 
   const handleFinish = useCallback(() => {
-    // Al salir del flujo se limpia la sesión para que la próxima entrada
-    // vuelva a cargar la base desde participantes confirmados de la juntada
     clearSession();
-
-    if (meetupId) {
-      navigation.navigate(Routes.MeetupDetail, { meetupId });
-      return;
-    }
-    navigation.navigate(Routes.Games, {});
+    navigation.navigate(Routes.ImpostorStart, { meetupId });
   }, [navigation, meetupId, clearSession]);
 
   if (!session || !currentPlayer) {
@@ -187,7 +182,7 @@ export const ImpostorRoleScreen = () => {
           </View>
         </ScrollView>
 
-        {/* Footer fijo: acciones siempre visibles por encima del tab bar */}
+        {/* Footer fijo: acciones de nueva ronda o volver al setup */}
         <View style={styles.finalActions}>
           <AppButton label="Nueva ronda" onPress={handleNewRound} />
           <AppButton label="Terminar" variant="ghost" onPress={handleFinish} />

@@ -219,7 +219,7 @@ export const MeetupDetailScreen = () => {
       return;
     }
 
-    setSuccessMessage('Juntada cancelada');
+    setSuccessMessage('✓ Juntada cancelada');
     setShowSuccess(true);
   };
 

@@ -112,6 +112,11 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **73** · Correctivo animaciones: SuccessAnimation 2.5s, ErrorAnimation, reemplazo toasts error → [`conversaciones/bloque-7/cursor-bloque-7-completo.md`](conversaciones/bloque-7/cursor-bloque-7-completo.md) · [`prompts/bloque-7/04_correctivo_animaciones.md`](prompts/bloque-7/04_correctivo_animaciones.md)
 - **74** · Documentación y cierre del Bloque 7 → [`conversaciones/bloque-7/cursor-bloque-7-completo.md`](conversaciones/bloque-7/cursor-bloque-7-completo.md)
 
+### Bloque 8 — Cierre final (19/06/2026)
+
+- **75** · Bloque 8: cierre final (debug logs, versión, ícono, animación Mezclar, Impostor nueva ronda, skeleton Home, revisión mensajes) → [`prompts/bloque-8/01_cierre_final.md`](prompts/bloque-8/01_cierre_final.md)
+- **76** · Fix fondo gris en animación "Mezclar de nuevo" de TeamRandomizer → [`prompts/bloque-8/02_fix_fondo_mezclar_teamrandomizer.md`](prompts/bloque-8/02_fix_fondo_mezclar_teamrandomizer.md)
+
 ## Skills
 
 - Skills instaladas (base heredada de E1): [`skills_instaladas.md`](skills_instaladas.md)

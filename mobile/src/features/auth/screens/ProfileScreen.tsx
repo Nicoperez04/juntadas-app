@@ -312,7 +312,7 @@ export const ProfileScreen = () => {
     }
 
     setIsEditing(false);
-    setSuccessMessage('Perfil actualizado');
+    setSuccessMessage('✓ Perfil actualizado');
     setShowSuccess(true);
   };
 
@@ -402,7 +402,7 @@ export const ProfileScreen = () => {
       return;
     }
 
-    setSuccessMessage('Tu cuenta ha sido eliminada');
+    setSuccessMessage('✓ Tu cuenta fue eliminada');
     setShowSuccess(true);
   };
 

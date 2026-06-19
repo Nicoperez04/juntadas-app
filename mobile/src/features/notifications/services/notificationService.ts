@@ -11,7 +11,7 @@
  * Todas las funciones siguen el patrón { data, error } para que los callers
  * nunca necesiten capturar excepciones directamente.
  */
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase/client';
 import type { Notification, NotificationInput, NotificationRow } from '../types';
@@ -41,6 +41,15 @@ const mapNotificationRow = (row: NotificationRow): Notification => ({
   createdAt: row.created_at,
 });
 
+/**
+ * Detecta Expo Go / Store Client donde expo-notifications no está
+ * completamente disponible. En SDK 55 appOwnership puede ser null,
+ * por eso también se consulta executionEnvironment.
+ */
+export const isExpoGoEnvironment = (): boolean =>
+  Constants.appOwnership === 'expo' ||
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
 export const notificationService = {
   /**
    * Registra el push token del dispositivo en el perfil del usuario.
@@ -54,30 +63,22 @@ export const notificationService = {
    * @returns El token registrado o null si se rechazaron los permisos
    */
   async registerPushToken(userId: string): Promise<ServiceResult<string | null>> {
-    try {
-      // El guard va antes del import dinámico: expo-notifications crashea al cargarse en Expo Go
-      const ConstantsModule = (await import('expo-constants')).default;
-      const isExpoGo = ConstantsModule.appOwnership === 'expo';
-      if (isExpoGo) {
-        console.log('[Push] Expo Go detectado — push notifications deshabilitadas'); // TODO: remover
-        return { data: null, error: null };
-      }
+    // Guard síncrono antes de cualquier import: evita cargar expo-notifications en Expo Go
+    if (isExpoGoEnvironment()) {
+      return { data: null, error: null };
+    }
 
+    try {
       const Notifications = await import('expo-notifications');
       const Device = await import('expo-device');
 
-      console.log('[Push] registerPushToken llamado con userId:', userId); // TODO: remover
-      console.log('[Push] Iniciando registro...'); // TODO: remover
-
       // Los emuladores no tienen push token real; omitir silenciosamente
-      console.log('[Push] isDevice:', Device.isDevice); // TODO: remover
       if (!Device.isDevice) {
         return { data: null, error: null };
       }
 
       // Solicitar permisos de notificación al sistema operativo
       const { status } = await Notifications.requestPermissionsAsync();
-      console.log('[Push] Status permisos:', status); // TODO: remover
 
       if (status !== 'granted') {
         // El usuario rechazó los permisos; no es un error, simplemente no hay push
@@ -87,39 +88,38 @@ export const notificationService = {
       // Se intenta obtener el projectId desde múltiples fuentes para mayor resiliencia
       // en builds standalone donde expoConfig puede ser undefined.
       const projectId =
-        ConstantsModule.expoConfig?.extra?.eas?.projectId ??
-        ConstantsModule.easConfig?.projectId ??
+        Constants.expoConfig?.extra?.eas?.projectId ??
+        Constants.easConfig?.projectId ??
         '4e795c92-2a3e-4984-939e-168bca1db737'; // fallback hardcodeado al projectId del proyecto
 
-      console.log('[Push] projectId:', projectId); // TODO: remover
-
       if (!projectId) {
-        console.error('[Push] projectId no disponible'); // TODO: remover
+        console.error('[Push] projectId no disponible');
         return { data: null, error: 'No se pudo obtener el projectId para notificaciones' };
       }
 
       const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
       const token = tokenData.data;
-      console.log('[Push] Token obtenido:', tokenData?.data); // TODO: remover
 
       // Persistir el token en el perfil del usuario para que la Edge Function lo lea
-      console.log('[Push] Intentando guardar token para userId:', userId); // TODO: remover
       const updateResult = await supabase
         .from('profiles')
         .update({ push_token: token })
         .eq('id', userId);
 
-      console.log('[Push] Resultado UPDATE:', JSON.stringify(updateResult)); // TODO: remover
-
       const { error: updateError } = updateResult;
       if (updateError) {
-        console.error('[Push] Error en UPDATE:', updateError); // TODO: remover
+        console.error('[Push] Error en UPDATE:', updateError);
         return { data: null, error: 'No se pudo guardar el token de notificaciones' };
       }
 
       return { data: token, error: null };
     } catch (err) {
-      console.error('[Push] Error:', err); // TODO: remover
+      // En Expo Go el módulo puede fallar al inicializarse; omitir silenciosamente
+      if (isExpoGoEnvironment()) {
+        return { data: null, error: null };
+      }
+
+      console.error('[Push] Error:', err);
       const message = err instanceof Error ? err.message : '';
       return { data: null, error: message || 'Error al registrar el token de notificaciones' };
     }
