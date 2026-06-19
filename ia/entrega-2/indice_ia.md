@@ -114,8 +114,10 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 
 ### Bloque 8 — Cierre final (19/06/2026)
 
-- **75** · Bloque 8: cierre final (debug logs, versión, ícono, animación Mezclar, Impostor nueva ronda, skeleton Home, revisión mensajes) → [`prompts/bloque-8/01_cierre_final.md`](prompts/bloque-8/01_cierre_final.md)
-- **76** · Fix fondo gris en animación "Mezclar de nuevo" de TeamRandomizer → [`prompts/bloque-8/02_fix_fondo_mezclar_teamrandomizer.md`](prompts/bloque-8/02_fix_fondo_mezclar_teamrandomizer.md)
+- **75** · Bloque 8: cierre final (debug logs, versión, animación Mezclar, Impostor nueva ronda, Home carga, revisión mensajes) → [`conversaciones/bloque-8/cursor-bloque-8-completo.md`](conversaciones/bloque-8/cursor-bloque-8-completo.md) · [`prompts/bloque-8/01_cierre_final.md`](prompts/bloque-8/01_cierre_final.md)
+- **76** · Fix fondo gris en animación "Mezclar de nuevo" de TeamRandomizer (intento 1 — paneles transparent) → [`conversaciones/bloque-8/cursor-bloque-8-completo.md`](conversaciones/bloque-8/cursor-bloque-8-completo.md) · [`prompts/bloque-8/02_fix_fondo_mezclar_teamrandomizer.md`](prompts/bloque-8/02_fix_fondo_mezclar_teamrandomizer.md)
+- **77** · Correctivos Bloque 8: TeamRandomizer fondo definitivo, guard Expo Go en App.tsx, Impostor flujo simplificado, Home ActivityIndicator → [`conversaciones/bloque-8/cursor-bloque-8-completo.md`](conversaciones/bloque-8/cursor-bloque-8-completo.md) · [`prompts/bloque-8/02_correctivo_bloque8.md`](prompts/bloque-8/02_correctivo_bloque8.md)
+- **Documentación** · Cierre del Bloque 8 → [`conversaciones/bloque-8/cursor-bloque-8-completo.md`](conversaciones/bloque-8/cursor-bloque-8-completo.md) · [`prompts/bloque-8/02_correctivo_bloque8.md`](prompts/bloque-8/02_correctivo_bloque8.md)
 
 ## Skills
 
