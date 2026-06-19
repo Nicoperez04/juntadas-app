@@ -8,7 +8,7 @@
 export const appConfig = {
   app: {
     name: 'Ronda App',
-    version: '1.0.0',
+    version: '2.0.0',
   },
   meetups: {
     /** Longitud del código alfanumérico para unirse a una juntada */

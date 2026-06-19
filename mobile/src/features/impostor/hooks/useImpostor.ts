@@ -129,7 +129,10 @@ export const useImpostor = (meetupId?: string) => {
 
     const updated: GameSession = {
       ...session,
-      topic: pick.category,
+      topic:
+        mode === 'specific_category'
+          ? categoryOverride ?? session.topic
+          : pick.category,
       normalPrompt: pick.word,
       impostorPrompt: session.includeImpostorHint
         ? generateImpostorHint(
@@ -158,6 +161,12 @@ export const useImpostor = (meetupId?: string) => {
   const revealedCount = session?.currentPlayerIndex ?? 0;
 
   /**
+   * Reinicia la ronda conservando jugadores y categoría, elige una palabra
+   * nueva y reasigna el impostor desde la primera carta de revelación.
+   */
+  const resetRound = (): GameSession | null => resetGameWithNewWord();
+
+  /**
    * Sincroniza la lista de jugadores en la sesión activa sin reiniciar la ronda.
    * Permite agregar o quitar jugadores manuales en el setup entre rondas.
    */
@@ -172,6 +181,7 @@ export const useImpostor = (meetupId?: string) => {
     setupGame,
     nextPlayer,
     resetGameWithNewWord,
+    resetRound,
     clearSession: () => clearSession(sessionKey),
     updateSessionPlayers,
     currentPlayer,

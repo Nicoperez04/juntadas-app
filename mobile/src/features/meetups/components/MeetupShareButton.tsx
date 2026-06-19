@@ -60,7 +60,7 @@ export const MeetupShareButton = ({
   const handleCopyCode = async () => {
     await Clipboard.setStringAsync(joinCode);
     setIsSheetVisible(false);
-    onFeedback('Código copiado', 'success');
+    onFeedback('✓ Código copiado', 'success');
   };
 
   /**

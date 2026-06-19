@@ -6,19 +6,18 @@
  * rápidas para crear y unirse a juntadas, un empty state atractivo cuando
  * no hay juntadas, y un tab bar visual en la parte inferior.
  *
- * El skeleton de carga evita la pantalla en blanco mientras se obtienen
- * los datos del servidor.
+ * Mientras cargan las queries muestra un spinner centrado, igual que Perfil.
  */
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Animated,
   Pressable,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,7 +29,7 @@ import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
-import { useUnreadCount } from '@/features/notifications/hooks/useNotifications';
+import { useUnreadCount, useNotifications } from '@/features/notifications/hooks/useNotifications';
 import { NotificationPanel } from '@/features/notifications/components/NotificationPanel';
 import { useMeetups } from '../hooks/useMeetups';
 import {
@@ -96,38 +95,6 @@ const formatDate = (dateStr: string): string => {
   const parts = dateStr.split('-');
   if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
   return dateStr;
-};
-
-/** Componente de card skeleton para el estado de carga inicial */
-const SkeletonCard = () => {
-  const opacity = useRef(new Animated.Value(0.4)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0.4,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [opacity]);
-
-  return (
-    <Animated.View style={[styles.skeletonCard, { opacity }]}>
-      <View style={styles.skeletonTitle} />
-      <View style={styles.skeletonLine} />
-      <View style={[styles.skeletonLine, { width: '55%' }]} />
-    </Animated.View>
-  );
 };
 
 /** Props de la card de juntada individual */
@@ -290,12 +257,23 @@ export const MeetupHomeScreen = () => {
   const navigation = useNavigation<NavProp>();
   const queryClient = useQueryClient();
   const { userId } = useCurrentUser();
+  const notificationsQuery = useNotifications(userId);
   const unreadCount = useUnreadCount(userId);
   const [panelVisible, setPanelVisible] = useState(false);
   const { meetups, isLoading, error, refresh } = useMeetups();
-  const { profile, loadProfile } = useAuth();
+  const { profile, loadProfile, isLoadingProfile } = useAuth();
   const pendingReviewsQuery = usePendingReviews();
   const pendingReviews = pendingReviewsQuery.data ?? [];
+
+  /**
+   * Spinner mientras cualquier query del home sigue cargando,
+   * para evitar que el contenido aparezca de a pedazos.
+   */
+  const isPageLoading =
+    isLoading ||
+    pendingReviewsQuery.isLoading ||
+    notificationsQuery.isLoading ||
+    isLoadingProfile;
 
   // Nombre para el avatar — prioriza el perfil de la tabla profiles
   // sobre los metadatos de Auth para reflejar cambios del ProfileScreen
@@ -402,179 +380,180 @@ export const MeetupHomeScreen = () => {
 
   return (
     <View style={styles.root}>
-      <SafeAreaView style={styles.topSafe} edges={['top']}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.headerSubtitle}>Bienvenido</Text>
-            <View style={styles.headerTitleRow}>
-              <Image
-                source={appLogoSource}
-                style={styles.headerLogo}
-                resizeMode="contain"
-              />
-              <Text style={styles.headerTitle}>Mis juntadas</Text>
+      {isPageLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Cargando tus juntadas...</Text>
+        </View>
+      ) : (
+        <>
+          <SafeAreaView style={styles.topSafe} edges={['top']}>
+            {/* Header */}
+            <View style={styles.header}>
+              <View>
+                <Text style={styles.headerSubtitle}>Bienvenido</Text>
+                <View style={styles.headerTitleRow}>
+                  <Image
+                    source={appLogoSource}
+                    style={styles.headerLogo}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.headerTitle}>Mis juntadas</Text>
+                </View>
+              </View>
+              <View style={styles.headerRight}>
+                <TouchableOpacity
+                  style={styles.notificationBtn}
+                  activeOpacity={0.7}
+                  onPress={() => setPanelVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Ver notificaciones"
+                >
+                  <Ionicons
+                    name="notifications-outline"
+                    size={22}
+                    color={theme.colors.textPrimary}
+                  />
+                  {unreadCount > 0 && (
+                    <View style={styles.notificationBadge}>
+                      <Text style={styles.notificationBadgeText}>
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.headerAvatar, { backgroundColor: profile?.avatarUrl ? 'transparent' : avatarBgColor }]}
+                  onPress={() => navigation.navigate(Routes.Profile)}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Ver mi perfil"
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                >
+                  {profile?.avatarUrl ? (
+                    <Image
+                      source={{ uri: profile.avatarUrl }}
+                      style={styles.headerAvatarImage}
+                    />
+                  ) : (
+                    <Text style={styles.headerAvatarText}>{initials}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-          <View style={styles.headerRight}>
-            <TouchableOpacity
-              style={styles.notificationBtn}
-              activeOpacity={0.7}
-              onPress={() => setPanelVisible(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Ver notificaciones"
-            >
-              <Ionicons
-                name="notifications-outline"
-                size={22}
-                color={theme.colors.textPrimary}
-              />
-              {unreadCount > 0 && (
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.notificationBadgeText}>
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </Text>
+          </SafeAreaView>
+
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Acciones rápidas */}
+            <View style={styles.quickActions}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.quickCard,
+                  pressed && styles.quickCardPressed,
+                ]}
+                onPress={() => navigation.navigate(Routes.CreateMeetup)}
+              >
+                <View
+                  style={[
+                    styles.quickIconBox,
+                    { backgroundColor: theme.colors.primaryLight },
+                  ]}
+                >
+                  <Ionicons
+                    name="add-circle"
+                    size={30}
+                    color={theme.colors.primary}
+                  />
+                </View>
+                <Text style={styles.quickLabel}>{'Crear\njuntada'}</Text>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.quickCard,
+                  pressed && styles.quickCardPressed,
+                ]}
+                onPress={() => navigation.navigate(Routes.JoinMeetup)}
+              >
+                <View
+                  style={[
+                    styles.quickIconBox,
+                    { backgroundColor: theme.colors.secondaryLight ?? `${theme.colors.secondary}20` },
+                  ]}
+                >
+                  <Ionicons
+                    name="enter"
+                    size={30}
+                    color={theme.colors.secondary}
+                  />
+                </View>
+                <Text style={styles.quickLabel}>{'Unirse a\njuntada'}</Text>
+              </Pressable>
+            </View>
+
+            {/* Cards de reseñas pendientes — encima de la lista de juntadas activas */}
+            {pendingReviews.length > 0 &&
+              pendingReviews.map((meetup) => (
+                <PendingReviewCard
+                  key={meetup.id}
+                  meetup={meetup}
+                  onLeaveReview={() =>
+                    navigation.navigate(Routes.ReviewForm, {
+                      meetupId: meetup.id,
+                      meetupTitle: meetup.title,
+                    })
+                  }
+                  onDismiss={() => void handleDismissPendingReview(meetup.id)}
+                />
+              ))}
+
+            {/* Título de sección con contador */}
+            <View style={styles.sectionRow}>
+              <Text style={styles.sectionTitle}>Próximas juntadas</Text>
+              {meetups.length > 0 && (
+                <View style={styles.countBadge}>
+                  <Text style={styles.countBadgeText}>{meetups.length}</Text>
                 </View>
               )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerAvatar, { backgroundColor: profile?.avatarUrl ? 'transparent' : avatarBgColor }]}
-              onPress={() => navigation.navigate(Routes.Profile)}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Ver mi perfil"
-              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-            >
-              {profile?.avatarUrl ? (
-                <Image
-                  source={{ uri: profile.avatarUrl }}
-                  style={styles.headerAvatarImage}
-                />
-              ) : (
-                <Text style={styles.headerAvatarText}>{initials}</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
-
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Acciones rápidas */}
-        <View style={styles.quickActions}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.quickCard,
-              pressed && styles.quickCardPressed,
-            ]}
-            onPress={() => navigation.navigate(Routes.CreateMeetup)}
-          >
-            <View
-              style={[
-                styles.quickIconBox,
-                { backgroundColor: theme.colors.primaryLight },
-              ]}
-            >
-              <Ionicons
-                name="add-circle"
-                size={30}
-                color={theme.colors.primary}
-              />
             </View>
-            <Text style={styles.quickLabel}>{'Crear\njuntada'}</Text>
-          </Pressable>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.quickCard,
-              pressed && styles.quickCardPressed,
-            ]}
-            onPress={() => navigation.navigate(Routes.JoinMeetup)}
-          >
-            <View
-              style={[
-                styles.quickIconBox,
-                // Fallback defensivo por si secondaryLight no estuviera definido en el tema
-                { backgroundColor: theme.colors.secondaryLight ?? `${theme.colors.secondary}20` },
-              ]}
-            >
-              <Ionicons
-                name="enter"
-                size={30}
-                color={theme.colors.secondary}
-              />
-            </View>
-            <Text style={styles.quickLabel}>{'Unirse a\njuntada'}</Text>
-          </Pressable>
-        </View>
+            {/* Contenido: error, vacío o lista */}
+            {error ? (
+              renderError()
+            ) : meetups.length === 0 ? (
+              renderEmptyState()
+            ) : (
+              <>
+                {meetups.map((meetup) => (
+                  <MeetupCard
+                    key={meetup.id}
+                    meetup={meetup}
+                    onPress={() => handleMeetupPress(meetup.id)}
+                  />
+                ))}
+                <TouchableOpacity
+                  style={styles.historyLink}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate(Routes.MeetupHistory)}
+                >
+                  <Text style={styles.historyLinkText}>Ver historial</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={15}
+                    color={theme.colors.primary}
+                  />
+                </TouchableOpacity>
+              </>
+            )}
 
-        {/* Cards de reseñas pendientes — encima de la lista de juntadas activas */}
-        {pendingReviews.length > 0 &&
-          pendingReviews.map((meetup) => (
-            <PendingReviewCard
-              key={meetup.id}
-              meetup={meetup}
-              onLeaveReview={() =>
-                navigation.navigate(Routes.ReviewForm, {
-                  meetupId: meetup.id,
-                  meetupTitle: meetup.title,
-                })
-              }
-              onDismiss={() => void handleDismissPendingReview(meetup.id)}
-            />
-          ))}
-
-        {/* Título de sección con contador */}
-        <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Próximas juntadas</Text>
-          {meetups.length > 0 && (
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>{meetups.length}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Contenido: skeleton, error, vacío o lista */}
-        {isLoading && meetups.length === 0 ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        ) : error ? (
-          renderError()
-        ) : meetups.length === 0 ? (
-          renderEmptyState()
-        ) : (
-          <>
-            {meetups.map((meetup) => (
-              <MeetupCard
-                key={meetup.id}
-                meetup={meetup}
-                onPress={() => handleMeetupPress(meetup.id)}
-              />
-            ))}
-            <TouchableOpacity
-              style={styles.historyLink}
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate(Routes.MeetupHistory)}
-            >
-              <Text style={styles.historyLinkText}>Ver historial</Text>
-              <Ionicons
-                name="chevron-forward"
-                size={15}
-                color={theme.colors.primary}
-              />
-            </TouchableOpacity>
-          </>
-        )}
-
-        {/* Espacio para que el contenido no quede tapado por el tab bar */}
-        <View style={styles.scrollBottom} />
-      </ScrollView>
+            <View style={styles.scrollBottom} />
+          </ScrollView>
+        </>
+      )}
 
       {/* Tab bar fijo en la parte inferior */}
       <SafeAreaView style={styles.tabSafe} edges={['bottom']}>
@@ -626,6 +605,19 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
+  loadingText: {
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
   topSafe: {
     backgroundColor: theme.colors.surface,
@@ -880,27 +872,6 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.sm,
     color: theme.colors.textSecondary,
     fontWeight: theme.typography.weights.medium,
-  },
-  skeletonCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    ...theme.shadows.sm,
-  },
-  skeletonTitle: {
-    height: 18,
-    width: '70%',
-    backgroundColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
-    marginBottom: theme.spacing.sm,
-  },
-  skeletonLine: {
-    height: 13,
-    width: '90%',
-    backgroundColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
-    marginTop: theme.spacing.xs,
   },
   emptyState: {
     alignItems: 'center',

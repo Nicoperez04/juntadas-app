@@ -4,9 +4,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase/client';
-import { notificationService } from '@/features/notifications/services/notificationService';
+import { notificationService, isExpoGoEnvironment } from '@/features/notifications/services/notificationService';
 import { NotificationBanner } from '@/features/notifications/components/NotificationBanner';
 import { useRealtimeNotifications } from '@/features/notifications/hooks/useNotifications';
 import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
@@ -47,8 +46,7 @@ export default function App() {
    * Import dinámico para evitar que expo-notifications se cargue en Expo Go.
    */
   useEffect(() => {
-    const isExpoGo = Constants.appOwnership === 'expo';
-    if (!isExpoGo) {
+    if (!isExpoGoEnvironment()) {
       import('expo-notifications').then((Notifications) => {
         Notifications.setNotificationHandler({
           handleNotification: async () => ({
@@ -72,17 +70,8 @@ export default function App() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        if (session?.user?.id) {
-          // Loguea el resultado para facilitar el diagnóstico en builds standalone // TODO: remover logs
-          notificationService.registerPushToken(session.user.id)
-            .then(result => {
-              if (result.error) {
-                console.error('[Push] Error al registrar token:', result.error);
-              } else if (result.data) {
-                console.log('[Push] Token registrado correctamente');
-              }
-            })
-            .catch(err => console.error('[Push] Error inesperado:', err));
+        if (session?.user?.id && !isExpoGoEnvironment()) {
+          void notificationService.registerPushToken(session.user.id);
         }
       },
     );

@@ -48,8 +48,8 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 /** Duración estándar de transición entre pasos de configuración y resultado */
 const STEP_TRANSITION_MS = 300;
 
-/** Duración de la animación al mezclar equipos de nuevo */
-const REMIX_TRANSITION_MS = 400;
+/** Duración de cada fase del fade al mezclar equipos (out + in = 300ms) */
+const REMIX_FADE_MS = 150;
 
 /** Modo de división: por cantidad de equipos o por personas por equipo */
 type DivisionMode = 'teamCount' | 'peoplePerTeam';
@@ -218,10 +218,12 @@ export const TeamRandomizerScreen = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  /** True mientras corre el fade de remix — desactiva elevation para evitar artefactos grises en Android */
+  const [isRemixing, setIsRemixing] = useState(false);
 
   /** 0 = paso configuración visible; 1 = paso resultado visible */
   const slideAnim = useRef(new Animated.Value(0)).current;
-  /** Opacidad/escala de la lista de equipos al mezclar de nuevo */
+  /** Opacidad de la lista de equipos al mezclar de nuevo (solo fade, sin scale) */
   const remixAnim = useRef(new Animated.Value(1)).current;
 
   /**
@@ -335,31 +337,37 @@ export const TeamRandomizerScreen = () => {
     if (!formed) return;
 
     void triggerSelectionHaptic();
+    setIsRemixing(true);
 
     Animated.timing(remixAnim, {
       toValue: 0,
-      duration: REMIX_TRANSITION_MS / 2,
+      duration: REMIX_FADE_MS,
       easing: Easing.inOut(Easing.ease),
       useNativeDriver: true,
     }).start(({ finished }) => {
-      if (!finished) return;
+      if (!finished) {
+        setIsRemixing(false);
+        return;
+      }
 
       setTeams(formed);
       remixAnim.setValue(0);
 
       Animated.timing(remixAnim, {
         toValue: 1,
-        duration: REMIX_TRANSITION_MS / 2,
+        duration: REMIX_FADE_MS,
         easing: Easing.inOut(Easing.ease),
         useNativeDriver: true,
-      }).start();
+      }).start(({ finished: fadeInDone }) => {
+        if (fadeInDone) setIsRemixing(false);
+      });
     });
   }, [names, buildTeams, remixAnim]);
 
   /** Copia el resultado al portapapeles */
   const handleCopyTeams = useCallback(async () => {
     await Clipboard.setStringAsync(formatTeamsForClipboard(teams));
-    setSuccessMessage('Equipos copiados');
+    setSuccessMessage('✓ Equipos copiados');
     setShowSuccess(true);
   }, [teams]);
 
@@ -387,11 +395,6 @@ export const TeamRandomizerScreen = () => {
     outputRange: [0, -SCREEN_WIDTH],
   });
 
-  const remixScale = remixAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.85, 1],
-  });
-
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -409,7 +412,7 @@ export const TeamRandomizerScreen = () => {
       </SafeAreaView>
 
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={styles.mainContent}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={[styles.flex, styles.stepViewport]}>
@@ -577,34 +580,32 @@ export const TeamRandomizerScreen = () => {
               />
             </ScrollView>
 
-            <Animated.View
-              style={[
-                styles.stepPanel,
-                styles.flex,
-                {
-                  opacity: remixAnim,
-                  transform: [{ scale: remixScale }],
-                },
-              ]}
-            >
+            <View style={[styles.stepPanel, styles.flex]}>
             <ScrollView
-              style={styles.flex}
+              style={styles.resultScroll}
               contentContainerStyle={styles.resultContent}
               showsVerticalScrollIndicator={false}
             >
               <Text style={styles.resultTitle}>Equipos formados</Text>
 
-              {teams.map((team) => (
-                <View key={team.name} style={styles.teamCard}>
-                  <Text style={styles.teamCardTitle}>{team.name}</Text>
-                  {team.members.map((member) => (
-                    <View key={`${team.name}-${member}`} style={styles.memberRow}>
-                      <View style={styles.memberDot} />
-                      <Text style={styles.memberName}>{member}</Text>
+              <View style={styles.teamsListArea}>
+                <Animated.View style={[styles.teamsRemixLayer, { opacity: remixAnim }]}>
+                  {teams.map((team) => (
+                    <View
+                      key={team.name}
+                      style={[styles.teamCard, isRemixing && styles.teamCardRemixing]}
+                    >
+                      <Text style={styles.teamCardTitle}>{team.name}</Text>
+                      {team.members.map((member) => (
+                        <View key={`${team.name}-${member}`} style={styles.memberRow}>
+                          <View style={styles.memberDot} />
+                          <Text style={styles.memberName}>{member}</Text>
+                        </View>
+                      ))}
                     </View>
                   ))}
-                </View>
-              ))}
+                </Animated.View>
+              </View>
 
               <View style={styles.resultActions}>
                 <AppButton label="Mezclar de nuevo" onPress={handleRemix} />
@@ -620,7 +621,7 @@ export const TeamRandomizerScreen = () => {
                 />
               </View>
             </ScrollView>
-            </Animated.View>
+            </View>
           </Animated.View>
         </View>
       </KeyboardAvoidingView>
@@ -650,6 +651,11 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  /** Área principal bajo el header — fondo explícito para que el fade no exponga capas del sistema */
+  mainContent: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
   },
   /**
    * Contenedor con overflow oculto para que solo se vea un paso a la vez
@@ -860,11 +866,25 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.xl,
     gap: theme.spacing.md,
   },
+  /** Scroll del paso resultado — fondo explícito igual al root para el fade de remix */
+  resultScroll: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   resultTitle: {
     fontSize: theme.typography.sizes.lg,
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
+  },
+  /** Contenedor estático sin opacity animada — mantiene el fondo visible durante el fade */
+  teamsListArea: {
+    backgroundColor: theme.colors.background,
+  },
+  /** Capa animada transparente: solo envuelve las cards para el fade */
+  teamsRemixLayer: {
+    gap: theme.spacing.md,
+    backgroundColor: 'transparent',
   },
   teamCard: {
     backgroundColor: theme.colors.surface,
@@ -874,6 +894,12 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     ...theme.shadows.sm,
     gap: theme.spacing.sm,
+  },
+  /** Sin sombra/elevation durante remix — evita rectángulos grises con useNativeDriver en Android */
+  teamCardRemixing: {
+    elevation: 0,
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
   teamCardTitle: {
     fontSize: theme.typography.sizes.md,
