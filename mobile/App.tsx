@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,6 +11,9 @@ import { NotificationBanner } from '@/features/notifications/components/Notifica
 import { useRealtimeNotifications } from '@/features/notifications/hooks/useNotifications';
 import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { AppNavigator } from '@/navigation/AppNavigator';
+
+/** Key de AsyncStorage para la preferencia local de notificaciones */
+const NOTIFICATIONS_ENABLED_KEY = 'notifications_enabled';
 
 /**
  * Cliente global de TanStack Query.
@@ -30,12 +34,36 @@ const queryClient = new QueryClient({
 });
 
 /**
- * Inicializa la suscripción Realtime de notificaciones cuando hay sesión activa.
- * Vive dentro del QueryClientProvider para poder invalidar queries.
+ * Inicializa la suscripción Realtime de notificaciones cuando hay sesión activa
+ * y la preferencia del usuario lo permite. Vive dentro del QueryClientProvider
+ * para poder invalidar queries.
  */
 const AppNotificationsBootstrap = () => {
   const { userId } = useCurrentUser();
-  useRealtimeNotifications(userId);
+  /** null = AsyncStorage aún no leído; se pasa enabled=false para evitar suscripción prematura */
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadPreference = async () => {
+      const value = await AsyncStorage.getItem(NOTIFICATIONS_ENABLED_KEY);
+      if (!mounted) return;
+      // Ausencia de key = activado por defecto, coherente con ProfileScreen
+      setNotificationsEnabled(value !== 'false');
+    };
+
+    void loadPreference();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Mientras carga la preferencia, bloquear Realtime; luego respetar el valor leído
+  const realtimeEnabled = notificationsEnabled ?? false;
+
+  useRealtimeNotifications(userId, realtimeEnabled);
   return null;
 };
 
@@ -71,7 +99,12 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session?.user?.id && !isExpoGoEnvironment()) {
-          void notificationService.registerPushToken(session.user.id);
+          const registerIfEnabled = async () => {
+            const value = await AsyncStorage.getItem(NOTIFICATIONS_ENABLED_KEY);
+            if (value === 'false') return;
+            await notificationService.registerPushToken(session.user.id);
+          };
+          void registerIfEnabled();
         }
       },
     );

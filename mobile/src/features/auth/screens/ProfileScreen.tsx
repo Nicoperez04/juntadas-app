@@ -41,6 +41,8 @@ import { profileEditSchema } from '../schemas/authSchemas';
 import { useAuth } from '../hooks/useAuth';
 import { ProfileEditFormData } from '../types';
 import { notificationService } from '@/features/notifications/services/notificationService';
+import { setNotificationsRealtimeEnabled } from '@/features/notifications/hooks/useNotifications';
+import { useNotificationStore } from '@/features/notifications/store/notificationStore';
 import { Routes } from '@/navigation/routes';
 import type { MainStackParamList } from '@/navigation/types';
 
@@ -220,6 +222,7 @@ export const ProfileScreen = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
+  const clearPendingBanner = useNotificationStore((state) => state.clearPendingBanner);
 
   const {
     control,
@@ -407,8 +410,9 @@ export const ProfileScreen = () => {
   };
 
   /**
-   * Activa o desactiva las notificaciones push del dispositivo.
-   * Persiste la preferencia localmente y sincroniza push_token en Supabase.
+   * Activa o desactiva las notificaciones push e in-app del dispositivo.
+   * Persiste la preferencia localmente, sincroniza push_token en Supabase
+   * y controla la suscripción Realtime en caliente.
    */
   const handleToggleNotifications = async (enabled: boolean) => {
     if (!profile?.id || isUpdatingNotifications) return;
@@ -426,6 +430,7 @@ export const ProfileScreen = () => {
           return;
         }
         await AsyncStorage.setItem(NOTIFICATIONS_ENABLED_KEY, 'true');
+        setNotificationsRealtimeEnabled(true);
         return;
       }
 
@@ -437,6 +442,8 @@ export const ProfileScreen = () => {
         return;
       }
       await AsyncStorage.setItem(NOTIFICATIONS_ENABLED_KEY, 'false');
+      setNotificationsRealtimeEnabled(false);
+      clearPendingBanner();
     } finally {
       setIsUpdatingNotifications(false);
     }

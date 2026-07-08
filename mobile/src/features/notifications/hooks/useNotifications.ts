@@ -7,12 +7,31 @@
  * automáticamente tras cada operación.
  */
 import { useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import { notificationService } from '../services/notificationService';
 import { useNotificationStore } from '../store/notificationStore';
 import type { Notification, NotificationRow } from '../types';
+
+/** Key de AsyncStorage para la preferencia local de notificaciones */
+const NOTIFICATIONS_ENABLED_KEY = 'notifications_enabled';
+
+type NotificationsPreferenceListener = (enabled: boolean) => void;
+
+/** Suscriptores internos para propagar cambios del toggle sin prop drilling */
+const notificationsPreferenceListeners = new Set<NotificationsPreferenceListener>();
+
+/**
+ * Sincroniza la suscripción Realtime en caliente cuando el usuario cambia
+ * el toggle en ProfileScreen. Debe invocarse después de persistir AsyncStorage.
+ *
+ * @param enabled - true para reactivar Realtime; false para destruir el canal
+ */
+export const setNotificationsRealtimeEnabled = (enabled: boolean): void => {
+  notificationsPreferenceListeners.forEach((listener) => listener(enabled));
+};
 
 /**
  * Convierte una fila de Realtime (snake_case) al tipo de dominio Notification.
@@ -135,15 +154,50 @@ export const useDeleteNotification = (userId: string | null) => {
  * Invalida la query de notificaciones y dispara el banner vía Zustand.
  *
  * @param userId - UUID del usuario autenticado; no suscribe si es null
+ * @param enabled - Guard externo; si es false no crea ni mantiene el canal
  * @returns La suscripción activa de Supabase Realtime o null si no hay sesión
  */
-export const useRealtimeNotifications = (userId: string | null): RealtimeChannel | null => {
+export const useRealtimeNotifications = (
+  userId: string | null,
+  enabled = true,
+): RealtimeChannel | null => {
   const queryClient = useQueryClient();
   const setPendingBanner = useNotificationStore((state) => state.setPendingBanner);
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+  /** null = preferencia aún no leída; evita suscribirse antes de conocer AsyncStorage */
+  const [preferenceEnabled, setPreferenceEnabled] = useState<boolean | null>(null);
+
+  /** Carga la preferencia persistida al montar; ausencia de key = activado por defecto */
+  useEffect(() => {
+    let mounted = true;
+
+    void AsyncStorage.getItem(NOTIFICATIONS_ENABLED_KEY).then((value) => {
+      if (!mounted) return;
+      setPreferenceEnabled(value !== 'false');
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  /** Escucha cambios en caliente propagados desde ProfileScreen */
+  useEffect(() => {
+    const listener: NotificationsPreferenceListener = (nextEnabled) => {
+      setPreferenceEnabled(nextEnabled);
+    };
+
+    notificationsPreferenceListeners.add(listener);
+
+    return () => {
+      notificationsPreferenceListeners.delete(listener);
+    };
+  }, []);
+
+  const isSubscriptionActive = !!userId && enabled && preferenceEnabled === true;
 
   useEffect(() => {
-    if (!userId) {
+    if (!isSubscriptionActive || !userId) {
       setChannel(null);
       return;
     }
@@ -174,7 +228,7 @@ export const useRealtimeNotifications = (userId: string | null): RealtimeChannel
       void supabase.removeChannel(subscription);
       setChannel(null);
     };
-  }, [userId, queryClient, setPendingBanner]);
+  }, [isSubscriptionActive, userId, queryClient, setPendingBanner]);
 
   return channel;
 };
