@@ -26,6 +26,7 @@ import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { Routes } from '@/navigation/routes';
 import { ModifyAttendanceLink } from '@/shared/components/ModifyAttendanceLink';
 import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
 import { useParticipants } from '../hooks/useParticipants';
 import { ModifyAttendanceScreen } from './ModifyAttendanceScreen';
 import { getParticipantDisplayName } from '../utils/participantDisplay';
@@ -199,6 +200,8 @@ export const ParticipantListScreen = () => {
   const [isLeaving, setIsLeaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   /**
    * Transporta el mensaje de Toast entre onSave y onClose del modal de
@@ -274,7 +277,8 @@ export const ParticipantListScreen = () => {
             setIsLeaving(false);
 
             if (result.error) {
-              Alert.alert('Error', result.error);
+              setErrorMessage(result.error);
+              setShowError(true);
               return;
             }
 
@@ -443,6 +447,12 @@ export const ParticipantListScreen = () => {
         visible={showSuccess}
         message={successMessage}
         onHide={() => setShowSuccess(false)}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </SafeAreaView>
   );
