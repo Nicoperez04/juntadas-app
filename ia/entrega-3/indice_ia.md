@@ -17,3 +17,5 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **03c** · Fix confirmDelete en MemoryViewerScreen: pasar meetupId e isOrganizer a deleteMemory → [`prompts/bloque-1/03c_fix_confirm_delete_viewer.md`](prompts/bloque-1/03c_fix_confirm_delete_viewer.md)
 - **04** · Hard delete de cuenta: Edge Function delete-account con service_role y reemplazo de stub en authService → [`prompts/bloque-1/04_hard_delete_cuenta.md`](prompts/bloque-1/04_hard_delete_cuenta.md)
 - **04b** · Corrección hard delete: limpieza avatar y portadas en Storage, anonimización impostor_games con migración 011 → [`prompts/bloque-1/04b_correccion_hard_delete.md`](prompts/bloque-1/04b_correccion_hard_delete.md)
+- **04c** · Fix transferencia organizador: actualizar role en meetup_participants al transferir created_by → [`prompts/bloque-1/04c_fix_transferencia_role.md`](prompts/bloque-1/04c_fix_transferencia_role.md)
+- **04d** · Fix WARNING portadas meetup-covers: reemplazar query schema storage por consulta a meetups.cover_url → [`prompts/bloque-1/04d_fix_warning_portadas.md`](prompts/bloque-1/04d_fix_warning_portadas.md)
