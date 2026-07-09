@@ -2,7 +2,7 @@
  * Vista ampliada de una foto de recuerdo (modal).
  *
  * Permite navegar horizontalmente entre fotos de la galería, cerrar con
- * swipe down o botón X, y eliminar fotos propias.
+ * swipe down o botón X, y eliminar fotos propias o ajenas si es organizador.
  */
 import React, { useCallback, useRef, useState } from 'react';
 import {
@@ -138,7 +138,7 @@ const PhotoSlide = ({ memory, onDismiss }: PhotoSlideProps) => {
 export const MemoryViewerScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
-  const { memories, initialIndex } = route.params;
+  const { memories, initialIndex, meetupId, isOrganizer } = route.params;
 
   // Usuario autenticado resuelto desde la caché compartida de sesión
   const { userId: currentUserId } = useCurrentUser();
@@ -167,6 +167,7 @@ export const MemoryViewerScreen = () => {
 
   const currentMemory = localMemories[currentIndex];
   const isOwn = currentMemory?.uploadedBy === currentUserId;
+  const canDelete = isOwn || isOrganizer;
 
   const handleClose = useCallback(() => {
     navigation.goBack();
@@ -193,6 +194,7 @@ export const MemoryViewerScreen = () => {
       currentMemory.id,
       currentUserId,
       currentMemory.filePath,
+      { meetupId, isOrganizer },
     );
     setIsDeleting(false);
     setShowDeleteModal(false);
@@ -302,7 +304,7 @@ export const MemoryViewerScreen = () => {
             </View>
           </View>
 
-          {isOwn && (
+          {canDelete && (
             <TouchableOpacity
               style={styles.deleteBtn}
               onPress={() => setShowDeleteModal(true)}

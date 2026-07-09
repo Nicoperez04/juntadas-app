@@ -431,6 +431,7 @@ export const MemoriesGalleryScreen = () => {
             memories: displayMemories,
             initialIndex: index,
             meetupId,
+            isOrganizer,
           });
         }}
         onLongPress={() => handleLongPress(item)}
