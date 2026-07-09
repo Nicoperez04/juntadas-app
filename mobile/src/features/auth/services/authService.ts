@@ -224,20 +224,53 @@ export const authService = {
   },
 
   /**
-   * Solicita la eliminación de la cuenta del usuario autenticado.
+   * Elimina permanentemente la cuenta del usuario autenticado.
    *
-   * El cliente de Supabase no expone deleteUser — para E2 se limpia el push token
-   * y se cierra sesión. El soft delete real requiere columna deleted_at (pendiente de migración).
+   * Delega la eliminación en la Edge Function delete-account (service_role).
+   * Solo cierra sesión local si la función confirma éxito, para permitir
+   * reintentar si falla algún paso intermedio.
    *
-   * @param userId - UUID del usuario autenticado
+   * @param userId - UUID del usuario autenticado (debe coincidir con la sesión)
    */
   async deleteAccount(userId: string): Promise<ServiceResult<null>> {
     try {
-      // Limpia el token push para dejar de recibir notificaciones tras la baja
-      await supabase.from('profiles').update({ push_token: null }).eq('id', userId);
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
 
-      const { error } = await supabase.auth.signOut();
-      if (error) return { data: null, error: mapAuthError(error.message) };
+      if (sessionError || !sessionData.session) {
+        return { data: null, error: 'No hay sesión activa para eliminar la cuenta' };
+      }
+
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        'delete-account',
+        {
+          headers: {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          },
+        },
+      );
+
+      if (invokeError) {
+        return {
+          data: null,
+          error: invokeError.message || 'No se pudo eliminar la cuenta',
+        };
+      }
+
+      const payload = data as { success?: boolean; error?: string } | null;
+      if (payload?.error) {
+        return { data: null, error: payload.error };
+      }
+
+      if (!payload?.success) {
+        return { data: null, error: 'No se pudo eliminar la cuenta' };
+      }
+
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) {
+        return { data: null, error: mapAuthError(signOutError.message) };
+      }
+
       return { data: null, error: null };
     } catch {
       return { data: null, error: 'Error inesperado al eliminar la cuenta' };

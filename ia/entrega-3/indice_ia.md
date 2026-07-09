@@ -15,3 +15,5 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **03** · RLS Storage memories: política DELETE para organizador y auditoría de políticas existentes → [`prompts/bloque-1/03_rls_memories_organizer.sql.md`](prompts/bloque-1/03_rls_memories_organizer.sql.md)
 - **03b** · Corrección RLS tabla memories y botón eliminar organizador en MemoryViewerScreen → [`prompts/bloque-1/03b_correccion_rls_memories_viewer.md`](prompts/bloque-1/03b_correccion_rls_memories_viewer.md)
 - **03c** · Fix confirmDelete en MemoryViewerScreen: pasar meetupId e isOrganizer a deleteMemory → [`prompts/bloque-1/03c_fix_confirm_delete_viewer.md`](prompts/bloque-1/03c_fix_confirm_delete_viewer.md)
+- **04** · Hard delete de cuenta: Edge Function delete-account con service_role y reemplazo de stub en authService → [`prompts/bloque-1/04_hard_delete_cuenta.md`](prompts/bloque-1/04_hard_delete_cuenta.md)
+- **04b** · Corrección hard delete: limpieza avatar y portadas en Storage, anonimización impostor_games con migración 011 → [`prompts/bloque-1/04b_correccion_hard_delete.md`](prompts/bloque-1/04b_correccion_hard_delete.md)
