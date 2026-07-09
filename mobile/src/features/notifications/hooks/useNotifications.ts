@@ -7,7 +7,6 @@
  * automáticamente tras cada operación.
  */
 import { useEffect, useMemo, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
@@ -15,13 +14,13 @@ import { notificationService } from '../services/notificationService';
 import { useNotificationStore } from '../store/notificationStore';
 import type { Notification, NotificationRow } from '../types';
 
-/** Key de AsyncStorage para la preferencia local de notificaciones */
-const NOTIFICATIONS_ENABLED_KEY = 'notifications_enabled';
-
 type NotificationsPreferenceListener = (enabled: boolean) => void;
 
-/** Suscriptores internos para propagar cambios del toggle sin prop drilling */
-const notificationsPreferenceListeners = new Set<NotificationsPreferenceListener>();
+/**
+ * Suscriptores para propagar cambios del toggle desde ProfileScreen hacia
+ * AppNotificationsBootstrap, sin prop drilling ni lectura duplicada de AsyncStorage.
+ */
+export const notificationsPreferenceListeners = new Set<NotificationsPreferenceListener>();
 
 /**
  * Sincroniza la suscripción Realtime en caliente cuando el usuario cambia
@@ -154,7 +153,7 @@ export const useDeleteNotification = (userId: string | null) => {
  * Invalida la query de notificaciones y dispara el banner vía Zustand.
  *
  * @param userId - UUID del usuario autenticado; no suscribe si es null
- * @param enabled - Guard externo; si es false no crea ni mantiene el canal
+ * @param enabled - Preferencia externa; AppNotificationsBootstrap es la única fuente de verdad
  * @returns La suscripción activa de Supabase Realtime o null si no hay sesión
  */
 export const useRealtimeNotifications = (
@@ -164,37 +163,8 @@ export const useRealtimeNotifications = (
   const queryClient = useQueryClient();
   const setPendingBanner = useNotificationStore((state) => state.setPendingBanner);
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
-  /** null = preferencia aún no leída; evita suscribirse antes de conocer AsyncStorage */
-  const [preferenceEnabled, setPreferenceEnabled] = useState<boolean | null>(null);
 
-  /** Carga la preferencia persistida al montar; ausencia de key = activado por defecto */
-  useEffect(() => {
-    let mounted = true;
-
-    void AsyncStorage.getItem(NOTIFICATIONS_ENABLED_KEY).then((value) => {
-      if (!mounted) return;
-      setPreferenceEnabled(value !== 'false');
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  /** Escucha cambios en caliente propagados desde ProfileScreen */
-  useEffect(() => {
-    const listener: NotificationsPreferenceListener = (nextEnabled) => {
-      setPreferenceEnabled(nextEnabled);
-    };
-
-    notificationsPreferenceListeners.add(listener);
-
-    return () => {
-      notificationsPreferenceListeners.delete(listener);
-    };
-  }, []);
-
-  const isSubscriptionActive = !!userId && enabled && preferenceEnabled === true;
+  const isSubscriptionActive = !!userId && enabled;
 
   useEffect(() => {
     if (!isSubscriptionActive || !userId) {

@@ -8,7 +8,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase/client';
 import { notificationService, isExpoGoEnvironment } from '@/features/notifications/services/notificationService';
 import { NotificationBanner } from '@/features/notifications/components/NotificationBanner';
-import { useRealtimeNotifications } from '@/features/notifications/hooks/useNotifications';
+import {
+  useRealtimeNotifications,
+  notificationsPreferenceListeners,
+} from '@/features/notifications/hooks/useNotifications';
 import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { AppNavigator } from '@/navigation/AppNavigator';
 
@@ -57,6 +60,19 @@ const AppNotificationsBootstrap = () => {
 
     return () => {
       mounted = false;
+    };
+  }, []);
+
+  /** Propaga cambios del toggle en caliente desde ProfileScreen al parámetro enabled del hook */
+  useEffect(() => {
+    const listener = (nextEnabled: boolean) => {
+      setNotificationsEnabled(nextEnabled);
+    };
+
+    notificationsPreferenceListeners.add(listener);
+
+    return () => {
+      notificationsPreferenceListeners.delete(listener);
     };
   }, []);
 
