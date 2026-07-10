@@ -19,6 +19,7 @@ import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { useParticipants } from '@/features/participants/hooks/useParticipants';
 import { participantService } from '@/features/participants/services/participantService';
 import { meetupService } from '../services/meetupService';
+import { isPastMeetup } from '../utils/meetupDateTime';
 import { useMeetups } from './useMeetups';
 import type {
   Meetup,
@@ -32,19 +33,6 @@ interface OperationResult<T> {
   data: T | null;
   error: string | null;
 }
-
-/**
- * Determina si la juntada ya comenzó comparando fecha y hora con el momento actual.
- * Se usa para habilitar la acción de finalizar solo después del inicio.
- *
- * @param date - Fecha en formato YYYY-MM-DD desde Supabase
- * @param time - Hora en formato HH:MM:SS desde Supabase
- * @returns true si la fecha/hora de inicio ya pasó o es ahora
- */
-const hasMeetupStarted = (date: string, time: string): boolean => {
-  const meetupDateTime = new Date(`${date}T${time}`);
-  return new Date() >= meetupDateTime;
-};
 
 export const useMeetupDetail = (meetupId: string) => {
   const { userId: currentUserId } = useCurrentUser();
@@ -70,6 +58,7 @@ export const useMeetupDetail = (meetupId: string) => {
   const {
     participants,
     isLoading: isLoadingParticipants,
+    error: participantsError,
     updateAttendance,
     updateParticipantAttendance,
     leaveMeetup,
@@ -122,7 +111,7 @@ export const useMeetupDetail = (meetupId: string) => {
     isOrganizer &&
     isActive &&
     !!meetup &&
-    hasMeetupStarted(meetup.date, meetup.time);
+    isPastMeetup(meetup.date, meetup.time);
   const currentAttendance: AttendanceStatus =
     currentUserParticipant?.attendanceStatus ?? 'pending';
 
@@ -191,6 +180,9 @@ export const useMeetupDetail = (meetupId: string) => {
     // Estados de carga y error del detalle
     isLoading: meetupQuery.isLoading || meetupQuery.isFetching,
     isLoadingParticipants,
+    /** true cuando falló la query de participantes y ya no está recargando */
+    isErrorParticipants: !!participantsError && !isLoadingParticipants,
+    refetchParticipants: refreshParticipants,
     error: meetupQuery.error?.message ?? null,
     // Contexto del usuario actual dentro de la juntada
     currentUserId,

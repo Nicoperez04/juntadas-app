@@ -50,7 +50,7 @@ export type MainStackParamList = {
     targetType?: 'win' | 'lose';
   };
   MemoriesGallery: { meetupId: string; isActive: boolean };
-  MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string };
+  MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string; isOrganizer: boolean };
   MeetupHistory: undefined;
   ReviewForm: { meetupId: string; meetupTitle: string };
   CompleteProfile: undefined;

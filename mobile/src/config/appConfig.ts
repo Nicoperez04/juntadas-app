@@ -13,8 +13,6 @@ export const appConfig = {
   meetups: {
     /** Longitud del código alfanumérico para unirse a una juntada */
     joinCodeLength: 6,
-    /** Máximo de participantes permitidos por juntada */
-    maxParticipants: 12,
   },
   impostor: {
     /** Mínimo de jugadores para iniciar una partida */

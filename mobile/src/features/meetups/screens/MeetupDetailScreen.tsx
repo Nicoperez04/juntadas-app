@@ -18,10 +18,12 @@ import {
   ActivityIndicator,
   Pressable,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
@@ -33,6 +35,7 @@ import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { ModifyAttendanceScreen } from '@/features/participants/screens/ModifyAttendanceScreen';
 import { getParticipantDisplayName } from '@/features/participants/utils/participantDisplay';
 import { useMeetupDetail } from '../hooks/useMeetupDetail';
+import { isPastMeetup } from '../utils/meetupDateTime';
 import {
   useHideMeetup,
   useDeleteMeetupForAll,
@@ -79,6 +82,7 @@ const ActionCard = ({ icon, label, color, onPress }: ActionCardProps) => (
 export const MeetupDetailScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
+  const queryClient = useQueryClient();
   const { meetupId } = route.params;
 
   const {
@@ -87,6 +91,8 @@ export const MeetupDetailScreen = () => {
     confirmedCount,
     isLoading,
     isLoadingParticipants,
+    isErrorParticipants,
+    refetchParticipants,
     error,
     currentUserParticipant,
     userRole,
@@ -105,6 +111,27 @@ export const MeetupDetailScreen = () => {
     reload,
     refreshAll,
   } = useMeetupDetail(meetupId);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  /**
+   * Recarga manual del detalle, participantes y participación propia
+   * cuando el usuario desliza hacia abajo en el ScrollView.
+   */
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+        queryClient.invalidateQueries({ queryKey: ['participants', meetupId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['userParticipation', meetupId, currentUserId],
+        }),
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [queryClient, meetupId, currentUserId]);
 
   // Estados de UI: visibilidad de modales y operaciones en curso
   const [attendanceModalTarget, setAttendanceModalTarget] =
@@ -356,6 +383,14 @@ export const MeetupDetailScreen = () => {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
       >
         {/* Banners de estado + card principal con los datos de la juntada */}
         <MeetupDetailHeader
@@ -364,6 +399,10 @@ export const MeetupDetailScreen = () => {
           participantCount={participants.length}
           confirmedCount={confirmedCount}
         />
+
+        {isActive && isPastMeetup(meetup.date, meetup.time) && (
+          <Text style={styles.pastMeetupHint}>Esta juntada ya ocurrió</Text>
+        )}
 
         {/* Botones de acción: Jugar y Recuerdos — ocultos si abandonó */}
         {!isCancelled && !hasAbandoned && (
@@ -394,7 +433,26 @@ export const MeetupDetailScreen = () => {
         )}
 
         {/* Sección de participantes — oculta si el usuario abandonó */}
-        {!hasAbandoned && (
+        {!hasAbandoned && isErrorParticipants && (
+          <View style={styles.participantsErrorSection}>
+            <Ionicons
+              name="alert-circle-outline"
+              size={24}
+              color={theme.colors.error}
+            />
+            <Text style={styles.participantsErrorText}>
+              No se pudieron cargar los participantes
+            </Text>
+            <TouchableOpacity
+              onPress={() => void refetchParticipants()}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.retryText}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!hasAbandoned && !isErrorParticipants && (
           <MeetupParticipantsSummary
             participants={participants}
             isOrganizer={isOrganizer}
@@ -888,6 +946,26 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.xl * 2,
+  },
+  pastMeetupHint: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md,
+    marginTop: -theme.spacing.xs,
+  },
+  participantsErrorSection: {
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    ...theme.shadows.sm,
+  },
+  participantsErrorText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
   actionsRow: {
     flexDirection: 'row',

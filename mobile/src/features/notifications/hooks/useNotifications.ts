@@ -14,6 +14,24 @@ import { notificationService } from '../services/notificationService';
 import { useNotificationStore } from '../store/notificationStore';
 import type { Notification, NotificationRow } from '../types';
 
+type NotificationsPreferenceListener = (enabled: boolean) => void;
+
+/**
+ * Suscriptores para propagar cambios del toggle desde ProfileScreen hacia
+ * AppNotificationsBootstrap, sin prop drilling ni lectura duplicada de AsyncStorage.
+ */
+export const notificationsPreferenceListeners = new Set<NotificationsPreferenceListener>();
+
+/**
+ * Sincroniza la suscripción Realtime en caliente cuando el usuario cambia
+ * el toggle en ProfileScreen. Debe invocarse después de persistir AsyncStorage.
+ *
+ * @param enabled - true para reactivar Realtime; false para destruir el canal
+ */
+export const setNotificationsRealtimeEnabled = (enabled: boolean): void => {
+  notificationsPreferenceListeners.forEach((listener) => listener(enabled));
+};
+
 /**
  * Convierte una fila de Realtime (snake_case) al tipo de dominio Notification.
  * Duplicado aquí para no acoplar el hook al servicio privado de mapeo.
@@ -135,15 +153,21 @@ export const useDeleteNotification = (userId: string | null) => {
  * Invalida la query de notificaciones y dispara el banner vía Zustand.
  *
  * @param userId - UUID del usuario autenticado; no suscribe si es null
+ * @param enabled - Preferencia externa; AppNotificationsBootstrap es la única fuente de verdad
  * @returns La suscripción activa de Supabase Realtime o null si no hay sesión
  */
-export const useRealtimeNotifications = (userId: string | null): RealtimeChannel | null => {
+export const useRealtimeNotifications = (
+  userId: string | null,
+  enabled = true,
+): RealtimeChannel | null => {
   const queryClient = useQueryClient();
   const setPendingBanner = useNotificationStore((state) => state.setPendingBanner);
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
 
+  const isSubscriptionActive = !!userId && enabled;
+
   useEffect(() => {
-    if (!userId) {
+    if (!isSubscriptionActive || !userId) {
       setChannel(null);
       return;
     }
@@ -163,6 +187,34 @@ export const useRealtimeNotifications = (userId: string | null): RealtimeChannel
           const notification = mapNotificationRow(row);
 
           void queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+
+          // Invalidar queries de home/detalle según el evento que originó la notificación,
+          // para que las pantallas reflejen cambios sin esperar al refetchInterval.
+          if (notification.meetupId) {
+            switch (notification.type) {
+              case 'joined':
+              case 'transferred':
+                void queryClient.invalidateQueries({
+                  queryKey: ['meetup', notification.meetupId],
+                });
+                void queryClient.invalidateQueries({
+                  queryKey: ['participants', notification.meetupId],
+                });
+                void queryClient.invalidateQueries({
+                  queryKey: ['meetups', userId],
+                });
+                break;
+              case 'review_enabled':
+                void queryClient.invalidateQueries({
+                  queryKey: ['meetup', notification.meetupId],
+                });
+                void queryClient.invalidateQueries({
+                  queryKey: ['meetups', userId],
+                });
+                break;
+            }
+          }
+
           setPendingBanner(notification);
         },
       )
@@ -174,7 +226,7 @@ export const useRealtimeNotifications = (userId: string | null): RealtimeChannel
       void supabase.removeChannel(subscription);
       setChannel(null);
     };
-  }, [userId, queryClient, setPendingBanner]);
+  }, [isSubscriptionActive, userId, queryClient, setPendingBanner]);
 
   return channel;
 };
