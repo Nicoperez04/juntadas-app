@@ -35,6 +35,7 @@ import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { ModifyAttendanceScreen } from '@/features/participants/screens/ModifyAttendanceScreen';
 import { getParticipantDisplayName } from '@/features/participants/utils/participantDisplay';
 import { useMeetupDetail } from '../hooks/useMeetupDetail';
+import { isPastMeetup } from '../utils/meetupDateTime';
 import {
   useHideMeetup,
   useDeleteMeetupForAll,
@@ -90,6 +91,8 @@ export const MeetupDetailScreen = () => {
     confirmedCount,
     isLoading,
     isLoadingParticipants,
+    isErrorParticipants,
+    refetchParticipants,
     error,
     currentUserParticipant,
     userRole,
@@ -397,6 +400,10 @@ export const MeetupDetailScreen = () => {
           confirmedCount={confirmedCount}
         />
 
+        {isActive && isPastMeetup(meetup.date, meetup.time) && (
+          <Text style={styles.pastMeetupHint}>Esta juntada ya ocurrió</Text>
+        )}
+
         {/* Botones de acción: Jugar y Recuerdos — ocultos si abandonó */}
         {!isCancelled && !hasAbandoned && (
           <View style={styles.actionsRow}>
@@ -426,7 +433,26 @@ export const MeetupDetailScreen = () => {
         )}
 
         {/* Sección de participantes — oculta si el usuario abandonó */}
-        {!hasAbandoned && (
+        {!hasAbandoned && isErrorParticipants && (
+          <View style={styles.participantsErrorSection}>
+            <Ionicons
+              name="alert-circle-outline"
+              size={24}
+              color={theme.colors.error}
+            />
+            <Text style={styles.participantsErrorText}>
+              No se pudieron cargar los participantes
+            </Text>
+            <TouchableOpacity
+              onPress={() => void refetchParticipants()}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.retryText}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!hasAbandoned && !isErrorParticipants && (
           <MeetupParticipantsSummary
             participants={participants}
             isOrganizer={isOrganizer}
@@ -920,6 +946,26 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.xl * 2,
+  },
+  pastMeetupHint: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md,
+    marginTop: -theme.spacing.xs,
+  },
+  participantsErrorSection: {
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    ...theme.shadows.sm,
+  },
+  participantsErrorText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
   actionsRow: {
     flexDirection: 'row',

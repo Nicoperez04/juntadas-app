@@ -20,3 +20,4 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **04c** · Fix transferencia organizador: actualizar role en meetup_participants al transferir created_by → [`prompts/bloque-1/04c_fix_transferencia_role.md`](prompts/bloque-1/04c_fix_transferencia_role.md)
 - **04d** · Fix WARNING portadas meetup-covers: reemplazar query schema storage por consulta a meetups.cover_url → [`prompts/bloque-1/04d_fix_warning_portadas.md`](prompts/bloque-1/04d_fix_warning_portadas.md)
 - **05b** · Corrección skeleton: solo en área de cards, pull-to-refresh resuelve con Promise.all → [`prompts/bloque-1/05b_correccion_skeleton_pulltorefresh.md`](prompts/bloque-1/05b_correccion_skeleton_pulltorefresh.md)
+- **06** · Casos borde: error participantes silencioso, subida parcial fotos, indicador fecha pasada, limpieza maxParticipants → [`prompts/bloque-1/06_casos_borde.md`](prompts/bloque-1/06_casos_borde.md)

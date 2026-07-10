@@ -361,13 +361,22 @@ export const MemoriesGalleryScreen = () => {
       }
 
       const imageUris = pickerResult.assets.map((asset) => asset.uri);
-      const count = await uploadPhotosFromUris(imageUris);
-      if (count && count > 0) {
+      const uploadResult = await uploadPhotosFromUris(imageUris);
+      if (!uploadResult) return;
+
+      if (uploadResult.outcome === 'success') {
+        const count = uploadResult.uploadedCount;
         setSuccessMessage(
           `✓ ${count} foto${count > 1 ? 's' : ''} agregada${count > 1 ? 's' : ''}`,
         );
         setShowSuccess(true);
+        return;
       }
+
+      setErrorMessage(
+        uploadResult.message ?? 'No se pudieron subir las fotos',
+      );
+      setShowError(true);
     },
     [uploadPhotosFromUris],
   );

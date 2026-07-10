@@ -39,6 +39,7 @@ import {
 } from '@/features/reviews/hooks/usePendingReviews';
 import { PendingReviewCard } from '@/features/reviews/components/PendingReviewCard';
 import { MeetupCardSkeleton } from '../components/MeetupCardSkeleton';
+import { isPastMeetup } from '../utils/meetupDateTime';
 import type { MeetupWithRole } from '../types';
 import type { MainStackParamList } from '@/navigation/types';
 
@@ -167,9 +168,17 @@ const MeetupCard = ({ meetup, onPress }: MeetupCardProps) => {
               size={13}
               color={theme.colors.textSecondary}
             />
-            <Text style={styles.cardInfoText}>
-              {formatDate(meetup.date)} · {meetup.time}
-            </Text>
+            <View style={styles.cardDateBlock}>
+              <Text style={styles.cardInfoText}>
+                {formatDate(meetup.date)} · {meetup.time}
+              </Text>
+              {meetup.status === 'active' &&
+                isPastMeetup(meetup.date, meetup.time) && (
+                  <Text style={styles.pastMeetupHint}>
+                    Esta juntada ya ocurrió
+                  </Text>
+                )}
+            </View>
           </View>
 
           <View style={styles.cardInfoRow}>
@@ -856,7 +865,14 @@ const styles = StyleSheet.create({
   cardInfoText: {
     fontSize: theme.typography.sizes.sm,
     color: theme.colors.textSecondary,
+  },
+  cardDateBlock: {
     flex: 1,
+  },
+  pastMeetupHint: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   cardFooter: {
     flexDirection: 'row',

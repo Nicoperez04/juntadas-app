@@ -18,6 +18,16 @@ export interface UploadProgress {
   total: number;
 }
 
+/** Resultado de una subida múltiple para decidir feedback en la UI */
+export interface UploadPhotosResult {
+  uploadedCount: number;
+  total: number;
+  /** success = todas; partial = algunas; failure = ninguna */
+  outcome: 'success' | 'partial' | 'failure';
+  /** Mensaje para toast de error; null cuando outcome es success */
+  message: string | null;
+}
+
 export const useMemories = (
   meetupId: string,
   currentUserId: string | null,
@@ -67,15 +77,21 @@ export const useMemories = (
 
   /**
    * Sube las URIs locales seleccionadas (desde cámara o galería) y recarga la lista.
+   * Los fallos de subida no alteran `error` del hook (reservado a la carga inicial);
+   * el resultado estructurado permite a la pantalla elegir toast de éxito o error.
    *
    * @param imageUris - URIs locales obtenidas con expo-image-picker
-   * @returns Cantidad de fotos subidas exitosamente o null si no hay URIs
+   * @returns Resultado con outcome y mensaje, o null si no hay URIs o sesión
    */
   const uploadPhotosFromUris = useCallback(
-    async (imageUris: string[]): Promise<number | null> => {
+    async (imageUris: string[]): Promise<UploadPhotosResult | null> => {
       if (!currentUserId) {
-        setError('Tenés que iniciar sesión para subir fotos');
-        return null;
+        return {
+          uploadedCount: 0,
+          total: imageUris.length,
+          outcome: 'failure',
+          message: 'Tenés que iniciar sesión para subir fotos',
+        };
       }
 
       if (imageUris.length === 0) {
@@ -84,7 +100,6 @@ export const useMemories = (
 
       setIsUploading(true);
       setUploadProgress({ current: 0, total: imageUris.length });
-      setError(null);
 
       // Subimos en paralelo pero actualizamos progreso conforme terminan
       let completed = 0;
@@ -109,15 +124,29 @@ export const useMemories = (
       await refresh();
 
       if (uploaded.length === 0) {
-        setError(failed[0]?.error ?? 'No se pudieron subir las fotos');
-        return 0;
+        return {
+          uploadedCount: 0,
+          total: imageUris.length,
+          outcome: 'failure',
+          message: failed[0]?.error ?? 'No se pudieron subir las fotos',
+        };
       }
 
       if (failed.length > 0) {
-        setError(`Se subieron ${uploaded.length} de ${imageUris.length} fotos`);
+        return {
+          uploadedCount: uploaded.length,
+          total: imageUris.length,
+          outcome: 'partial',
+          message: `Se subieron ${uploaded.length} de ${imageUris.length} fotos`,
+        };
       }
 
-      return uploaded.length;
+      return {
+        uploadedCount: uploaded.length,
+        total: imageUris.length,
+        outcome: 'success',
+        message: null,
+      };
     },
     [currentUserId, meetupId, refresh],
   );
