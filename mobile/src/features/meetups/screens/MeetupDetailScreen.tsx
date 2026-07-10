@@ -18,10 +18,12 @@ import {
   ActivityIndicator,
   Pressable,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { theme } from '@/shared/constants/theme';
@@ -79,6 +81,7 @@ const ActionCard = ({ icon, label, color, onPress }: ActionCardProps) => (
 export const MeetupDetailScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
+  const queryClient = useQueryClient();
   const { meetupId } = route.params;
 
   const {
@@ -105,6 +108,27 @@ export const MeetupDetailScreen = () => {
     reload,
     refreshAll,
   } = useMeetupDetail(meetupId);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  /**
+   * Recarga manual del detalle, participantes y participación propia
+   * cuando el usuario desliza hacia abajo en el ScrollView.
+   */
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+        queryClient.invalidateQueries({ queryKey: ['participants', meetupId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['userParticipation', meetupId, currentUserId],
+        }),
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [queryClient, meetupId, currentUserId]);
 
   // Estados de UI: visibilidad de modales y operaciones en curso
   const [attendanceModalTarget, setAttendanceModalTarget] =
@@ -356,6 +380,14 @@ export const MeetupDetailScreen = () => {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
       >
         {/* Banners de estado + card principal con los datos de la juntada */}
         <MeetupDetailHeader

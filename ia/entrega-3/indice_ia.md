@@ -19,3 +19,4 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **04b** · Corrección hard delete: limpieza avatar y portadas en Storage, anonimización impostor_games con migración 011 → [`prompts/bloque-1/04b_correccion_hard_delete.md`](prompts/bloque-1/04b_correccion_hard_delete.md)
 - **04c** · Fix transferencia organizador: actualizar role en meetup_participants al transferir created_by → [`prompts/bloque-1/04c_fix_transferencia_role.md`](prompts/bloque-1/04c_fix_transferencia_role.md)
 - **04d** · Fix WARNING portadas meetup-covers: reemplazar query schema storage por consulta a meetups.cover_url → [`prompts/bloque-1/04d_fix_warning_portadas.md`](prompts/bloque-1/04d_fix_warning_portadas.md)
+- **05b** · Corrección skeleton: solo en área de cards, pull-to-refresh resuelve con Promise.all → [`prompts/bloque-1/05b_correccion_skeleton_pulltorefresh.md`](prompts/bloque-1/05b_correccion_skeleton_pulltorefresh.md)

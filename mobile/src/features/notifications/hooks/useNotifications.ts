@@ -187,6 +187,34 @@ export const useRealtimeNotifications = (
           const notification = mapNotificationRow(row);
 
           void queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+
+          // Invalidar queries de home/detalle según el evento que originó la notificación,
+          // para que las pantallas reflejen cambios sin esperar al refetchInterval.
+          if (notification.meetupId) {
+            switch (notification.type) {
+              case 'joined':
+              case 'transferred':
+                void queryClient.invalidateQueries({
+                  queryKey: ['meetup', notification.meetupId],
+                });
+                void queryClient.invalidateQueries({
+                  queryKey: ['participants', notification.meetupId],
+                });
+                void queryClient.invalidateQueries({
+                  queryKey: ['meetups', userId],
+                });
+                break;
+              case 'review_enabled':
+                void queryClient.invalidateQueries({
+                  queryKey: ['meetup', notification.meetupId],
+                });
+                void queryClient.invalidateQueries({
+                  queryKey: ['meetups', userId],
+                });
+                break;
+            }
+          }
+
           setPendingBanner(notification);
         },
       )
