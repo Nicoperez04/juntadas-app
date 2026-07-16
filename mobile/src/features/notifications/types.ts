@@ -17,6 +17,12 @@ export enum NotificationType {
   Transferred = 'transferred',
   /** La juntada finalizó con reseñas habilitadas — todos los participantes */
   ReviewEnabled = 'review_enabled',
+  /** La juntada fue cancelada — todos los participantes */
+  Cancelled = 'cancelled',
+  /** La juntada fue finalizada — todos los participantes */
+  Finished = 'finished',
+  /** Alguien abandonó tu juntada — el organizador lo recibe */
+  Left = 'left',
   /** Recordatorio local 2 horas antes de la juntada */
   Reminder = 'reminder',
 }

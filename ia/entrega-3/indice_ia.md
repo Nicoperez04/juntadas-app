@@ -23,3 +23,7 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **05b** · Corrección skeleton: solo en área de cards, pull-to-refresh resuelve con Promise.all → [`prompts/bloque-1/05b_correccion_skeleton_pulltorefresh.md`](prompts/bloque-1/05b_correccion_skeleton_pulltorefresh.md)
 - **06** · Casos borde: error participantes silencioso, subida parcial fotos, indicador fecha pasada, limpieza maxParticipants → [`prompts/bloque-1/06_casos_borde.md`](prompts/bloque-1/06_casos_borde.md)
 - **07** · Documentación y cierre del Bloque 1 → [`prompts/bloque-1/07_documentacion_cierre_bloque1.md`](prompts/bloque-1/07_documentacion_cierre_bloque1.md) · [`conversaciones/bloque-1/cursor-bloque-1-completo.md`](conversaciones/bloque-1/cursor-bloque-1-completo.md)
+
+### Bloque 2 — Notificaciones (16/07/2026)
+
+- **01** · Nuevos tipos de notificación (cancelled, finished, left) → [`prompts/bloque-2/01_nuevos_tipos_notificacion.md`](prompts/bloque-2/01_nuevos_tipos_notificacion.md)

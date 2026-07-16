@@ -26,7 +26,10 @@ type NotificationType =
   | 'joined'
   | 'transferred'
   | 'review_enabled'
-  | 'reminder';
+  | 'reminder'
+  | 'cancelled'
+  | 'finished'
+  | 'left';
 
 /** Cuerpo esperado del POST */
 interface NotificationRequestBody {
@@ -122,6 +125,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       'transferred',
       'review_enabled',
       'reminder',
+      'cancelled',
+      'finished',
+      'left',
     ];
     if (!tiposValidos.includes(type)) {
       return new Response(

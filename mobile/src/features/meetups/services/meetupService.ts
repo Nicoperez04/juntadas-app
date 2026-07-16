@@ -657,6 +657,35 @@ export const meetupService = {
 
       if (updateError) throw updateError;
 
+      // Notificar a participantes activos excepto al organizador (fire-and-forget)
+      void (async () => {
+        try {
+          const { data: participants } = await supabase
+            .from('meetup_participants')
+            .select('user_id')
+            .eq('meetup_id', meetupId)
+            .is('left_at', null)
+            .neq('user_id', userId);
+
+          const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
+          const recipients = (participants ?? []) as { user_id: string }[];
+
+          await Promise.allSettled(
+            recipients.map((p) =>
+              notificationService.sendNotification({
+                recipientUserId: p.user_id,
+                type: NotificationType.Cancelled,
+                title: 'Juntada cancelada 😔',
+                body: `${mappedMeetup.title} fue cancelada`,
+                meetupId: mappedMeetup.id,
+              }),
+            ),
+          );
+        } catch {
+          // Error en las notificaciones: no afecta el resultado de la cancelación
+        }
+      })();
+
       return { data: mapMeetupRow(updated as MeetupRow), error: null };
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
@@ -715,6 +744,35 @@ export const meetupService = {
         .eq('id', meetupId);
 
       if (updateError) throw updateError;
+
+      // Notificar finalización a participantes activos excepto al organizador (fire-and-forget)
+      void (async () => {
+        try {
+          const { data: participants } = await supabase
+            .from('meetup_participants')
+            .select('user_id')
+            .eq('meetup_id', meetupId)
+            .is('left_at', null)
+            .neq('user_id', userId);
+
+          const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
+          const recipients = (participants ?? []) as { user_id: string }[];
+
+          await Promise.allSettled(
+            recipients.map((p) =>
+              notificationService.sendNotification({
+                recipientUserId: p.user_id,
+                type: NotificationType.Finished,
+                title: '¡Juntada finalizada! 🎊',
+                body: `${mappedMeetup.title} ha finalizado`,
+                meetupId: mappedMeetup.id,
+              }),
+            ),
+          );
+        } catch {
+          // Error en las notificaciones: no afecta el resultado de la finalización
+        }
+      })();
 
       // Si se habilitaron reseñas, notificar a todos los participantes excepto al organizador (fire-and-forget)
       if (reviewsEnabled) {
