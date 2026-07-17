@@ -7,6 +7,7 @@
  */
 import { supabase } from '@/lib/supabase/client';
 import { notificationService } from '@/features/notifications/services/notificationService';
+import { NotificationType } from '@/features/notifications/types';
 import type {
   MeetupParticipant,
   AttendanceStatus,
@@ -374,6 +375,29 @@ export const participantService = {
         .is('left_at', null);
 
       if (updateError) throw updateError;
+
+      // Notificar al organizador que alguien abandonó la juntada (fire-and-forget)
+      void (async () => {
+        try {
+          const { data: meetup } = await supabase
+            .from('meetups')
+            .select('id, title, created_by')
+            .eq('id', meetupId)
+            .single();
+
+          if (!meetup) return;
+
+          await notificationService.sendNotification({
+            recipientUserId: meetup.created_by,
+            type: NotificationType.Left,
+            title: 'Alguien abandonó tu juntada',
+            body: `Un participante se fue de ${meetup.title}`,
+            meetupId,
+          });
+        } catch {
+          // Error en la notificación: no afecta el resultado del abandono
+        }
+      })();
 
       return { data: true, error: null };
     } catch (err) {
