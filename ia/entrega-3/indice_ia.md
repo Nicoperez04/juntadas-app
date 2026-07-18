@@ -28,3 +28,4 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 
 - **01** · Nuevos tipos de notificación (cancelled, finished, left) → [`prompts/bloque-2/01_nuevos_tipos_notificacion.md`](prompts/bloque-2/01_nuevos_tipos_notificacion.md)
 - **01b** · Fix RLS notificaciones: función RPC `get_meetup_participant_ids` con SECURITY DEFINER → [`prompts/bloque-2/01b_fix_rls_notificaciones.md`](prompts/bloque-2/01b_fix_rls_notificaciones.md)
+- **02** · Navegación desde panel y banner a MeetupDetail → [`prompts/bloque-2/02_navegacion_panel_banner.md`](prompts/bloque-2/02_navegacion_panel_banner.md)

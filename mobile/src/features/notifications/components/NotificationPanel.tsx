@@ -18,7 +18,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NavigationProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Routes } from '@/navigation/routes';
+import type { MainStackParamList } from '@/navigation/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { theme } from '@/shared/constants/theme';
 import {
@@ -194,6 +198,7 @@ const NotificationItem = ({ notification, onPress, onDelete }: NotificationItemP
 };
 
 export const NotificationPanel = ({ visible, onClose, userId }: NotificationPanelProps) => {
+  const navigation = useNavigation<NavigationProp<MainStackParamList>>();
   const insets = useSafeAreaInsets();
   const { data: notifications = [], isLoading } = useNotifications(userId);
   const markAsReadMutation = useMarkAsRead(userId);
@@ -256,11 +261,22 @@ export const NotificationPanel = ({ visible, onClose, userId }: NotificationPane
 
   const handlePressNotification = useCallback(
     (notification: Notification) => {
+      if (notification.meetupId) {
+        if (!notification.read) {
+          void markAsReadMutation.mutateAsync(notification.id).catch(() => undefined);
+        }
+        onClose();
+        navigation.navigate(Routes.MeetupDetail, {
+          meetupId: notification.meetupId,
+        });
+        return;
+      }
+
       if (!notification.read) {
         void markAsReadMutation.mutateAsync(notification.id).catch(() => undefined);
       }
     },
-    [markAsReadMutation],
+    [markAsReadMutation, navigation, onClose],
   );
 
   const handleDeleteNotification = useCallback(

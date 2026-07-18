@@ -13,10 +13,8 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking } from 'react-native';
-import {
-  NavigationContainer,
-  createNavigationContainerRef,
-} from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
+import type { NavigationContainerRef } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
@@ -25,15 +23,13 @@ import { Routes } from './routes';
 import type { AuthStackParamList } from './types';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
+import { mainNavigationRef } from './navigationService';
 
 /** Prefijo de los usernames autogenerados por el trigger de la base de datos */
 const AUTO_USERNAME_PREFIX = 'user_';
 
 /** Scheme y host del deep link de recuperación configurados en app.json y Supabase */
 const RECOVERY_DEEP_LINK_PREFIX = 'rondaapp://reset-password';
-
-/** Ref global para navegar imperativamente tras procesar el deep link de recovery */
-const navigationRef = createNavigationContainerRef<AuthStackParamList>();
 
 export const AppNavigator = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -49,9 +45,12 @@ export const AppNavigator = () => {
    * Se invoca desde onReady y cuando isPasswordRecovery cambia tras el re-render.
    */
   const flushPendingNavigation = useCallback(() => {
-    if (!pendingNavigationRef.current || !navigationRef.isReady()) return;
+    if (!pendingNavigationRef.current || !mainNavigationRef.isReady()) return;
 
-    navigationRef.navigate(pendingNavigationRef.current);
+    // ResetPassword vive en AuthNavigator; el ref está tipado con MainStackParamList
+    (mainNavigationRef as NavigationContainerRef<AuthStackParamList>).navigate(
+      pendingNavigationRef.current,
+    );
     pendingNavigationRef.current = null;
   }, []);
 
@@ -158,7 +157,7 @@ export const AppNavigator = () => {
 
   return (
     <NavigationContainer
-      ref={navigationRef}
+      ref={mainNavigationRef}
       onReady={() => {
         flushPendingNavigation();
       }}
