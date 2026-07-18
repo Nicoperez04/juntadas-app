@@ -17,6 +17,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Routes } from '@/navigation/routes';
+import { mainNavigationRef } from '@/navigation/navigationService';
 import { theme } from '@/shared/constants/theme';
 import { useMarkAsRead } from '../hooks/useNotifications';
 import { useNotificationStore } from '../store/notificationStore';
@@ -146,7 +148,13 @@ export const NotificationBanner = () => {
     >
       <Pressable
         style={styles.banner}
-        onPress={() => hideBanner(true)}
+        onPress={() => {
+          const meetupId = pendingBanner.meetupId;
+          hideBanner(true);
+          if (meetupId && mainNavigationRef.isReady()) {
+            mainNavigationRef.navigate(Routes.MeetupDetail, { meetupId });
+          }
+        }}
         accessibilityRole="button"
         accessibilityLabel="Descartar notificación"
       >

@@ -134,8 +134,8 @@ export default function App() {
         <BottomSheetModalProvider>
           <QueryClientProvider client={queryClient}>
             <AppNotificationsBootstrap />
-            <NotificationBanner />
             <AppNavigator />
+            <NotificationBanner />
           </QueryClientProvider>
         </BottomSheetModalProvider>
       </GestureHandlerRootView>

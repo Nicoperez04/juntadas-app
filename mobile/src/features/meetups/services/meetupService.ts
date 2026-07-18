@@ -660,12 +660,13 @@ export const meetupService = {
       // Notificar a participantes activos excepto al organizador (fire-and-forget)
       void (async () => {
         try {
-          const { data: participants } = await supabase
-            .from('meetup_participants')
-            .select('user_id')
-            .eq('meetup_id', meetupId)
-            .is('left_at', null)
-            .neq('user_id', userId);
+          const { data: participants } = await supabase.rpc(
+            'get_meetup_participant_ids',
+            {
+              p_meetup_id: meetupId,
+              p_excluded_user_id: userId,
+            },
+          );
 
           const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
           const recipients = (participants ?? []) as { user_id: string }[];
@@ -748,12 +749,13 @@ export const meetupService = {
       // Notificar finalización a participantes activos excepto al organizador (fire-and-forget)
       void (async () => {
         try {
-          const { data: participants } = await supabase
-            .from('meetup_participants')
-            .select('user_id')
-            .eq('meetup_id', meetupId)
-            .is('left_at', null)
-            .neq('user_id', userId);
+          const { data: participants } = await supabase.rpc(
+            'get_meetup_participant_ids',
+            {
+              p_meetup_id: meetupId,
+              p_excluded_user_id: userId,
+            },
+          );
 
           const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
           const recipients = (participants ?? []) as { user_id: string }[];
@@ -778,12 +780,13 @@ export const meetupService = {
       if (reviewsEnabled) {
         void (async () => {
           try {
-            const { data: participants } = await supabase
-              .from('meetup_participants')
-              .select('user_id')
-              .eq('meetup_id', meetupId)
-              .is('left_at', null)
-              .neq('user_id', userId);
+            const { data: participants } = await supabase.rpc(
+              'get_meetup_participant_ids',
+              {
+                p_meetup_id: meetupId,
+                p_excluded_user_id: userId,
+              },
+            );
 
             const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
             const recipients = (participants ?? []) as { user_id: string }[];
