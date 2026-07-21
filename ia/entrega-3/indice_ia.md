@@ -34,4 +34,5 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 ### Bloque 5 — Juegos nuevos (21/07/2026)
 
 - **01** · Anotador de Truco: Implementación Completa → [`prompts/bloque-5/01_anotador_truco.md`](prompts/bloque-5/01_anotador_truco.md)
+- **02** · Anotador de Generala: Planilla Interactiva de Dados → [`prompts/bloque-5/02_anotador_generala.md`](prompts/bloque-5/02_anotador_generala.md)
 

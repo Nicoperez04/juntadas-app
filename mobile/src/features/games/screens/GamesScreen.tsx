@@ -248,6 +248,15 @@ export const GamesScreen = () => {
         iconColor: theme.colors.primary,
         available: true,
       },
+      {
+        id: 'generala',
+        title: 'Anotador de Generala',
+        description: 'Planilla interactiva de dados',
+        icon: 'dice-5-outline',
+        backgroundColor: '#FCE7F3',
+        iconColor: '#EC4899',
+        available: true,
+      },
     ],
     [],
   );
@@ -331,6 +340,11 @@ export const GamesScreen = () => {
         case 'truco':
           navigateWithFade(() =>
             navigation.navigate(Routes.TrucoSetup, meetupId ? { meetupId } : {}),
+          );
+          break;
+        case 'generala':
+          navigateWithFade(() =>
+            navigation.navigate(Routes.GeneralaSetup, meetupId ? { meetupId } : {}),
           );
           break;
         case 'timer':

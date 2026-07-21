@@ -56,6 +56,11 @@ export type MainStackParamList = {
     targetPoints: 15 | 30;
     meetupId?: string;
   };
+  GeneralaSetup: { meetupId?: string };
+  GeneralaGame: {
+    players: string[];
+    meetupId?: string;
+  };
   MemoriesGallery: { meetupId: string; isActive: boolean };
   MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string; isOrganizer: boolean };
   MeetupHistory: undefined;

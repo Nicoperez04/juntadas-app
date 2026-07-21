@@ -25,6 +25,8 @@ export const Routes = {
     ScorerGame: 'ScorerGame',
     TrucoSetup: 'TrucoSetup',
     TrucoGame: 'TrucoGame',
+    GeneralaSetup: 'GeneralaSetup',
+    GeneralaGame: 'GeneralaGame',
     MemoriesGallery: 'MemoriesGallery',
     MemoryViewer: 'MemoryViewer',
     MeetupHistory: 'MeetupHistory',
