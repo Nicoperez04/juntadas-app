@@ -281,6 +281,15 @@ export const GamesScreen = () => {
         iconColor: theme.colors.warning,
         available: true,
       },
+      {
+        id: 'raffle',
+        title: 'Sorteador',
+        description: 'Elegí un ganador al azar',
+        icon: 'ticket-percent-outline',
+        backgroundColor: theme.colors.primaryLight,
+        iconColor: theme.colors.primary,
+        available: true,
+      },
     ],
     [],
   );
@@ -353,6 +362,11 @@ export const GamesScreen = () => {
         case 'teams':
           navigateWithFade(() =>
             navigation.navigate(Routes.TeamRandomizer, meetupId ? { meetupId } : {}),
+          );
+          break;
+        case 'raffle':
+          navigateWithFade(() =>
+            navigation.navigate(Routes.Raffle, meetupId ? { meetupId } : {}),
           );
           break;
         default:

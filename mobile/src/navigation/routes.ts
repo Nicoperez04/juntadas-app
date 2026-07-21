@@ -27,6 +27,7 @@ export const Routes = {
     TrucoGame: 'TrucoGame',
     GeneralaSetup: 'GeneralaSetup',
     GeneralaGame: 'GeneralaGame',
+    Raffle: 'Raffle',
     MemoriesGallery: 'MemoriesGallery',
     MemoryViewer: 'MemoryViewer',
     MeetupHistory: 'MeetupHistory',

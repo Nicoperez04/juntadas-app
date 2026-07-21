@@ -35,4 +35,5 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 
 - **01** · Anotador de Truco: Implementación Completa → [`prompts/bloque-5/01_anotador_truco.md`](prompts/bloque-5/01_anotador_truco.md)
 - **02** · Anotador de Generala: Planilla Interactiva de Dados → [`prompts/bloque-5/02_anotador_generala.md`](prompts/bloque-5/02_anotador_generala.md)
+- **03** · Sorteador (Raffle): Ruleta y Selección al Azar → [`prompts/bloque-5/03_sorteador.md`](prompts/bloque-5/03_sorteador.md)
 
