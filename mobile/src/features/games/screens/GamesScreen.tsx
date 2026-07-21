@@ -257,6 +257,15 @@ export const GamesScreen = () => {
         iconColor: '#EC4899',
         available: true,
       },
+      {
+        id: 'league',
+        title: 'Generador de Ligas',
+        description: 'Fixture todos contra todos',
+        icon: 'trophy-outline',
+        backgroundColor: '#FEF3C7',
+        iconColor: '#F59E0B',
+        available: true,
+      },
     ],
     [],
   );
@@ -354,6 +363,11 @@ export const GamesScreen = () => {
         case 'generala':
           navigateWithFade(() =>
             navigation.navigate(Routes.GeneralaSetup, meetupId ? { meetupId } : {}),
+          );
+          break;
+        case 'league':
+          navigateWithFade(() =>
+            navigation.navigate(Routes.LeagueSetup, meetupId ? { meetupId } : {}),
           );
           break;
         case 'timer':

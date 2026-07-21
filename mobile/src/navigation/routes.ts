@@ -28,6 +28,8 @@ export const Routes = {
     GeneralaSetup: 'GeneralaSetup',
     GeneralaGame: 'GeneralaGame',
     Raffle: 'Raffle',
+    LeagueSetup: 'LeagueSetup',
+    LeagueGame: 'LeagueGame',
     MemoriesGallery: 'MemoriesGallery',
     MemoryViewer: 'MemoryViewer',
     MeetupHistory: 'MeetupHistory',

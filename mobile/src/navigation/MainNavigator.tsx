@@ -39,6 +39,8 @@ import { TrucoGameScreen } from '@/features/games/screens/TrucoGameScreen';
 import { GeneralaSetupScreen } from '@/features/games/screens/GeneralaSetupScreen';
 import { GeneralaGameScreen } from '@/features/games/screens/GeneralaGameScreen';
 import { RaffleScreen } from '@/features/games/screens/RaffleScreen';
+import { LeagueSetupScreen } from '@/features/games/screens/LeagueSetupScreen';
+import { LeagueGameScreen } from '@/features/games/screens/LeagueGameScreen';
 import { ImpostorStartScreen } from '@/features/impostor/screens/ImpostorStartScreen';
 import { ImpostorRoleScreen } from '@/features/impostor/screens/ImpostorRoleScreen';
 
@@ -104,6 +106,8 @@ export const MainNavigator = ({
       <Stack.Screen name={Routes.GeneralaSetup} component={GeneralaSetupScreen} />
       <Stack.Screen name={Routes.GeneralaGame} component={GeneralaGameScreen} />
       <Stack.Screen name={Routes.Raffle} component={RaffleScreen} />
+      <Stack.Screen name={Routes.LeagueSetup} component={LeagueSetupScreen} />
+      <Stack.Screen name={Routes.LeagueGame} component={LeagueGameScreen} />
       <Stack.Screen name={Routes.ImpostorStart} component={ImpostorStartScreen} />
       <Stack.Screen name={Routes.ImpostorRole} component={ImpostorRoleScreen} />
 

@@ -62,6 +62,11 @@ export type MainStackParamList = {
     meetupId?: string;
   };
   Raffle: { meetupId?: string };
+  LeagueSetup: { meetupId?: string };
+  LeagueGame: {
+    teams: string[];
+    meetupId?: string;
+  };
   MemoriesGallery: { meetupId: string; isActive: boolean };
   MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string; isOrganizer: boolean };
   MeetupHistory: undefined;
