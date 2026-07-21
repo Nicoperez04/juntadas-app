@@ -49,6 +49,13 @@ export type MainStackParamList = {
     targetScore?: number;
     targetType?: 'win' | 'lose';
   };
+  TrucoSetup: { meetupId?: string };
+  TrucoGame: {
+    teamAName: string;
+    teamBName: string;
+    targetPoints: 15 | 30;
+    meetupId?: string;
+  };
   MemoriesGallery: { meetupId: string; isActive: boolean };
   MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string; isOrganizer: boolean };
   MeetupHistory: undefined;

@@ -30,3 +30,8 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **01b** · Fix RLS notificaciones: función RPC `get_meetup_participant_ids` con SECURITY DEFINER → [`prompts/bloque-2/01b_fix_rls_notificaciones.md`](prompts/bloque-2/01b_fix_rls_notificaciones.md)
 - **02** · Navegación desde panel y banner a MeetupDetail → [`prompts/bloque-2/02_navegacion_panel_banner.md`](prompts/bloque-2/02_navegacion_panel_banner.md)
 - **03** · Documentación y cierre del Bloque 2 → [`prompts/bloque-2/03_documentacion_cierre_bloque2.md`](prompts/bloque-2/03_documentacion_cierre_bloque2.md) · [`conversaciones/bloque-2/cursor-bloque-2-completo.md`](conversaciones/bloque-2/cursor-bloque-2-completo.md)
+
+### Bloque 5 — Juegos nuevos (21/07/2026)
+
+- **01** · Anotador de Truco: Implementación Completa → [`prompts/bloque-5/01_anotador_truco.md`](prompts/bloque-5/01_anotador_truco.md)
+

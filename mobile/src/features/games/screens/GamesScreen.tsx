@@ -239,6 +239,15 @@ export const GamesScreen = () => {
         iconColor: theme.colors.success,
         available: true,
       },
+      {
+        id: 'truco',
+        title: 'Anotador de Truco',
+        description: 'Fósforos y puntaje para Truco',
+        icon: 'cards-playing-outline',
+        backgroundColor: theme.colors.primaryLight,
+        iconColor: theme.colors.primary,
+        available: true,
+      },
     ],
     [],
   );
@@ -317,6 +326,11 @@ export const GamesScreen = () => {
         case 'scorekeeper':
           navigateWithFade(() =>
             navigation.navigate(Routes.ScorerSetup, meetupId ? { meetupId } : {}),
+          );
+          break;
+        case 'truco':
+          navigateWithFade(() =>
+            navigation.navigate(Routes.TrucoSetup, meetupId ? { meetupId } : {}),
           );
           break;
         case 'timer':
@@ -409,7 +423,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: theme.spacing.xl + 80, // Se suma offset del tab bar fijo
   },
   sectionTitle: {
     fontSize: theme.typography.sizes.lg,

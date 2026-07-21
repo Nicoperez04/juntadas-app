@@ -23,6 +23,8 @@ export const Routes = {
     GroupQuestions: 'GroupQuestions',
     ScorerSetup: 'ScorerSetup',
     ScorerGame: 'ScorerGame',
+    TrucoSetup: 'TrucoSetup',
+    TrucoGame: 'TrucoGame',
     MemoriesGallery: 'MemoriesGallery',
     MemoryViewer: 'MemoryViewer',
     MeetupHistory: 'MeetupHistory',
