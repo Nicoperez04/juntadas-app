@@ -347,7 +347,7 @@ export const MeetupHomeScreen = () => {
   const handleTabPress = useCallback(
     (tabId: string) => {
       if (tabId === 'create') navigation.navigate(Routes.CreateMeetup);
-      if (tabId === 'join') navigation.navigate(Routes.JoinMeetup);
+      if (tabId === 'join') navigation.navigate(Routes.ChooseJoinType);
       if (tabId === 'games') navigation.navigate(Routes.Games, {});
       if (tabId === 'profile') navigation.navigate(Routes.Profile);
     },
@@ -536,6 +536,30 @@ export const MeetupHomeScreen = () => {
             <Text style={styles.quickLabel}>{'Unirse a\njuntada'}</Text>
           </Pressable>
         </View>
+
+        {/* Acceso a grupos — bloque 4.2 */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.groupsCard,
+            pressed && styles.groupsCardPressed,
+          ]}
+          onPress={() => navigation.navigate(Routes.GroupHome)}
+        >
+          <View style={styles.groupsIconBox}>
+            <Ionicons name="people" size={22} color={theme.colors.info} />
+          </View>
+          <View style={styles.groupsTextBlock}>
+            <Text style={styles.groupsTitle}>Tus grupos</Text>
+            <Text style={styles.groupsSubtitle}>
+              Organizá juntadas con la gente de siempre
+            </Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={theme.colors.textSecondary}
+          />
+        </Pressable>
 
         {/* Cards de reseñas pendientes — encima de la lista de juntadas activas */}
         {pendingReviews.length > 0 &&
@@ -775,6 +799,41 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  groupsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.md,
+  },
+  groupsCardPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.99 }],
+  },
+  groupsIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.infoLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupsTextBlock: {
+    flex: 1,
+  },
+  groupsTitle: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textPrimary,
+  },
+  groupsSubtitle: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   sectionRow: {
     flexDirection: 'row',

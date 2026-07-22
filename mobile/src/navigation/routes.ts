@@ -30,6 +30,12 @@ export const Routes = {
     CompleteProfile: 'CompleteProfile',
     Profile: 'Profile',
     ChangePassword: 'ChangePassword',
+
+    // Bloque 4.2 (grupos)
+    ChooseJoinType: 'ChooseJoinType',
+    GroupHome: 'GroupHome',
+    CreateGroup: 'CreateGroup',
+    JoinGroup: 'JoinGroup',
   } as const;
   
   export type RouteNames = typeof Routes[keyof typeof Routes];

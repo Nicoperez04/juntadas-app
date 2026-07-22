@@ -56,4 +56,8 @@ export type MainStackParamList = {
   CompleteProfile: undefined;
   Profile: undefined;
   ChangePassword: undefined;
+  ChooseJoinType: undefined;
+  GroupHome: undefined;
+  CreateGroup: undefined;
+  JoinGroup: undefined;
 };
