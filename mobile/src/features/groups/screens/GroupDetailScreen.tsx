@@ -271,13 +271,13 @@ export const GroupDetailScreen = () => {
               pressed && styles.sectionCardPressed,
             ]}
             onPress={() =>
-              navigation.navigate(Routes.GroupPlaceholder, {
+              navigation.navigate(Routes.GroupMeetups, {
                 groupId,
-                section: 'Juntadas',
+                groupName: group.name,
               })
             }
           >
-            <Ionicons name="game-controller" size={22} color={theme.colors.primary} />
+            <Ionicons name="calendar-outline" size={22} color={theme.colors.primary} />
             <Text style={[styles.sectionCardText, { color: theme.colors.primary }]}>
               Juntadas
             </Text>

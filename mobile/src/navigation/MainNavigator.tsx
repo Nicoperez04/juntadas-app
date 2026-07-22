@@ -59,6 +59,9 @@ import { GroupDetailScreen } from '@/features/groups/screens/GroupDetailScreen';
 import { GroupMembersScreen } from '@/features/groups/screens/GroupMembersScreen';
 import { GroupPlaceholderScreen } from '@/features/groups/screens/GroupPlaceholderScreen';
 
+// Pantallas implementadas — bloque 4.4b E3 (grupos: listado de juntadas)
+import { GroupMeetupsScreen } from '@/features/groups/screens/GroupMeetupsScreen';
+
 // El genérico habilita el chequeo de nombres de ruta y parámetros en compilación
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -133,6 +136,9 @@ export const MainNavigator = ({
       <Stack.Screen name={Routes.GroupDetail} component={GroupDetailScreen} />
       <Stack.Screen name={Routes.GroupMembers} component={GroupMembersScreen} />
       <Stack.Screen name={Routes.GroupPlaceholder} component={GroupPlaceholderScreen} />
+
+      {/* Bloque 4.4b — grupos: listado real de juntadas del grupo */}
+      <Stack.Screen name={Routes.GroupMeetups} component={GroupMeetupsScreen} />
     </Stack.Navigator>
   );
 };

@@ -20,6 +20,13 @@ import type {
   GroupMember,
   CreateGroupFormData,
 } from '../types';
+import type {
+  Meetup,
+  MeetupWithRole,
+  MeetupStatus,
+  ParticipantRole,
+  AttendanceStatus,
+} from '@/features/meetups/types';
 
 /** Contrato de retorno uniforme de todas las operaciones del servicio */
 interface ServiceResult<T> {
@@ -72,6 +79,37 @@ interface GroupMemberDetailRow {
   } | null;
 }
 
+/**
+ * Fila de meetups tal como la retorna Supabase, usada por getGroupMeetups.
+ * No se reusa la interfaz privada MeetupRow de meetupService.ts (no está
+ * exportada, y este prompt no la toca más allá de importar tipos).
+ */
+interface MeetupRowForGroup {
+  id: string;
+  title: string;
+  description: string | null;
+  date: string;
+  time: string;
+  location: string;
+  estimated_cost: number | null;
+  status: string;
+  join_code: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  cancelled_at: string | null;
+  cover_url: string | null;
+  reviews_enabled: boolean;
+}
+
+/** Fila de meetup_participants reducida, usada por getGroupMeetups para rol/conteos */
+interface MeetupParticipantRowForGroup {
+  meetup_id: string;
+  user_id: string;
+  role: string;
+  attendance_status: string;
+}
+
 /** Caracteres válidos para generar el código de grupo (mismo charset que meetups) */
 const JOIN_CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
@@ -113,6 +151,33 @@ const getInitials = (name: string): string => {
   if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
+
+/**
+ * Convierte una fila de meetups al tipo de dominio Meetup.
+ * Duplica el mapeo equivalente a meetupService.mapMeetupRow (privado a
+ * ese archivo, no exportado) — el alcance de este prompt no incluye
+ * tocar meetupService.ts más allá de importar tipos.
+ *
+ * @param row - Fila cruda de la tabla meetups
+ * @returns Objeto Meetup del dominio de la aplicación
+ */
+const mapMeetupRowForGroup = (row: MeetupRowForGroup): Meetup => ({
+  id: row.id,
+  title: row.title,
+  description: row.description,
+  date: row.date,
+  time: row.time,
+  location: row.location,
+  estimatedCost: row.estimated_cost,
+  status: row.status as MeetupStatus,
+  joinCode: row.join_code,
+  createdBy: row.created_by,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+  cancelledAt: row.cancelled_at,
+  cover_url: row.cover_url ?? null,
+  reviews_enabled: row.reviews_enabled ?? false,
+});
 
 /**
  * Genera un código alfanumérico de 6 caracteres (prefijo 'G' + 5 al azar)
@@ -478,6 +543,81 @@ export const groupService = {
       return { data: members, error: null };
     } catch {
       return { data: null, error: 'Error al obtener los miembros del grupo' };
+    }
+  },
+
+  /**
+   * Obtiene las juntadas activas asociadas a un grupo, con el rol del
+   * usuario autenticado y los conteos de participantes de cada una —
+   * mismo criterio de 3 pasos que meetupService.getUserMeetups, pero
+   * filtrando por group_id en vez de por las participaciones propias.
+   *
+   * Solo trae juntadas con status = 'active': la policy "meetups: select
+   * by join_code" (002_fix_rls_circular.sql) permite leer cualquier
+   * juntada activa a cualquier usuario autenticado, así que no hace
+   * falta RLS nueva para este filtro. Las juntadas canceladas o
+   * finalizadas de un grupo no son visibles acá para miembros que se
+   * unieron después de que ocurrieron — caso reportado y confirmado en
+   * el análisis previo, fuera de alcance de este prompt.
+   *
+   * @param groupId - UUID del grupo
+   * @param userId - UUID del usuario autenticado
+   * @returns Lista de juntadas del grupo con rol del usuario o error
+   */
+  async getGroupMeetups(
+    groupId: string,
+    userId: string,
+  ): Promise<ServiceResult<MeetupWithRole[]>> {
+    try {
+      const { data: meetupsData, error: meetupsError } = await supabase
+        .from('meetups')
+        .select('*')
+        .eq('group_id', groupId)
+        .eq('status', 'active')
+        .order('date', { ascending: true });
+
+      if (meetupsError) throw meetupsError;
+      if (!meetupsData || meetupsData.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const meetupIds = (meetupsData as MeetupRowForGroup[]).map((m) => m.id);
+
+      const { data: allParticipants, error: participantsError } = await supabase
+        .from('meetup_participants')
+        .select('meetup_id, user_id, role, attendance_status')
+        .in('meetup_id', meetupIds);
+
+      if (participantsError) throw participantsError;
+
+      const safeParticipants = (allParticipants ?? []) as MeetupParticipantRowForGroup[];
+
+      const result: MeetupWithRole[] = (meetupsData as MeetupRowForGroup[]).map(
+        (meetupRow) => {
+          const participantsForMeetup = safeParticipants.filter(
+            (p) => p.meetup_id === meetupRow.id,
+          );
+          const myParticipation = participantsForMeetup.find(
+            (p) => p.user_id === userId,
+          );
+
+          return {
+            ...mapMeetupRowForGroup(meetupRow),
+            userRole: (myParticipation?.role ?? 'participant') as ParticipantRole,
+            attendanceStatus: (myParticipation?.attendance_status ??
+              'pending') as AttendanceStatus,
+            participantCount: participantsForMeetup.length,
+            confirmedCount: participantsForMeetup.filter(
+              (p) => p.attendance_status === 'confirmed',
+            ).length,
+            leftAt: null,
+          };
+        },
+      );
+
+      return { data: result, error: null };
+    } catch {
+      return { data: null, error: 'Error al obtener las juntadas del grupo' };
     }
   },
 

@@ -41,6 +41,9 @@ export const Routes = {
     GroupDetail: 'GroupDetail',
     GroupMembers: 'GroupMembers',
     GroupPlaceholder: 'GroupPlaceholder',
+
+    // Bloque 4.4b (grupos: listado de juntadas del grupo)
+    GroupMeetups: 'GroupMeetups',
   } as const;
   
   export type RouteNames = typeof Routes[keyof typeof Routes];
