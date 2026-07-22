@@ -12,7 +12,14 @@
  * createMeetup.
  */
 import { supabase } from '@/lib/supabase/client';
-import type { Group, GroupWithRole, GroupMemberPreview, CreateGroupFormData } from '../types';
+import type {
+  Group,
+  GroupWithRole,
+  GroupMemberPreview,
+  GroupDetail,
+  GroupMember,
+  CreateGroupFormData,
+} from '../types';
 
 /** Contrato de retorno uniforme de todas las operaciones del servicio */
 interface ServiceResult<T> {
@@ -49,6 +56,20 @@ interface GroupMemberWithProfileRow {
 /** Fila de meetups reducida a lo necesario para contar juntadas activas por grupo */
 interface GroupMeetupRow {
   group_id: string | null;
+}
+
+/** Fila de group_members con el perfil completo, usada por getGroupMembers */
+interface GroupMemberDetailRow {
+  id: string;
+  group_id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
+  profiles: {
+    full_name: string;
+    username: string;
+    avatar_url: string | null;
+  } | null;
 }
 
 /** Caracteres válidos para generar el código de grupo (mismo charset que meetups) */
@@ -337,6 +358,176 @@ export const groupService = {
       return { data: result, error: null };
     } catch {
       return { data: null, error: 'Error al obtener los grupos' };
+    }
+  },
+
+  /**
+   * Obtiene el detalle de un grupo: datos del grupo, rol del usuario
+   * autenticado (vía RPC get_user_group_role, 014_groups.sql) y conteos
+   * de miembros activos y juntadas activas asociadas.
+   *
+   * @param groupId - UUID del grupo
+   * @param userId - UUID del usuario autenticado
+   * @returns El detalle del grupo o mensaje de error
+   */
+  async getGroupDetail(
+    groupId: string,
+    userId: string,
+  ): Promise<ServiceResult<GroupDetail>> {
+    try {
+      const { data: groupRow, error: groupError } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('id', groupId)
+        .single();
+
+      if (groupError) throw groupError;
+      if (!groupRow) {
+        return { data: null, error: 'Grupo no encontrado' };
+      }
+
+      const { data: role, error: roleError } = await supabase.rpc(
+        'get_user_group_role',
+        { p_group_id: groupId, p_user_id: userId },
+      );
+
+      if (roleError) throw roleError;
+
+      const { count: memberCount, error: memberCountError } = await supabase
+        .from('group_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+        .is('left_at', null);
+
+      if (memberCountError) throw memberCountError;
+
+      const { count: activeMeetupCount, error: meetupCountError } = await supabase
+        .from('meetups')
+        .select('id', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+        .eq('status', 'active');
+
+      if (meetupCountError) throw meetupCountError;
+
+      return {
+        data: {
+          ...mapGroupRow(groupRow as GroupRow),
+          userRole: (role ?? 'member') as GroupDetail['userRole'],
+          memberCount: memberCount ?? 0,
+          activeMeetupCount: activeMeetupCount ?? 0,
+        },
+        error: null,
+      };
+    } catch {
+      return { data: null, error: 'Error al obtener el detalle del grupo' };
+    }
+  },
+
+  /**
+   * Obtiene los miembros activos de un grupo con su perfil público,
+   * ordenados por rol (admin primero, ya que 'admin' < 'guest' < 'member'
+   * alfabéticamente no garantiza ese orden, así que se ordena en el cliente).
+   *
+   * @param groupId - UUID del grupo
+   * @returns Lista de miembros con perfil o mensaje de error
+   */
+  async getGroupMembers(groupId: string): Promise<ServiceResult<GroupMember[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('group_members')
+        .select(
+          `
+          id,
+          group_id,
+          user_id,
+          role,
+          joined_at,
+          profiles:user_id (
+            full_name,
+            username,
+            avatar_url
+          )
+        `,
+        )
+        .eq('group_id', groupId)
+        .is('left_at', null);
+
+      if (error) throw error;
+
+      const rows = (data ?? []) as unknown as GroupMemberDetailRow[];
+
+      // admin primero, después member, después guest
+      const ROLE_ORDER: Record<string, number> = { admin: 0, member: 1, guest: 2 };
+      const sorted = [...rows].sort(
+        (a, b) => (ROLE_ORDER[a.role] ?? 3) - (ROLE_ORDER[b.role] ?? 3),
+      );
+
+      const members: GroupMember[] = sorted.map((row) => ({
+        id: row.id,
+        groupId: row.group_id,
+        userId: row.user_id,
+        role: row.role as GroupMember['role'],
+        joinedAt: row.joined_at,
+        profile: {
+          fullName: row.profiles?.full_name ?? '',
+          username: row.profiles?.username ?? '',
+          avatarUrl: row.profiles?.avatar_url ?? null,
+        },
+      }));
+
+      return { data: members, error: null };
+    } catch {
+      return { data: null, error: 'Error al obtener los miembros del grupo' };
+    }
+  },
+
+  /**
+   * Elimina un grupo por completo. La policy "groups_delete" (014_groups.sql)
+   * ya restringe esta operación a admins — no se valida el rol acá de nuevo.
+   *
+   * @param groupId - UUID del grupo a eliminar
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
+   */
+  async deleteGroup(groupId: string): Promise<ServiceResult<null>> {
+    try {
+      const { error } = await supabase.from('groups').delete().eq('id', groupId);
+      if (error) throw error;
+      return { data: null, error: null };
+    } catch {
+      return { data: null, error: 'No se pudo eliminar el grupo' };
+    }
+  },
+
+  /**
+   * Wrapper del RPC leave_group (014_groups.sql). Si el usuario es admin,
+   * la función lanza una excepción específica que se debe mostrar tal cual
+   * al usuario: es un comportamiento esperado (el admin debe transferir su
+   * rol primero — función que llega en 4.5), no un error genérico a ocultar.
+   *
+   * @param groupId - UUID del grupo del que se quiere salir
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
+   */
+  async leaveGroup(groupId: string): Promise<ServiceResult<null>> {
+    try {
+      const { error } = await supabase.rpc('leave_group', { p_group_id: groupId });
+      if (error) throw error;
+      return { data: null, error: null };
+    } catch (err) {
+      // No usar `instanceof Error`: el PostgrestError que lanza el RPC no
+      // siempre pasa ese chequeo en Hermes/React Native, pese a tener la
+      // propiedad `message` con el texto correcto. Acceso directo (duck
+      // typing) en su lugar.
+      const message =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : '';
+
+      return {
+        data: null,
+        error: message.includes('debe transferir su rol')
+          ? message
+          : 'No se pudo salir del grupo',
+      };
     }
   },
 };

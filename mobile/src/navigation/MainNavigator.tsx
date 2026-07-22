@@ -54,6 +54,11 @@ import { GroupHomeScreen } from '@/features/groups/screens/GroupHomeScreen';
 import { CreateGroupScreen } from '@/features/groups/screens/CreateGroupScreen';
 import { JoinGroupScreen } from '@/features/groups/screens/JoinGroupScreen';
 
+// Pantallas implementadas — bloque 4.3 E3 (grupos: detalle y miembros)
+import { GroupDetailScreen } from '@/features/groups/screens/GroupDetailScreen';
+import { GroupMembersScreen } from '@/features/groups/screens/GroupMembersScreen';
+import { GroupPlaceholderScreen } from '@/features/groups/screens/GroupPlaceholderScreen';
+
 // El genérico habilita el chequeo de nombres de ruta y parámetros en compilación
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -123,6 +128,11 @@ export const MainNavigator = ({
       <Stack.Screen name={Routes.GroupHome} component={GroupHomeScreen} />
       <Stack.Screen name={Routes.CreateGroup} component={CreateGroupScreen} />
       <Stack.Screen name={Routes.JoinGroup} component={JoinGroupScreen} />
+
+      {/* Bloque 4.3 — grupos: detalle, miembros y placeholder de secciones */}
+      <Stack.Screen name={Routes.GroupDetail} component={GroupDetailScreen} />
+      <Stack.Screen name={Routes.GroupMembers} component={GroupMembersScreen} />
+      <Stack.Screen name={Routes.GroupPlaceholder} component={GroupPlaceholderScreen} />
     </Stack.Navigator>
   );
 };

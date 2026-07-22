@@ -50,6 +50,31 @@ export interface GroupWithRole extends Group {
 }
 
 /**
+ * Grupo enriquecido con los datos que necesita la pantalla de detalle:
+ * rol del usuario y conteos, sin el preview de avatares (eso es solo
+ * para las cards de la lista).
+ */
+export interface GroupDetail extends Group {
+  userRole: GroupRole;
+  memberCount: number;
+  activeMeetupCount: number;
+}
+
+/** Miembro de un grupo con su perfil, para GroupMembersScreen */
+export interface GroupMember {
+  id: string;
+  groupId: string;
+  userId: string;
+  role: GroupRole;
+  joinedAt: string;
+  profile: {
+    fullName: string;
+    username: string;
+    avatarUrl: string | null;
+  };
+}
+
+/**
  * Datos del formulario de creación de grupo.
  * Inferido desde createGroupSchema para que Zod sea la única fuente de verdad.
  */

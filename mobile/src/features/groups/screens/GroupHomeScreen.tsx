@@ -7,8 +7,7 @@
  * grupos no tiene un tab propio en el bottom nav (así lo define el mockup
  * de Figma "Mis grupos").
  *
- * Las cards de grupo no son interactivas todavía: la pantalla de detalle
- * de grupo es del sub-bloque 4.3, fuera de este alcance.
+ * Las cards de grupo navegan a GroupDetailScreen (sub-bloque 4.3).
  */
 import React, { useCallback, useState } from 'react';
 import {
@@ -66,10 +65,14 @@ const ROLE_LABELS: Record<GroupRole, string> = {
 /** Props de la card de grupo individual */
 interface GroupCardProps {
   group: GroupWithRole;
+  onPress: () => void;
 }
 
-const GroupCard = ({ group }: GroupCardProps) => (
-  <View style={styles.card}>
+const GroupCard = ({ group, onPress }: GroupCardProps) => (
+  <Pressable
+    style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+    onPress={onPress}
+  >
     <View style={styles.cardHeader}>
       <Text style={styles.cardTitle} numberOfLines={1}>
         {group.name}
@@ -129,7 +132,7 @@ const GroupCard = ({ group }: GroupCardProps) => (
 
       <Text style={styles.countText}>{group.memberCount} personas</Text>
     </View>
-  </View>
+  </Pressable>
 );
 
 export const GroupHomeScreen = () => {
@@ -256,7 +259,13 @@ export const GroupHomeScreen = () => {
         ) : groups.length === 0 ? (
           renderEmptyState()
         ) : (
-          groups.map((group) => <GroupCard key={group.id} group={group} />)
+          groups.map((group) => (
+            <GroupCard
+              key={group.id}
+              group={group}
+              onPress={() => navigation.navigate(Routes.GroupDetail, { groupId: group.id })}
+            />
+          ))
         )}
 
         <View style={styles.scrollBottom} />
@@ -372,6 +381,10 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  cardPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.985 }],
   },
   cardHeader: {
     flexDirection: 'row',

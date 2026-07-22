@@ -36,6 +36,11 @@ export const Routes = {
     GroupHome: 'GroupHome',
     CreateGroup: 'CreateGroup',
     JoinGroup: 'JoinGroup',
+
+    // Bloque 4.3 (grupos: detalle y miembros)
+    GroupDetail: 'GroupDetail',
+    GroupMembers: 'GroupMembers',
+    GroupPlaceholder: 'GroupPlaceholder',
   } as const;
   
   export type RouteNames = typeof Routes[keyof typeof Routes];

@@ -60,4 +60,7 @@ export type MainStackParamList = {
   GroupHome: undefined;
   CreateGroup: undefined;
   JoinGroup: undefined;
+  GroupDetail: { groupId: string };
+  GroupMembers: { groupId: string; groupName: string; joinCode: string };
+  GroupPlaceholder: { groupId: string; section: 'Juntadas' | 'Multimedia' };
 };
