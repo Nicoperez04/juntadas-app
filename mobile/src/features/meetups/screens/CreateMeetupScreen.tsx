@@ -23,7 +23,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -40,6 +41,7 @@ import type { CreateMeetupFormData } from '../types';
 import type { MainStackParamList } from '@/navigation/types';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'CreateMeetup'>;
+type RoutePropType = RouteProp<MainStackParamList, 'CreateMeetup'>;
 
 // ─── FieldInput (campos de texto genéricos) ──────────────────────────────────
 
@@ -244,6 +246,9 @@ const pickCoverFromSource = async (
 
 export const CreateMeetupScreen = () => {
   const navigation = useNavigation<NavProp>();
+  const route = useRoute<RoutePropType>();
+  const groupId = route.params?.groupId;
+  const groupName = route.params?.groupName;
   const { createMeetup } = useMeetups();
   const uploadCoverMutation = useUploadMeetupCover();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -338,7 +343,7 @@ export const CreateMeetupScreen = () => {
    */
   const onSubmit = async (data: CreateMeetupFormData) => {
     setSubmitError(null);
-    const result = await createMeetup(data);
+    const result = await createMeetup(data, groupId);
     if (result.error) {
       setSubmitError(result.error);
       return;
@@ -391,6 +396,15 @@ export const CreateMeetupScreen = () => {
           <Text style={styles.intro}>
             Completá los datos de tu juntada. La fecha no puede ser anterior a hoy.
           </Text>
+
+          {groupName && (
+            <View style={styles.groupContextRow}>
+              <Ionicons name="people" size={16} color={theme.colors.primary} />
+              <Text style={styles.groupContextText}>
+                Creando juntada para: {groupName}
+              </Text>
+            </View>
+          )}
 
           {/* Portada opcional — se sube después de crear la juntada */}
           <CoverPickerSection
@@ -814,6 +828,17 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryLight,
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,
+  },
+  groupContextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.lg,
+  },
+  groupContextText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   row: {
     flexDirection: 'row',

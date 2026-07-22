@@ -303,6 +303,19 @@ export const GroupDetailScreen = () => {
           </Pressable>
         </View>
 
+        {/* Crear una juntada para este grupo — invita a todos los miembros activos */}
+        <View style={styles.createMeetupWrapper}>
+          <AppButton
+            label="+ Crear juntada"
+            onPress={() =>
+              navigation.navigate(Routes.CreateMeetup, {
+                groupId,
+                groupName: group.name,
+              })
+            }
+          />
+        </View>
+
         {/* Preview de miembros */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
@@ -765,6 +778,9 @@ const styles = StyleSheet.create({
   previewRoleBadgeText: {
     fontSize: theme.typography.sizes.xs,
     fontWeight: theme.typography.weights.semibold,
+  },
+  createMeetupWrapper: {
+    marginBottom: theme.spacing.lg,
   },
   section: {
     marginBottom: theme.spacing.md,

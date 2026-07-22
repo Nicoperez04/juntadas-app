@@ -39,6 +39,12 @@ interface EditMeetupVariables {
   formData: CreateMeetupFormData;
 }
 
+/** Variables de la mutación de creación: datos del formulario + grupo opcional a invitar */
+interface CreateMeetupVariables {
+  formData: CreateMeetupFormData;
+  groupId?: string;
+}
+
 /** Variables de la mutación de subida de portada */
 interface UploadCoverVariables {
   meetupId: string;
@@ -203,13 +209,14 @@ export const useMeetups = () => {
 
   /** Mutación de creación de juntada — refresca la lista si fue exitosa */
   const createMeetupMutation = useMutation({
-    mutationFn: async (
-      formData: CreateMeetupFormData,
-    ): Promise<OperationResult<Meetup>> => {
+    mutationFn: async ({
+      formData,
+      groupId,
+    }: CreateMeetupVariables): Promise<OperationResult<Meetup>> => {
       if (!userId) {
         return { data: null, error: 'No hay usuario autenticado' };
       }
-      return meetupService.createMeetup(userId, formData);
+      return meetupService.createMeetup(userId, formData, groupId);
     },
     onSuccess: async (result) => {
       if (!result.error) {
@@ -290,13 +297,19 @@ export const useMeetups = () => {
 
   /**
    * Crea una nueva juntada con los datos del formulario y recarga la lista.
+   * Si se pasa `groupId`, invita automáticamente a todos los miembros
+   * activos del grupo (vía RPC `invite_group_to_meetup`).
    *
    * @param formData - Datos validados del formulario de creación
+   * @param groupId - UUID opcional del grupo a invitar
    * @returns La juntada creada o un mensaje de error
    */
   const createMeetup = useCallback(
-    (formData: CreateMeetupFormData): Promise<OperationResult<Meetup>> =>
-      createMeetupMutation.mutateAsync(formData),
+    (
+      formData: CreateMeetupFormData,
+      groupId?: string,
+    ): Promise<OperationResult<Meetup>> =>
+      createMeetupMutation.mutateAsync({ formData, groupId }),
     [createMeetupMutation.mutateAsync],
   );
 
