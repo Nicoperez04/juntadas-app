@@ -37,4 +37,5 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **02** · Anotador de Generala: Planilla Interactiva de Dados → [`prompts/bloque-5/02_anotador_generala.md`](prompts/bloque-5/02_anotador_generala.md)
 - **03** · Sorteador (Raffle): Ruleta y Selección al Azar → [`prompts/bloque-5/03_sorteador.md`](prompts/bloque-5/03_sorteador.md)
 - **04** · Generador de Ligas (League): Fixture y Tabla de Posiciones → [`prompts/bloque-5/04_generador_ligas.md`](prompts/bloque-5/04_generador_ligas.md)
+- **05** · Generador de Torneos (Tournament): Eliminación Directa → [`prompts/bloque-5/05_generador_torneos.md`](prompts/bloque-5/05_generador_torneos.md) · [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md)
 

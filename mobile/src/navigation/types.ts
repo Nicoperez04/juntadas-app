@@ -67,6 +67,11 @@ export type MainStackParamList = {
     teams: string[];
     meetupId?: string;
   };
+  TournamentSetup: { meetupId?: string };
+  TournamentGame: {
+    players: string[];
+    meetupId?: string;
+  };
   MemoriesGallery: { meetupId: string; isActive: boolean };
   MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string; isOrganizer: boolean };
   MeetupHistory: undefined;

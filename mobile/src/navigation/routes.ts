@@ -30,6 +30,8 @@ export const Routes = {
     Raffle: 'Raffle',
     LeagueSetup: 'LeagueSetup',
     LeagueGame: 'LeagueGame',
+    TournamentSetup: 'TournamentSetup',
+    TournamentGame: 'TournamentGame',
     MemoriesGallery: 'MemoriesGallery',
     MemoryViewer: 'MemoryViewer',
     MeetupHistory: 'MeetupHistory',

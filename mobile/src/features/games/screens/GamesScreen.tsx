@@ -266,6 +266,15 @@ export const GamesScreen = () => {
         iconColor: '#F59E0B',
         available: true,
       },
+      {
+        id: 'tournament',
+        title: 'Generador de Torneos',
+        description: 'Eliminación directa (Playoffs)',
+        icon: 'tournament',
+        backgroundColor: '#E0F2FE',
+        iconColor: '#0284C7',
+        available: true,
+      },
     ],
     [],
   );
@@ -368,6 +377,11 @@ export const GamesScreen = () => {
         case 'league':
           navigateWithFade(() =>
             navigation.navigate(Routes.LeagueSetup, meetupId ? { meetupId } : {}),
+          );
+          break;
+        case 'tournament':
+          navigateWithFade(() =>
+            navigation.navigate(Routes.TournamentSetup, meetupId ? { meetupId } : {}),
           );
           break;
         case 'timer':
