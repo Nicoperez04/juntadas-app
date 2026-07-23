@@ -39,3 +39,11 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **04** · Generador de Ligas (League): Fixture y Tabla de Posiciones → [`prompts/bloque-5/04_generador_ligas.md`](prompts/bloque-5/04_generador_ligas.md)
 - **05** · Generador de Torneos (Tournament): Eliminación Directa → [`prompts/bloque-5/05_generador_torneos.md`](prompts/bloque-5/05_generador_torneos.md) · [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md)
 
+## ChatGPT / Codex
+
+### Bloque 6 - Estadisticas (23/07/2026)
+
+- **01** - Analisis de dependencias: estadisticas de juntadas vs estadisticas de grupos -> [`prompts/bloque-6/01_analisis_dependencias_estadisticas_grupos.md`](prompts/bloque-6/01_analisis_dependencias_estadisticas_grupos.md)
+- **02** - Alcance, flujo IA, Figma y APK: adaptacion ChatGPT/Codex y fuentes de verdad del Bloque 6 -> [`prompts/bloque-6/02_alcance_flujo_figma_apk.md`](prompts/bloque-6/02_alcance_flujo_figma_apk.md)
+- **03** - Referencias visuales y diseno funcional: hub real, cierres de juegos, historial y contrato futuro de grupos -> [`prompts/bloque-6/03_referencias_visuales_diseno_estadisticas.md`](prompts/bloque-6/03_referencias_visuales_diseno_estadisticas.md)
+- **04** - Decisiones preimplementacion: nombre visible, navegacion, persistencia, juegos incluidos y limites -> [`prompts/bloque-6/04_decisiones_preimplementacion_estadisticas.md`](prompts/bloque-6/04_decisiones_preimplementacion_estadisticas.md)
