@@ -57,7 +57,6 @@ import { JoinGroupScreen } from '@/features/groups/screens/JoinGroupScreen';
 // Pantallas implementadas — bloque 4.3 E3 (grupos: detalle y miembros)
 import { GroupDetailScreen } from '@/features/groups/screens/GroupDetailScreen';
 import { GroupMembersScreen } from '@/features/groups/screens/GroupMembersScreen';
-import { GroupPlaceholderScreen } from '@/features/groups/screens/GroupPlaceholderScreen';
 
 // Pantallas implementadas — bloque 4.4b E3 (grupos: listado de juntadas)
 import { GroupMeetupsScreen } from '@/features/groups/screens/GroupMeetupsScreen';
@@ -132,10 +131,9 @@ export const MainNavigator = ({
       <Stack.Screen name={Routes.CreateGroup} component={CreateGroupScreen} />
       <Stack.Screen name={Routes.JoinGroup} component={JoinGroupScreen} />
 
-      {/* Bloque 4.3 — grupos: detalle, miembros y placeholder de secciones */}
+      {/* Bloque 4.3 — grupos: detalle y miembros */}
       <Stack.Screen name={Routes.GroupDetail} component={GroupDetailScreen} />
       <Stack.Screen name={Routes.GroupMembers} component={GroupMembersScreen} />
-      <Stack.Screen name={Routes.GroupPlaceholder} component={GroupPlaceholderScreen} />
 
       {/* Bloque 4.4b — grupos: listado real de juntadas del grupo */}
       <Stack.Screen name={Routes.GroupMeetups} component={GroupMeetupsScreen} />

@@ -262,7 +262,7 @@ export const GroupDetailScreen = () => {
           </View>
         </View>
 
-        {/* Secciones "Juntadas" / "Multimedia" — navegan a placeholder */}
+        {/* Sección "Juntadas" — navega al listado real de juntadas del grupo */}
         <View style={styles.sectionsRow}>
           <Pressable
             style={({ pressed }) => [
@@ -280,25 +280,6 @@ export const GroupDetailScreen = () => {
             <Ionicons name="calendar-outline" size={22} color={theme.colors.primary} />
             <Text style={[styles.sectionCardText, { color: theme.colors.primary }]}>
               Juntadas
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.sectionCard,
-              styles.sectionCardMedia,
-              pressed && styles.sectionCardPressed,
-            ]}
-            onPress={() =>
-              navigation.navigate(Routes.GroupPlaceholder, {
-                groupId,
-                section: 'Multimedia',
-              })
-            }
-          >
-            <Ionicons name="camera" size={22} color={theme.colors.secondary} />
-            <Text style={[styles.sectionCardText, { color: theme.colors.secondary }]}>
-              Multimedia
             </Text>
           </Pressable>
         </View>
@@ -705,10 +686,6 @@ const styles = StyleSheet.create({
   sectionCardMeetups: {
     backgroundColor: theme.colors.primaryLight,
     borderColor: '#EDE9FE',
-  },
-  sectionCardMedia: {
-    backgroundColor: theme.colors.secondaryLight,
-    borderColor: '#FCE7F3',
   },
   sectionCardPressed: {
     opacity: 0.85,

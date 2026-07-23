@@ -62,6 +62,5 @@ export type MainStackParamList = {
   JoinGroup: undefined;
   GroupDetail: { groupId: string };
   GroupMembers: { groupId: string; groupName: string; joinCode: string };
-  GroupPlaceholder: { groupId: string; section: 'Juntadas' | 'Multimedia' };
   GroupMeetups: { groupId: string; groupName: string };
 };

@@ -40,7 +40,6 @@ export const Routes = {
     // Bloque 4.3 (grupos: detalle y miembros)
     GroupDetail: 'GroupDetail',
     GroupMembers: 'GroupMembers',
-    GroupPlaceholder: 'GroupPlaceholder',
 
     // Bloque 4.4b (grupos: listado de juntadas del grupo)
     GroupMeetups: 'GroupMeetups',
