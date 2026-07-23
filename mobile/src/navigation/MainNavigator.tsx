@@ -34,6 +34,15 @@ import { WhoAmIGameScreen } from '@/features/games/screens/WhoAmIGameScreen';
 import { GroupQuestionsScreen } from '@/features/games/screens/GroupQuestionsScreen';
 import { ScorerSetupScreen } from '@/features/games/screens/ScorerSetupScreen';
 import { ScorerGameScreen } from '@/features/games/screens/ScorerGameScreen';
+import { TrucoSetupScreen } from '@/features/games/screens/TrucoSetupScreen';
+import { TrucoGameScreen } from '@/features/games/screens/TrucoGameScreen';
+import { GeneralaSetupScreen } from '@/features/games/screens/GeneralaSetupScreen';
+import { GeneralaGameScreen } from '@/features/games/screens/GeneralaGameScreen';
+import { RaffleScreen } from '@/features/games/screens/RaffleScreen';
+import { LeagueSetupScreen } from '@/features/games/screens/LeagueSetupScreen';
+import { LeagueGameScreen } from '@/features/games/screens/LeagueGameScreen';
+import { TournamentSetupScreen } from '@/features/games/screens/TournamentSetupScreen';
+import { TournamentGameScreen } from '@/features/games/screens/TournamentGameScreen';
 import { ImpostorStartScreen } from '@/features/impostor/screens/ImpostorStartScreen';
 import { ImpostorRoleScreen } from '@/features/impostor/screens/ImpostorRoleScreen';
 
@@ -107,6 +116,15 @@ export const MainNavigator = ({
       <Stack.Screen name={Routes.GroupQuestions} component={GroupQuestionsScreen} />
       <Stack.Screen name={Routes.ScorerSetup} component={ScorerSetupScreen} />
       <Stack.Screen name={Routes.ScorerGame} component={ScorerGameScreen} />
+      <Stack.Screen name={Routes.TrucoSetup} component={TrucoSetupScreen} />
+      <Stack.Screen name={Routes.TrucoGame} component={TrucoGameScreen} />
+      <Stack.Screen name={Routes.GeneralaSetup} component={GeneralaSetupScreen} />
+      <Stack.Screen name={Routes.GeneralaGame} component={GeneralaGameScreen} />
+      <Stack.Screen name={Routes.Raffle} component={RaffleScreen} />
+      <Stack.Screen name={Routes.LeagueSetup} component={LeagueSetupScreen} />
+      <Stack.Screen name={Routes.LeagueGame} component={LeagueGameScreen} />
+      <Stack.Screen name={Routes.TournamentSetup} component={TournamentSetupScreen} />
+      <Stack.Screen name={Routes.TournamentGame} component={TournamentGameScreen} />
       <Stack.Screen name={Routes.ImpostorStart} component={ImpostorStartScreen} />
       <Stack.Screen name={Routes.ImpostorRole} component={ImpostorRoleScreen} />
 

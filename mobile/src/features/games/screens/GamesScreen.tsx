@@ -239,6 +239,42 @@ export const GamesScreen = () => {
         iconColor: theme.colors.success,
         available: true,
       },
+      {
+        id: 'truco',
+        title: 'Anotador de Truco',
+        description: 'Fósforos y puntaje para Truco',
+        icon: 'cards-playing-outline',
+        backgroundColor: theme.colors.primaryLight,
+        iconColor: theme.colors.primary,
+        available: true,
+      },
+      {
+        id: 'generala',
+        title: 'Anotador de Generala',
+        description: 'Planilla interactiva de dados',
+        icon: 'dice-5-outline',
+        backgroundColor: '#FCE7F3',
+        iconColor: '#EC4899',
+        available: true,
+      },
+      {
+        id: 'league',
+        title: 'Generador de Ligas',
+        description: 'Fixture todos contra todos',
+        icon: 'trophy-outline',
+        backgroundColor: '#FEF3C7',
+        iconColor: '#F59E0B',
+        available: true,
+      },
+      {
+        id: 'tournament',
+        title: 'Generador de Torneos',
+        description: 'Eliminación directa (Playoffs)',
+        icon: 'tournament',
+        backgroundColor: '#E0F2FE',
+        iconColor: '#0284C7',
+        available: true,
+      },
     ],
     [],
   );
@@ -261,6 +297,15 @@ export const GamesScreen = () => {
         icon: 'account-group',
         backgroundColor: theme.colors.warningLight,
         iconColor: theme.colors.warning,
+        available: true,
+      },
+      {
+        id: 'raffle',
+        title: 'Sorteador',
+        description: 'Elegí un ganador al azar',
+        icon: 'ticket-percent-outline',
+        backgroundColor: theme.colors.primaryLight,
+        iconColor: theme.colors.primary,
         available: true,
       },
     ],
@@ -319,12 +364,37 @@ export const GamesScreen = () => {
             navigation.navigate(Routes.ScorerSetup, meetupId ? { meetupId } : {}),
           );
           break;
+        case 'truco':
+          navigateWithFade(() =>
+            navigation.navigate(Routes.TrucoSetup, meetupId ? { meetupId } : {}),
+          );
+          break;
+        case 'generala':
+          navigateWithFade(() =>
+            navigation.navigate(Routes.GeneralaSetup, meetupId ? { meetupId } : {}),
+          );
+          break;
+        case 'league':
+          navigateWithFade(() =>
+            navigation.navigate(Routes.LeagueSetup, meetupId ? { meetupId } : {}),
+          );
+          break;
+        case 'tournament':
+          navigateWithFade(() =>
+            navigation.navigate(Routes.TournamentSetup, meetupId ? { meetupId } : {}),
+          );
+          break;
         case 'timer':
           navigateWithFade(() => navigation.navigate(Routes.Timer));
           break;
         case 'teams':
           navigateWithFade(() =>
             navigation.navigate(Routes.TeamRandomizer, meetupId ? { meetupId } : {}),
+          );
+          break;
+        case 'raffle':
+          navigateWithFade(() =>
+            navigation.navigate(Routes.Raffle, meetupId ? { meetupId } : {}),
           );
           break;
         default:
@@ -409,7 +479,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: theme.spacing.xl + 80, // Se suma offset del tab bar fijo
   },
   sectionTitle: {
     fontSize: theme.typography.sizes.lg,
