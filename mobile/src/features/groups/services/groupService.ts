@@ -12,6 +12,8 @@
  * createMeetup.
  */
 import { supabase } from '@/lib/supabase/client';
+import { notificationService } from '@/features/notifications/services/notificationService';
+import { NotificationType } from '@/features/notifications/types';
 import type {
   Group,
   GroupWithRole,
@@ -108,6 +110,16 @@ interface MeetupParticipantRowForGroup {
   user_id: string;
   role: string;
   attendance_status: string;
+}
+
+/**
+ * Fila del retorno de expel_group_member (019_group_admin_actions_fixes.sql):
+ * una por cada juntada activa del grupo que se canceló automáticamente
+ * porque el expulsado era su único participante activo.
+ */
+interface CancelledMeetupRow {
+  cancelled_meetup_id: string;
+  cancelled_meetup_title: string;
 }
 
 /** Caracteres válidos para generar el código de grupo (mismo charset que meetups) */
@@ -667,6 +679,123 @@ export const groupService = {
         error: message.includes('debe transferir su rol')
           ? message
           : 'No se pudo salir del grupo',
+      };
+    }
+  },
+
+  /**
+   * Wrapper del RPC expel_group_member (018_group_admin_actions.sql,
+   * fixes en 019_group_admin_actions_fixes.sql). Solo el admin puede
+   * ejecutarla; el mensaje del RPC (si es un caso conocido) se muestra
+   * tal cual, igual que en leaveGroup.
+   *
+   * Si el expulsado organizaba alguna juntada activa del grupo y era su
+   * único participante activo, la función SQL la cancela automáticamente
+   * y la retorna en el resultado. Una función SQL no puede invocar la
+   * Edge Function send-push-notification directamente, así que acá se
+   * dispara la notificación de cancelación a los participantes restantes
+   * de cada una — mismo patrón fire-and-forget que meetupService.cancelMeetup.
+   *
+   * @param groupId - UUID del grupo
+   * @param targetUserId - UUID del miembro a expulsar
+   * @param actingUserId - UUID del admin que ejecuta la expulsión (se excluye de las notificaciones)
+   * @returns las juntadas canceladas automáticamente, o mensaje de error
+   */
+  async expelMember(
+    groupId: string,
+    targetUserId: string,
+    actingUserId: string,
+  ): Promise<ServiceResult<{ cancelledMeetups: { id: string; title: string }[] }>> {
+    try {
+      const { data, error } = await supabase.rpc('expel_group_member', {
+        p_group_id: groupId,
+        p_target_user_id: targetUserId,
+      });
+      if (error) throw error;
+
+      const cancelledMeetups = ((data ?? []) as CancelledMeetupRow[]).map((row) => ({
+        id: row.cancelled_meetup_id,
+        title: row.cancelled_meetup_title,
+      }));
+
+      // Notificar a los participantes restantes de cada juntada cancelada
+      // automáticamente (fire-and-forget: un fallo acá no afecta el
+      // resultado de la expulsión, que ya ocurrió del lado del servidor).
+      if (cancelledMeetups.length > 0) {
+        void (async () => {
+          try {
+            for (const meetup of cancelledMeetups) {
+              const { data: participants } = await supabase.rpc(
+                'get_meetup_participant_ids',
+                { p_meetup_id: meetup.id, p_excluded_user_id: actingUserId },
+              );
+              const recipients = (participants ?? []) as { user_id: string }[];
+
+              await Promise.allSettled(
+                recipients.map((p) =>
+                  notificationService.sendNotification({
+                    recipientUserId: p.user_id,
+                    type: NotificationType.Cancelled,
+                    title: 'Juntada cancelada 😔',
+                    body: `${meetup.title} fue cancelada`,
+                    meetupId: meetup.id,
+                  }),
+                ),
+              );
+            }
+          } catch {
+            // Error en las notificaciones: no afecta el resultado de la expulsión
+          }
+        })();
+      }
+
+      return { data: { cancelledMeetups }, error: null };
+    } catch (err) {
+      // Mismo motivo que leaveGroup: no usar `instanceof Error` con
+      // PostgrestError en Hermes/React Native.
+      const message =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : '';
+
+      return {
+        data: null,
+        error: message || 'No se pudo expulsar al miembro',
+      };
+    }
+  },
+
+  /**
+   * Wrapper del RPC transfer_group_admin (018_group_admin_actions.sql).
+   * Atómico: degrada al admin actual y promueve al destinatario dentro
+   * de la misma función SECURITY DEFINER — a diferencia de
+   * meetupService.transferOrganizer (3 UPDATEs secuenciales desde el
+   * cliente, sin transacción real), acá no hay riesgo de estado parcial.
+   *
+   * @param groupId - UUID del grupo
+   * @param newAdminUserId - UUID del miembro que pasará a ser admin
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
+   */
+  async transferAdmin(
+    groupId: string,
+    newAdminUserId: string,
+  ): Promise<ServiceResult<null>> {
+    try {
+      const { error } = await supabase.rpc('transfer_group_admin', {
+        p_group_id: groupId,
+        p_new_admin_user_id: newAdminUserId,
+      });
+      if (error) throw error;
+      return { data: null, error: null };
+    } catch (err) {
+      const message =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : '';
+
+      return {
+        data: null,
+        error: message || 'No se pudo transferir la administración',
       };
     }
   },
