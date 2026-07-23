@@ -98,6 +98,7 @@ export const GroupDetailScreen = () => {
     group,
     isLoading,
     error,
+    isNotMember,
     isAdmin,
     deleteGroup,
     isDeleting,
@@ -105,7 +106,9 @@ export const GroupDetailScreen = () => {
     isLeaving,
     reload,
   } = useGroupDetail(groupId);
-  const { members } = useGroupMembers(groupId);
+  // Si ya sabemos que el usuario no es miembro activo, no hace falta pedir
+  // la lista de miembros: RLS la devolvería vacía de todos modos.
+  const { members } = useGroupMembers(groupId, { enabled: !isNotMember });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -162,6 +165,24 @@ export const GroupDetailScreen = () => {
       <SafeAreaView style={styles.loadingContainer} edges={['top', 'bottom']}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>Cargando grupo...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Estado propio para "ya no sos miembro" — distinto del error genérico:
+  // no tiene sentido ofrecer "Reintentar" (va a volver a fallar igual),
+  // ni mostrar counts/botones de un grupo al que ya no se tiene acceso.
+  if (isNotMember) {
+    return (
+      <SafeAreaView style={styles.errorFullScreen} edges={['top', 'bottom']}>
+        <Ionicons name="exit-outline" size={48} color={theme.colors.textSecondary} />
+        <Text style={styles.errorFullText}>Ya no formás parte de este grupo</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate(Routes.GroupHome)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.retryText}>Volver a Inicio</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }

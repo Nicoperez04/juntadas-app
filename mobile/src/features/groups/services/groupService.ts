@@ -218,6 +218,118 @@ const generateJoinCode = async (): Promise<string> => {
   throw new Error('No se pudo generar un código único después de varios intentos');
 };
 
+/**
+ * Trae los user_id de los miembros activos de un grupo, excluyendo a uno.
+ *
+ * Usa el RPC get_group_member_ids (021_get_group_member_ids.sql, SECURITY
+ * DEFINER) en vez de un SELECT directo: la policy group_members_select
+ * es un gate de todo o nada sobre si auth.uid() (quien pregunta) sigue
+ * siendo miembro activo, no un filtro fila por fila. En notifyGroupMemberLeft
+ * eso rompía en silencio — leave_group() ya había dado de baja a quien
+ * pregunta antes de este SELECT, así que RLS bloqueaba la lectura completa
+ * (0 filas, sin error) y la notificación se enviaba a una lista vacía.
+ * Se unifica acá para notifyGroupMemberJoined también, aunque ahí sí
+ * funcionaba (quien pregunta todavía es miembro activo) — evita tener
+ * dos caminos distintos resolviendo lo mismo y que un futuro cambio de
+ * RLS rompa uno de los dos otra vez sin avisar.
+ *
+ * @param groupId - UUID del grupo
+ * @param excludedUserId - UUID a excluir de la lista
+ * @returns Lista de user_id de miembros activos, sin incluir al excluido
+ */
+const getOtherActiveMemberIds = async (
+  groupId: string,
+  excludedUserId: string,
+): Promise<string[]> => {
+  const { data, error } = await supabase.rpc('get_group_member_ids', {
+    p_group_id: groupId,
+    p_excluded_user_id: excludedUserId,
+  });
+
+  if (error) {
+    // No es el camino esperado: un RPC fallido acá deja la notificación
+    // sin destinatarios en vez de fallar ruidosamente. Se loguea para
+    // no repetir el patrón de fallos de RPC silenciosos ya visto en
+    // este bloque (RLS bloqueando el SELECT directo, y el bug de
+    // shadowing de 021) — el [] es un fallback ante error, no el
+    // resultado normal.
+    console.error('[get_group_member_ids] Error en el RPC:', error);
+    return [];
+  }
+
+  return ((data ?? []) as { user_id: string }[]).map((row) => row.user_id);
+};
+
+/**
+ * Notifica a los demás miembros activos del grupo que alguien se unió
+ * (fire-and-forget: un fallo acá no afecta el resultado de joinGroupByCode).
+ *
+ * @param groupId - UUID del grupo
+ * @param joinedUserId - UUID de quien se acaba de unir
+ */
+const notifyGroupMemberJoined = async (
+  groupId: string,
+  joinedUserId: string,
+): Promise<void> => {
+  try {
+    const [{ data: profile }, recipientIds] = await Promise.all([
+      supabase.from('profiles').select('username').eq('id', joinedUserId).single(),
+      getOtherActiveMemberIds(groupId, joinedUserId),
+    ]);
+
+    const username = profile?.username ?? 'Alguien';
+
+    await Promise.allSettled(
+      recipientIds.map((recipientId) =>
+        notificationService.sendNotification({
+          recipientUserId: recipientId,
+          type: NotificationType.GroupMemberJoined,
+          title: 'Nuevo miembro 🎉',
+          body: `${username} se unió al grupo`,
+          groupId,
+        }),
+      ),
+    );
+  } catch {
+    // Error en las notificaciones: no afecta el flujo principal
+  }
+};
+
+/**
+ * Notifica a los demás miembros activos del grupo que alguien lo abandonó
+ * (fire-and-forget: un fallo acá no afecta el resultado de leaveGroup).
+ *
+ * @param groupId - UUID del grupo
+ * @param leftUserId - UUID de quien acaba de salir
+ */
+const notifyGroupMemberLeft = async (
+  groupId: string,
+  leftUserId: string,
+): Promise<void> => {
+  try {
+    const [{ data: profile }, recipientIds] = await Promise.all([
+      supabase.from('profiles').select('username').eq('id', leftUserId).single(),
+      getOtherActiveMemberIds(groupId, leftUserId),
+    ]);
+
+    const username = profile?.username ?? 'Alguien';
+
+    await Promise.allSettled(
+      recipientIds.map((recipientId) =>
+        notificationService.sendNotification({
+          recipientUserId: recipientId,
+          type: NotificationType.GroupMemberLeft,
+          title: 'Un miembro se fue 👋',
+          body: `${username} salió del grupo`,
+          groupId,
+        }),
+      ),
+    );
+  } catch {
+    // Error en las notificaciones: no afecta el flujo principal
+  }
+};
+
 export const groupService = {
   /**
    * Crea un nuevo grupo. El trigger trg_assign_group_creator_as_admin
@@ -344,6 +456,9 @@ export const groupService = {
         if (insertError) throw insertError;
       }
 
+      // Notificar al resto de los miembros activos (fire-and-forget)
+      void notifyGroupMemberJoined(group.id, userId);
+
       return { data: mapGroupRow(group as GroupRow), error: null };
     } catch {
       return { data: null, error: 'Error al unirse al grupo' };
@@ -443,15 +558,39 @@ export const groupService = {
    * autenticado (vía RPC get_user_group_role, 014_groups.sql) y conteos
    * de miembros activos y juntadas activas asociadas.
    *
+   * Verifica la membresía PRIMERO, antes de las otras 3 lecturas. Las
+   * policies de `groups`/`group_members`/`meetups` no se comportan igual
+   * ante un no-miembro: el SELECT de `groups` con `.single()` sí falla
+   * explícitamente (0 filas visibles), pero los `count` de miembros y
+   * juntadas activas son SELECTs de múltiples filas — RLS los filtra en
+   * silencio y devuelven 0 como resultado "exitoso", indistinguible de un
+   * grupo real con 0 miembros. get_user_group_role es SECURITY DEFINER
+   * (bypasea RLS) y devuelve NULL de forma confiable si el usuario no
+   * tiene una fila activa — por eso se usa acá como el único gate real,
+   * y se corta la ejecución antes de disparar las otras 3 queries que
+   * no distinguirían "bloqueado por RLS" de "dato real en 0".
+   *
    * @param groupId - UUID del grupo
    * @param userId - UUID del usuario autenticado
-   * @returns El detalle del grupo o mensaje de error
+   * @returns El detalle del grupo; error 'NOT_MEMBER' si ya no es miembro
+   *   activo (código distinguible, no mensaje genérico); u otro error
    */
   async getGroupDetail(
     groupId: string,
     userId: string,
   ): Promise<ServiceResult<GroupDetail>> {
     try {
+      const { data: role, error: roleError } = await supabase.rpc(
+        'get_user_group_role',
+        { p_group_id: groupId, p_user_id: userId },
+      );
+
+      if (roleError) throw roleError;
+
+      if (!role) {
+        return { data: null, error: 'NOT_MEMBER' };
+      }
+
       const { data: groupRow, error: groupError } = await supabase
         .from('groups')
         .select('*')
@@ -462,13 +601,6 @@ export const groupService = {
       if (!groupRow) {
         return { data: null, error: 'Grupo no encontrado' };
       }
-
-      const { data: role, error: roleError } = await supabase.rpc(
-        'get_user_group_role',
-        { p_group_id: groupId, p_user_id: userId },
-      );
-
-      if (roleError) throw roleError;
 
       const { count: memberCount, error: memberCountError } = await supabase
         .from('group_members')
@@ -489,7 +621,7 @@ export const groupService = {
       return {
         data: {
           ...mapGroupRow(groupRow as GroupRow),
-          userRole: (role ?? 'member') as GroupDetail['userRole'],
+          userRole: role as GroupDetail['userRole'],
           memberCount: memberCount ?? 0,
           activeMeetupCount: activeMeetupCount ?? 0,
         },
@@ -651,19 +783,87 @@ export const groupService = {
   },
 
   /**
-   * Wrapper del RPC leave_group (014_groups.sql). Si el usuario es admin,
-   * la función lanza una excepción específica que se debe mostrar tal cual
+   * Wrapper del RPC leave_group (014_groups.sql, cambia de firma en
+   * 023_leave_group_meetup_cleanup.sql). Si el usuario es admin, la
+   * función lanza una excepción específica que se debe mostrar tal cual
    * al usuario: es un comportamiento esperado (el admin debe transferir su
    * rol primero — función que llega en 4.5), no un error genérico a ocultar.
    *
+   * Desde 023, si quien sale organizaba alguna juntada activa del grupo y
+   * era su único participante activo, la función SQL la cancela
+   * automáticamente y la retorna en el resultado — misma lógica que ya
+   * tenía expel_group_member (019) para el caso de expulsión, ahora
+   * replicada acá para no dejar asimétrica la salida voluntaria.
+   *
    * @param groupId - UUID del grupo del que se quiere salir
-   * @returns null en data si fue exitoso; mensaje de error en caso contrario
+   * @returns las juntadas canceladas automáticamente, o mensaje de error
    */
-  async leaveGroup(groupId: string): Promise<ServiceResult<null>> {
+  async leaveGroup(
+    groupId: string,
+  ): Promise<ServiceResult<{ cancelledMeetups: { id: string; title: string }[] }>> {
     try {
-      const { error } = await supabase.rpc('leave_group', { p_group_id: groupId });
+      const { data, error } = await supabase.rpc('leave_group', { p_group_id: groupId });
       if (error) throw error;
-      return { data: null, error: null };
+
+      const cancelledMeetups = ((data ?? []) as CancelledMeetupRow[]).map((row) => ({
+        id: row.cancelled_meetup_id,
+        title: row.cancelled_meetup_title,
+      }));
+
+      // Notificar al resto de los miembros activos del grupo (fire-and-forget).
+      // leave_group() usa auth.uid() del lado del servidor y no recibe el
+      // userId como parámetro; se obtiene acá vía supabase.auth.getUser()
+      // para no cambiar la firma de la función ni sus callers.
+      void (async () => {
+        try {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          if (user) {
+            await notifyGroupMemberLeft(groupId, user.id);
+          }
+        } catch {
+          // Error en la notificación: no afecta el resultado de la salida
+        }
+      })();
+
+      // Notificar a los participantes restantes de cada juntada cancelada
+      // automáticamente — mismo patrón fire-and-forget que expelMember:
+      // la salida ya ocurrió del lado del servidor, un fallo acá no la afecta.
+      if (cancelledMeetups.length > 0) {
+        void (async () => {
+          try {
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
+            if (!user) return;
+
+            for (const meetup of cancelledMeetups) {
+              const { data: participants } = await supabase.rpc(
+                'get_meetup_participant_ids',
+                { p_meetup_id: meetup.id, p_excluded_user_id: user.id },
+              );
+              const recipients = (participants ?? []) as { user_id: string }[];
+
+              await Promise.allSettled(
+                recipients.map((p) =>
+                  notificationService.sendNotification({
+                    recipientUserId: p.user_id,
+                    type: NotificationType.Cancelled,
+                    title: 'Juntada cancelada 😔',
+                    body: `${meetup.title} fue cancelada`,
+                    meetupId: meetup.id,
+                  }),
+                ),
+              );
+            }
+          } catch {
+            // Error en las notificaciones: no afecta el resultado de la salida
+          }
+        })();
+      }
+
+      return { data: { cancelledMeetups }, error: null };
     } catch (err) {
       // No usar `instanceof Error`: el PostgrestError que lanza el RPC no
       // siempre pasa ese chequeo en Hermes/React Native, pese a tener la
@@ -712,6 +912,21 @@ export const groupService = {
         p_target_user_id: targetUserId,
       });
       if (error) throw error;
+
+      // Notificar solo al expulsado (fire-and-forget)
+      void (async () => {
+        try {
+          await notificationService.sendNotification({
+            recipientUserId: targetUserId,
+            type: NotificationType.GroupMemberExpelled,
+            title: 'Fuiste removido de un grupo',
+            body: 'Un administrador te expulsó del grupo',
+            groupId,
+          });
+        } catch {
+          // Error en la notificación: no afecta el resultado de la expulsión
+        }
+      })();
 
       const cancelledMeetups = ((data ?? []) as CancelledMeetupRow[]).map((row) => ({
         id: row.cancelled_meetup_id,
@@ -786,6 +1001,22 @@ export const groupService = {
         p_new_admin_user_id: newAdminUserId,
       });
       if (error) throw error;
+
+      // Notificar solo al nuevo admin (fire-and-forget)
+      void (async () => {
+        try {
+          await notificationService.sendNotification({
+            recipientUserId: newAdminUserId,
+            type: NotificationType.GroupAdminTransferred,
+            title: 'Ahora sos admin de un grupo 👑',
+            body: 'Te transfirieron la administración del grupo',
+            groupId,
+          });
+        } catch {
+          // Error en la notificación: no afecta el resultado de la transferencia
+        }
+      })();
+
       return { data: null, error: null };
     } catch (err) {
       const message =

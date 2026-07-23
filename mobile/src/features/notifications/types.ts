@@ -25,6 +25,16 @@ export enum NotificationType {
   Left = 'left',
   /** Recordatorio local 2 horas antes de la juntada */
   Reminder = 'reminder',
+  /** Alguien se unió al grupo — el resto de los miembros activos lo reciben */
+  GroupMemberJoined = 'group_member_joined',
+  /** Fuiste expulsado de un grupo — solo el expulsado lo recibe */
+  GroupMemberExpelled = 'group_member_expelled',
+  /** Te transfirieron la administración de un grupo — solo el nuevo admin lo recibe */
+  GroupAdminTransferred = 'group_admin_transferred',
+  /** Alguien salió del grupo — el resto de los miembros activos lo reciben */
+  GroupMemberLeft = 'group_member_left',
+  /** Te agregaron como participante de una juntada creada desde un grupo */
+  GroupMeetupInvite = 'group_meetup_invite',
 }
 
 /**
@@ -36,6 +46,7 @@ export enum NotificationType {
  * @field title     - Título del mensaje mostrado al usuario
  * @field body      - Cuerpo del mensaje mostrado al usuario
  * @field meetupId  - UUID de la juntada relacionada (opcional)
+ * @field groupId   - UUID del grupo relacionado (opcional)
  * @field read      - true si el usuario ya la vio o la marcó como leída
  * @field createdAt - Timestamp de creación en la base de datos
  */
@@ -46,6 +57,7 @@ export interface Notification {
   title: string;
   body: string;
   meetupId?: string | null;
+  groupId?: string | null;
   read: boolean;
   createdAt: string;
 }
@@ -58,6 +70,7 @@ export interface Notification {
  * @field title           - Título del mensaje
  * @field body            - Cuerpo del mensaje
  * @field meetupId        - UUID de la juntada relacionada (opcional)
+ * @field groupId         - UUID del grupo relacionado (opcional)
  */
 export interface NotificationInput {
   recipientUserId: string;
@@ -65,6 +78,7 @@ export interface NotificationInput {
   title: string;
   body: string;
   meetupId?: string;
+  groupId?: string;
 }
 
 /** Fila cruda de la tabla notifications tal como la devuelve Supabase (snake_case) */
@@ -75,6 +89,7 @@ export interface NotificationRow {
   title: string;
   body: string;
   meetup_id: string | null;
+  group_id: string | null;
   read: boolean;
   created_at: string;
 }

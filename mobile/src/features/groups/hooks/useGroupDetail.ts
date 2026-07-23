@@ -21,6 +21,14 @@ interface OperationResult<T> {
   error: string | null;
 }
 
+/** Resultado de leaveGroup: juntadas del grupo canceladas automáticamente */
+interface LeaveGroupResult {
+  cancelledMeetups: { id: string; title: string }[];
+}
+
+/** Código de error distinguible que devuelve getGroupDetail cuando el usuario ya no es miembro activo */
+const NOT_MEMBER_ERROR = 'NOT_MEMBER';
+
 export const useGroupDetail = (groupId: string) => {
   const queryClient = useQueryClient();
   const { userId: currentUserId } = useCurrentUser();
@@ -52,17 +60,31 @@ export const useGroupDetail = (groupId: string) => {
   });
 
   const leaveMutation = useMutation({
-    mutationFn: async (): Promise<OperationResult<null>> =>
+    mutationFn: async (): Promise<OperationResult<LeaveGroupResult>> =>
       groupService.leaveGroup(groupId),
     onSuccess: async (result) => {
       if (!result.error) {
         await queryClient.invalidateQueries({ queryKey: ['groups', currentUserId] });
+
+        // Si se canceló alguna juntada al salir, refrescar su listado y detalle
+        const cancelledMeetups = result.data?.cancelledMeetups ?? [];
+        if (cancelledMeetups.length > 0) {
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['groupMeetups', groupId] }),
+            queryClient.invalidateQueries({ queryKey: ['meetups', currentUserId] }),
+            ...cancelledMeetups.map((m) =>
+              queryClient.invalidateQueries({ queryKey: ['meetup', m.id] }),
+            ),
+          ]);
+        }
       }
     },
   });
 
   const group = groupQuery.data ?? null;
   const isAdmin = group?.userRole === 'admin';
+  const rawError = groupQuery.error?.message ?? null;
+  const isNotMember = rawError === NOT_MEMBER_ERROR;
 
   /** Recarga el detalle del grupo desde el servidor */
   const reload = useCallback(async () => {
@@ -72,7 +94,10 @@ export const useGroupDetail = (groupId: string) => {
   return {
     group,
     isLoading: groupQuery.isLoading || groupQuery.isFetching,
-    error: groupQuery.error?.message ?? null,
+    // El caso NOT_MEMBER tiene su propia pantalla (isNotMember); no se
+    // expone acá como error genérico para no duplicar el manejo en la UI.
+    error: isNotMember ? null : rawError,
+    isNotMember,
     isAdmin,
     deleteGroup: () => deleteMutation.mutateAsync(),
     isDeleting: deleteMutation.isPending,

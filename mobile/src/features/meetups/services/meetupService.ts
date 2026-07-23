@@ -270,12 +270,37 @@ export const meetupService = {
 
       // Invitar a todo el grupo (best-effort: un fallo acá no invalida la juntada)
       if (groupId) {
-        const { error: inviteError } = await supabase.rpc(
+        const { data: invitedRows, error: inviteError } = await supabase.rpc(
           'invite_group_to_meetup',
           { p_meetup_id: newMeetup.id },
         );
         if (inviteError) {
           console.warn('No se pudo invitar a todo el grupo:', inviteError);
+        } else {
+          // Notificar a cada miembro agregado como participante (fire-and-forget)
+          const invitedUserIds = ((invitedRows ?? []) as { invited_user_id: string }[]).map(
+            (row) => row.invited_user_id,
+          );
+
+          if (invitedUserIds.length > 0) {
+            void (async () => {
+              try {
+                await Promise.allSettled(
+                  invitedUserIds.map((invitedUserId) =>
+                    notificationService.sendNotification({
+                      recipientUserId: invitedUserId,
+                      type: NotificationType.GroupMeetupInvite,
+                      title: 'Nueva juntada de grupo 📅',
+                      body: `Te agregaron a ${formData.title}`,
+                      meetupId: newMeetup.id,
+                    }),
+                  ),
+                );
+              } catch {
+                // Error en las notificaciones: no afecta la creación de la juntada
+              }
+            })();
+          }
         }
       }
 

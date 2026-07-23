@@ -43,6 +43,7 @@ const mapNotificationRow = (row: NotificationRow): Notification => ({
   title: row.title,
   body: row.body,
   meetupId: row.meetup_id,
+  groupId: row.group_id,
   read: row.read,
   createdAt: row.created_at,
 });

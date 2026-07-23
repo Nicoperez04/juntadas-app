@@ -24,12 +24,25 @@ interface ExpelResult {
   cancelledMeetups: { id: string; title: string }[];
 }
 
-export const useGroupMembers = (groupId: string) => {
+interface UseGroupMembersOptions {
+  /**
+   * Permite desactivar la query desde el caller — por ejemplo,
+   * GroupDetailScreen ya sabe (vía useGroupDetail) que el usuario no es
+   * miembro activo del grupo, así que no tiene sentido gastar esta
+   * llamada: RLS la filtraría en silencio y devolvería una lista vacía
+   * de todos modos.
+   */
+  enabled?: boolean;
+}
+
+export const useGroupMembers = (groupId: string, options?: UseGroupMembersOptions) => {
   const queryClient = useQueryClient();
   const { userId: currentUserId } = useCurrentUser();
+  const enabled = options?.enabled ?? true;
 
   const membersQuery = useQuery({
     queryKey: ['groupMembers', groupId],
+    enabled,
     queryFn: async (): Promise<GroupMember[]> => {
       const { data, error } = await groupService.getGroupMembers(groupId);
       if (error) throw new Error(error);
