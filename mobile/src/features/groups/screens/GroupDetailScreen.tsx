@@ -248,7 +248,7 @@ export const GroupDetailScreen = () => {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIconBox}>
-              <Ionicons name="game-controller-outline" size={18} color={theme.colors.textSecondary} />
+              <Ionicons name="calendar" size={18} color={theme.colors.textSecondary} />
             </View>
             <Text style={styles.infoText}>
               {group.activeMeetupCount} juntada{group.activeMeetupCount === 1 ? '' : 's'} activa
