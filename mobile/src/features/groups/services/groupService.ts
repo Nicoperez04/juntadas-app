@@ -122,6 +122,19 @@ interface CancelledMeetupRow {
   cancelled_meetup_title: string;
 }
 
+/**
+ * Fila del retorno de leave_group (025_security_hardening_grupos.sql):
+ * siempre trae al menos una fila con recipient_ids (mismo array repetido
+ * en todas), y cancelled_meetup_id/title en null cuando no se canceló
+ * ninguna juntada — a diferencia de expel_group_member, que no devuelve
+ * fila alguna en ese caso.
+ */
+interface LeaveGroupRow {
+  cancelled_meetup_id: string | null;
+  cancelled_meetup_title: string | null;
+  recipient_ids: string[] | null;
+}
+
 /** Caracteres válidos para generar el código de grupo (mismo charset que meetups) */
 const JOIN_CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
@@ -224,14 +237,15 @@ const generateJoinCode = async (): Promise<string> => {
  * Usa el RPC get_group_member_ids (021_get_group_member_ids.sql, SECURITY
  * DEFINER) en vez de un SELECT directo: la policy group_members_select
  * es un gate de todo o nada sobre si auth.uid() (quien pregunta) sigue
- * siendo miembro activo, no un filtro fila por fila. En notifyGroupMemberLeft
- * eso rompía en silencio — leave_group() ya había dado de baja a quien
- * pregunta antes de este SELECT, así que RLS bloqueaba la lectura completa
- * (0 filas, sin error) y la notificación se enviaba a una lista vacía.
- * Se unifica acá para notifyGroupMemberJoined también, aunque ahí sí
- * funcionaba (quien pregunta todavía es miembro activo) — evita tener
- * dos caminos distintos resolviendo lo mismo y que un futuro cambio de
- * RLS rompa uno de los dos otra vez sin avisar.
+ * siendo miembro activo, no un filtro fila por fila.
+ *
+ * Usada solo por notifyGroupMemberJoined: ahí quien pregunta todavía es
+ * miembro activo, así que el chequeo de 025 (left_at IS NULL en la
+ * autorización) no la afecta. notifyGroupMemberLeft ya NO la usa desde
+ * 025_security_hardening_grupos.sql — auth.uid() deja de calificar como
+ * miembro apenas sale, así que leave_group() calcula y devuelve los
+ * destinatarios directamente en la misma transacción, antes de dar de
+ * baja la membresía.
  *
  * @param groupId - UUID del grupo
  * @param excludedUserId - UUID a excluir de la lista
@@ -299,18 +313,28 @@ export const notifyGroupMemberJoined = async (
  * Notifica a los demás miembros activos del grupo que alguien lo abandonó
  * (fire-and-forget: un fallo acá no afecta el resultado de leaveGroup).
  *
+ * Recibe los destinatarios ya resueltos en vez de calcularlos acá: desde
+ * 025_security_hardening_grupos.sql, get_group_member_ids exige left_at
+ * IS NULL en el chequeo de autorización, y auth.uid() ya no califica como
+ * miembro activo apenas leave_group() lo da de baja. leave_group() ahora
+ * calcula y devuelve recipient_ids en la misma transacción, mientras
+ * auth.uid() todavía era miembro.
+ *
  * @param groupId - UUID del grupo
  * @param leftUserId - UUID de quien acaba de salir
+ * @param recipientIds - UUIDs de los demás miembros activos, calculados por leave_group()
  */
 const notifyGroupMemberLeft = async (
   groupId: string,
   leftUserId: string,
+  recipientIds: string[],
 ): Promise<void> => {
   try {
-    const [{ data: profile }, recipientIds] = await Promise.all([
-      supabase.from('profiles').select('username').eq('id', leftUserId).single(),
-      getOtherActiveMemberIds(groupId, leftUserId),
-    ]);
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', leftUserId)
+      .single();
 
     const username = profile?.username ?? 'Alguien';
 
@@ -332,35 +356,45 @@ const notifyGroupMemberLeft = async (
 
 export const groupService = {
   /**
-   * Crea un nuevo grupo. El trigger trg_assign_group_creator_as_admin
-   * inserta automáticamente al creador como admin en group_members.
+   * Crea un nuevo grupo vía la RPC create_group (SECURITY DEFINER,
+   * 026_create_group_security_definer.sql).
    *
-   * @param userId - UUID del usuario autenticado que crea el grupo
+   * No se hace un INSERT directo desde el cliente porque
+   * .from('groups').insert({...}).select().single() genera un único
+   * INSERT ... RETURNING *, y el RETURNING de una fila bajo RLS se
+   * filtra con la policy de SELECT (groups_select: requiere ya ser
+   * miembro del grupo), no con la de INSERT. Esa condición solo se
+   * cumple cuando existe una fila en group_members para el grupo
+   * recién creado — la crea el trigger trg_assign_group_creator_as_admin
+   * (AFTER INSERT), que corre después de que la proyección del
+   * RETURNING ya fue evaluada dentro de la misma sentencia. Resultado:
+   * el INSERT se comitea igual, pero el cliente recibe un 42501 y
+   * nunca ve la fila. La RPC evita el problema de raíz: al ser
+   * SECURITY DEFINER, ninguna de sus consultas internas (incluida la
+   * que arma el resultado) está sujeta a RLS.
+   *
+   * auth.uid() se resuelve del lado del servidor dentro de la función;
+   * no hace falta pasar userId como parámetro.
+   *
    * @param formData - Datos del formulario de creación
    * @returns El grupo creado o un mensaje de error en español
    */
-  async createGroup(
-    userId: string,
-    formData: CreateGroupFormData,
-  ): Promise<ServiceResult<Group>> {
+  async createGroup(formData: CreateGroupFormData): Promise<ServiceResult<Group>> {
     try {
       const joinCode = await generateJoinCode();
 
-      const { data: newGroup, error } = await supabase
-        .from('groups')
-        .insert({
-          name: formData.name,
-          description: formData.description || null,
-          join_code: joinCode,
-          created_by: userId,
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('create_group', {
+        p_name: formData.name,
+        p_description: formData.description || null,
+        p_join_code: joinCode,
+      });
 
       if (error) throw error;
-      if (!newGroup) throw new Error('No se obtuvo el grupo recién creado');
+      if (!data || data.length === 0) {
+        throw new Error('No se obtuvo el grupo recién creado');
+      }
 
-      return { data: mapGroupRow(newGroup as GroupRow), error: null };
+      return { data: mapGroupRow(data[0] as GroupRow), error: null };
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
       return {
@@ -398,13 +432,13 @@ export const groupService = {
   /**
    * Une a un usuario a un grupo mediante su código de ingreso.
    *
-   * Si el usuario ya tuvo una fila en group_members para este grupo
-   * (salió antes), rejoin_group() la reactiva vía RPC en vez de insertar
-   * una fila nueva — evita duplicados históricos para el mismo usuario+
-   * grupo. No puede reactivarse con un UPDATE directo del cliente porque
-   * no existe una policy de UPDATE genérica sobre la propia fila (ver
-   * 016_rejoin_group.sql). Si rejoin_group() devuelve false (nunca fue
-   * miembro), se sigue con el INSERT normal como 'member'.
+   * Toda la validación y resolución vive en la RPC join_group_by_code
+   * (SECURITY DEFINER, 015_groups_search_by_code.sql): valida que el
+   * código exista, chequea si ya es miembro activo, y decide entre
+   * reactivar una membresía previa (salió y vuelve a entrar) o insertar
+   * una fila nueva como 'member'. El cliente no tiene lógica propia acá
+   * más que invocar la RPC y mapear su resultado — no hace SELECT sobre
+   * groups ni INSERT/UPDATE directo sobre group_members.
    *
    * @param joinCode - Código del grupo
    * @returns UUID del grupo y si fue una reactivación, o mensaje de error específico
@@ -756,7 +790,10 @@ export const groupService = {
 
   /**
    * Wrapper del RPC leave_group (014_groups.sql, cambia de firma en
-   * 023_leave_group_meetup_cleanup.sql). Si el usuario es admin, la
+   * 023_leave_group_meetup_cleanup.sql y de nuevo en
+   * 025_security_hardening_grupos.sql — ahora también devuelve
+   * recipient_ids, calculado server-side antes de dar de baja la
+   * membresía). Si el usuario es admin, la
    * función lanza una excepción específica que se debe mostrar tal cual
    * al usuario: es un comportamiento esperado (el admin debe transferir su
    * rol primero — función que llega en 4.5), no un error genérico a ocultar.
@@ -777,10 +814,21 @@ export const groupService = {
       const { data, error } = await supabase.rpc('leave_group', { p_group_id: groupId });
       if (error) throw error;
 
-      const cancelledMeetups = ((data ?? []) as CancelledMeetupRow[]).map((row) => ({
-        id: row.cancelled_meetup_id,
-        title: row.cancelled_meetup_title,
-      }));
+      const rows = (data ?? []) as LeaveGroupRow[];
+
+      // leave_group() (025) siempre devuelve al menos una fila para poder
+      // viajar recipient_ids; cuando no hubo cancelaciones, esa fila trae
+      // cancelled_meetup_id/title en null — se filtra para no reportar una
+      // juntada "cancelada" fantasma.
+      const cancelledMeetups = rows
+        .filter((row) => row.cancelled_meetup_id !== null)
+        .map((row) => ({
+          id: row.cancelled_meetup_id as string,
+          title: row.cancelled_meetup_title as string,
+        }));
+
+      // recipient_ids es el mismo array en todas las filas — se toma de la primera.
+      const recipientIds = rows[0]?.recipient_ids ?? [];
 
       // Notificar al resto de los miembros activos del grupo (fire-and-forget).
       // leave_group() usa auth.uid() del lado del servidor y no recibe el
@@ -792,7 +840,7 @@ export const groupService = {
             data: { user },
           } = await supabase.auth.getUser();
           if (user) {
-            await notifyGroupMemberLeft(groupId, user.id);
+            await notifyGroupMemberLeft(groupId, user.id, recipientIds);
           }
         } catch {
           // Error en la notificación: no afecta el resultado de la salida

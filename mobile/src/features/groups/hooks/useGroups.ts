@@ -47,12 +47,7 @@ export const useGroups = () => {
   const createGroupMutation = useMutation({
     mutationFn: async (
       formData: CreateGroupFormData,
-    ): Promise<OperationResult<Group>> => {
-      if (!userId) {
-        return { data: null, error: 'No hay usuario autenticado' };
-      }
-      return groupService.createGroup(userId, formData);
-    },
+    ): Promise<OperationResult<Group>> => groupService.createGroup(formData),
     onSuccess: async (result) => {
       if (!result.error) {
         await invalidateGroups();
