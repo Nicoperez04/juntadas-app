@@ -87,5 +87,7 @@ export type MainStackParamList = {
   JoinGroup: undefined;
   GroupDetail: { groupId: string };
   GroupMembers: { groupId: string; groupName: string; joinCode: string };
+  GroupStats: { groupId: string; groupName?: string };
+  GroupResultsHistory: { groupId: string; groupName?: string };
   GroupMeetups: { groupId: string; groupName: string };
 };

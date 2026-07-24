@@ -53,9 +53,10 @@ const formatScoreSummary = (summary: JsonRecord): string => {
 
 interface GameResultCardProps {
   result: GameResult;
+  contextLabel?: string;
 }
 
-export const GameResultCard = ({ result }: GameResultCardProps) => (
+export const GameResultCard = ({ result, contextLabel }: GameResultCardProps) => (
   <View style={styles.resultCard}>
     <View style={styles.resultHeader}>
       <View style={styles.gameChip}>
@@ -65,6 +66,7 @@ export const GameResultCard = ({ result }: GameResultCardProps) => (
     </View>
 
     <Text style={styles.resultWinner}>Ganador: {result.winnerName}</Text>
+    {contextLabel ? <Text style={styles.resultContext}>{contextLabel}</Text> : null}
     <Text style={styles.resultSummary}>
       {formatScoreSummary(result.scoreSummary)}
     </Text>
@@ -108,6 +110,10 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.textPrimary,
+  },
+  resultContext: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textSecondary,
   },
   resultSummary: {
     fontSize: theme.typography.sizes.sm,

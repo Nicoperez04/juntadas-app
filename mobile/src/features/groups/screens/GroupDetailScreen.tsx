@@ -303,6 +303,25 @@ export const GroupDetailScreen = () => {
               Juntadas
             </Text>
           </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.sectionCard,
+              styles.sectionCardStats,
+              pressed && styles.sectionCardPressed,
+            ]}
+            onPress={() =>
+              navigation.navigate(Routes.GroupStats, {
+                groupId,
+                groupName: group.name,
+              })
+            }
+          >
+            <Ionicons name="stats-chart" size={22} color={theme.colors.warning} />
+            <Text style={[styles.sectionCardText, { color: theme.colors.warning }]}>
+              Estadisticas
+            </Text>
+          </Pressable>
         </View>
 
         {/* Crear una juntada para este grupo — invita a todos los miembros activos */}
@@ -707,6 +726,10 @@ const styles = StyleSheet.create({
   sectionCardMeetups: {
     backgroundColor: theme.colors.primaryLight,
     borderColor: '#EDE9FE',
+  },
+  sectionCardStats: {
+    backgroundColor: theme.colors.warningLight,
+    borderColor: '#FEF3C7',
   },
   sectionCardPressed: {
     opacity: 0.85,

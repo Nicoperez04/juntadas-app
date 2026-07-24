@@ -2,10 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase/client';
 import type {
   CreateGameResultInput,
+  GameStats,
   GameResult,
   GameResultParticipant,
   GameType,
   GameTypeDistributionItem,
+  GroupGameResult,
+  GroupGameStats,
   JsonRecord,
   MeetupGameStats,
   WinnerRankingItem,
@@ -29,7 +32,17 @@ interface GameResultRow {
   created_at: string;
 }
 
+interface GroupGameResultRow extends GameResultRow {
+  meetup_title: string;
+}
+
+interface MeetupGroupContextRow {
+  title: string;
+  group_id: string | null;
+}
+
 const LOCAL_RESULTS_KEY_PREFIX = '@juntadas:game_results:';
+const LOCAL_GROUP_RESULTS_KEY_PREFIX = '@juntadas:group_game_results:';
 
 const isMigrationMissingError = (error: unknown): boolean => {
   if (typeof error !== 'object' || error === null) {
@@ -43,6 +56,7 @@ const isMigrationMissingError = (error: unknown): boolean => {
   return (
     code === '42P01' ||
     message.includes('game_results') ||
+    message.includes('get_group_game_results') ||
     message.includes('schema cache')
   );
 };
@@ -78,6 +92,9 @@ const getErrorMessage = (error: unknown): string => {
 const getLocalResultsKey = (meetupId: string): string =>
   `${LOCAL_RESULTS_KEY_PREFIX}${meetupId}`;
 
+const getLocalGroupResultsKey = (groupId: string): string =>
+  `${LOCAL_GROUP_RESULTS_KEY_PREFIX}${groupId}`;
+
 const getLocalResults = async (meetupId: string): Promise<GameResult[]> => {
   const raw = await AsyncStorage.getItem(getLocalResultsKey(meetupId));
   if (!raw) {
@@ -104,11 +121,55 @@ const getLocalResults = async (meetupId: string): Promise<GameResult[]> => {
   });
 };
 
+const getLocalGroupResults = async (
+  groupId: string,
+): Promise<GroupGameResult[]> => {
+  const raw = await AsyncStorage.getItem(getLocalGroupResultsKey(groupId));
+  if (!raw) {
+    return [];
+  }
+
+  const parsed: unknown = JSON.parse(raw);
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed.filter((item): item is GroupGameResult => {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+      return false;
+    }
+    const record = item as Record<string, unknown>;
+    return (
+      typeof record.id === 'string' &&
+      typeof record.meetupId === 'string' &&
+      typeof record.meetupTitle === 'string' &&
+      typeof record.gameType === 'string' &&
+      typeof record.winnerName === 'string' &&
+      typeof record.createdAt === 'string'
+    );
+  });
+};
+
 const saveLocalResult = async (result: GameResult): Promise<void> => {
   const currentResults = await getLocalResults(result.meetupId);
   const nextResults = [result, ...currentResults];
   await AsyncStorage.setItem(
     getLocalResultsKey(result.meetupId),
+    JSON.stringify(nextResults),
+  );
+};
+
+const saveLocalGroupResult = async (
+  groupId: string,
+  result: GroupGameResult,
+): Promise<void> => {
+  const currentResults = await getLocalGroupResults(groupId);
+  const nextResults = [
+    result,
+    ...currentResults.filter((current) => current.id !== result.id),
+  ];
+  await AsyncStorage.setItem(
+    getLocalGroupResultsKey(groupId),
     JSON.stringify(nextResults),
   );
 };
@@ -131,6 +192,48 @@ const createLocalResult = (
   },
   createdAt: new Date().toISOString(),
 });
+
+const getMeetupGroupContext = async (
+  meetupId: string,
+): Promise<{ groupId: string; meetupTitle: string } | null> => {
+  const { data, error } = await supabase
+    .from('meetups')
+    .select('title, group_id')
+    .eq('id', meetupId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  const row = data as MeetupGroupContextRow;
+  if (!row.group_id) {
+    return null;
+  }
+
+  return {
+    groupId: row.group_id,
+    meetupTitle: row.title,
+  };
+};
+
+const mirrorResultToLocalGroupStats = async (
+  result: GameResult,
+): Promise<void> => {
+  try {
+    const groupContext = await getMeetupGroupContext(result.meetupId);
+    if (!groupContext) {
+      return;
+    }
+
+    await saveLocalGroupResult(groupContext.groupId, {
+      ...result,
+      meetupTitle: groupContext.meetupTitle,
+    });
+  } catch {
+    // El fallback local no debe romper el guardado real del resultado.
+  }
+};
 
 const isGameType = (value: string): value is GameType =>
   ['truco', 'generala', 'league', 'tournament', 'scorer', 'impostor'].includes(
@@ -173,10 +276,15 @@ const mapGameResultRow = (row: GameResultRow): GameResult => ({
   createdAt: row.created_at,
 });
 
+const mapGroupGameResultRow = (row: GroupGameResultRow): GroupGameResult => ({
+  ...mapGameResultRow(row),
+  meetupTitle: row.meetup_title,
+});
+
 const normalizeWinnerName = (value: string): string =>
   value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('es-AR');
 
-const buildStats = (results: GameResult[]): MeetupGameStats => {
+const buildStats = <T extends GameResult>(results: T[]): GameStats<T> => {
   const winnerStats = new Map<
     string,
     { displayName: string; wins: number; gameTypes: Set<GameType> }
@@ -253,14 +361,16 @@ export const gameResultService = {
         .single();
 
       if (error) throw error;
-      return {
-        data: mapGameResultRow(data as unknown as GameResultRow),
-        error: null,
-      };
+      const result = mapGameResultRow(data as unknown as GameResultRow);
+      if (__DEV__) {
+        await mirrorResultToLocalGroupStats(result);
+      }
+      return { data: result, error: null };
     } catch (error) {
       if (__DEV__ && isMigrationMissingError(error)) {
         const localResult = createLocalResult(userId, input);
         await saveLocalResult(localResult);
+        await mirrorResultToLocalGroupStats(localResult);
         return { data: localResult, error: null };
       }
 
@@ -300,6 +410,52 @@ export const gameResultService = {
       return {
         data: null,
         error: error ?? 'No se pudieron calcular las estadisticas',
+      };
+    }
+
+    return { data: buildStats(data), error: null };
+  },
+
+  async getResultsByGroup(
+    groupId: string,
+  ): Promise<ServiceResult<GroupGameResult[]>> {
+    try {
+      const { data, error } = await supabase.rpc('get_group_game_results', {
+        p_group_id: groupId,
+      });
+
+      if (error) throw error;
+
+      const rows = (data ?? []) as unknown as GroupGameResultRow[];
+      return { data: rows.map(mapGroupGameResultRow), error: null };
+    } catch (error) {
+      if (__DEV__ && isMigrationMissingError(error)) {
+        return { data: await getLocalGroupResults(groupId), error: null };
+      }
+
+      if (isMigrationMissingError(error)) {
+        return {
+          data: null,
+          error: 'Falta aplicar la migracion de estadisticas de grupos en Supabase',
+        };
+      }
+
+      return {
+        data: null,
+        error: 'No se pudieron obtener los resultados del grupo',
+      };
+    }
+  },
+
+  async getStatsByGroup(
+    groupId: string,
+  ): Promise<ServiceResult<GroupGameStats>> {
+    const { data, error } = await gameResultService.getResultsByGroup(groupId);
+
+    if (error || !data) {
+      return {
+        data: null,
+        error: error ?? 'No se pudieron calcular las estadisticas del grupo',
       };
     }
 

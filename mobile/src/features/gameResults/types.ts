@@ -29,6 +29,10 @@ export interface GameResult {
   createdAt: string;
 }
 
+export interface GroupGameResult extends GameResult {
+  meetupTitle: string;
+}
+
 export interface CreateGameResultInput {
   meetupId: string;
   gameType: GameType;
@@ -55,11 +59,15 @@ export interface FrequentWinner {
   wins: number;
 }
 
-export interface MeetupGameStats {
+export interface GameStats<T extends GameResult = GameResult> {
   totalResults: number;
   distinctGameTypes: number;
   mostFrequentWinner: FrequentWinner | null;
   winnerRanking: WinnerRankingItem[];
   gameTypeDistribution: GameTypeDistributionItem[];
-  results: GameResult[];
+  results: T[];
 }
+
+export type MeetupGameStats = GameStats<GameResult>;
+
+export type GroupGameStats = GameStats<GroupGameResult>;
