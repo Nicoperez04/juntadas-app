@@ -33,6 +33,8 @@ export type MainStackParamList = {
   CreateMeetup: { groupId?: string; groupName?: string } | undefined;
   JoinMeetup: undefined;
   MeetupDetail: { meetupId: string };
+  MeetupStats: { meetupId: string; meetupTitle?: string; isActive?: boolean };
+  MeetupResultsHistory: { meetupId: string; meetupTitle?: string };
   EditMeetup: { meetupId: string };
   ParticipantList: { meetupId: string };
   Games: { meetupId?: string };
@@ -85,5 +87,7 @@ export type MainStackParamList = {
   JoinGroup: undefined;
   GroupDetail: { groupId: string };
   GroupMembers: { groupId: string; groupName: string; joinCode: string };
+  GroupStats: { groupId: string; groupName?: string };
+  GroupResultsHistory: { groupId: string; groupName?: string };
   GroupMeetups: { groupId: string; groupName: string };
 };

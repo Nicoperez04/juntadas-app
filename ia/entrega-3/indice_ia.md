@@ -60,4 +60,10 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **04** · Generador de Ligas (League): Fixture y Tabla de Posiciones → [`prompts/bloque-5/04_generador_ligas.md`](prompts/bloque-5/04_generador_ligas.md)
 - **05** · Generador de Torneos (Tournament): Eliminación Directa → [`prompts/bloque-5/05_generador_torneos.md`](prompts/bloque-5/05_generador_torneos.md) · [`conversaciones/bloque-5/cursor-bloque-5-completo.md`](conversaciones/bloque-5/cursor-bloque-5-completo.md)
 
+## ChatGPT / Codex
 
+### Bloque 6 - Estadisticas (23/07/2026)
+
+- **Fase 1 cerrada** - Estadisticas de juntadas independientes: registro de resultados, pantalla de resumen, historial completo, correcciones de testing y cierre documental -> [`conversaciones/bloque-6/codex-bloque-6-fase-1-estadisticas-juntadas.md`](conversaciones/bloque-6/codex-bloque-6-fase-1-estadisticas-juntadas.md)
+- **Soporte granular 01-13** - Prompts, analisis y correcciones de la fase 1 -> [`prompts/bloque-6/`](prompts/bloque-6/)
+- **Fase 2 cerrada** - Estadisticas por grupo: RPC `get_group_game_results`, pantallas `GroupStats`/`GroupResultsHistory`, entrada desde Detalle de Grupo, fallback local `__DEV__` para probar sin migracion aplicada y cierre documental -> [`prompts/bloque-6/14_implementacion_estadisticas_grupo.md`](prompts/bloque-6/14_implementacion_estadisticas_grupo.md) · [`conversaciones/bloque-6/codex-bloque-6-fase-2-estadisticas-grupo.md`](conversaciones/bloque-6/codex-bloque-6-fase-2-estadisticas-grupo.md)

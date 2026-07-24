@@ -11,6 +11,8 @@ export const Routes = {
     CreateMeetup: 'CreateMeetup',
     JoinMeetup: 'JoinMeetup',
     MeetupDetail: 'MeetupDetail',
+    MeetupStats: 'MeetupStats',
+    MeetupResultsHistory: 'MeetupResultsHistory',
     EditMeetup: 'EditMeetup',
     ParticipantList: 'ParticipantList',
     Games: 'Games',
@@ -49,6 +51,8 @@ export const Routes = {
     // Bloque 4.3 (grupos: detalle y miembros)
     GroupDetail: 'GroupDetail',
     GroupMembers: 'GroupMembers',
+    GroupStats: 'GroupStats',
+    GroupResultsHistory: 'GroupResultsHistory',
 
     // Bloque 4.4b (grupos: listado de juntadas del grupo)
     GroupMeetups: 'GroupMeetups',

@@ -20,7 +20,9 @@ import type { LeagueMatch } from '../types/league';
 import { useLeagueGame, calculateTable } from '../hooks/useLeagueGame';
 import { AppButton } from '@/shared/components/AppButton';
 import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
+import { useGameResults } from '@/features/gameResults/hooks/useGameResults';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'LeagueGame'>;
 type RouteProps = RouteProp<MainStackParamList, 'LeagueGame'>;
@@ -45,6 +47,9 @@ export const LeagueGameScreen = () => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const { createResult, isCreating } = useGameResults(meetupId);
 
   const rounds = useMemo(() => {
     const list = matches.map((m) => m.round);
@@ -81,13 +86,75 @@ export const LeagueGameScreen = () => {
     setEditingMatch(null);
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     void triggerSelectionHaptic();
-    if (meetupId) {
-      setShowSuccess(true);
-    } else {
+    if (!meetupId) {
       navigation.goBack();
+      return;
     }
+
+    const champion = tableStats[0]?.teamName;
+    if (!champion) {
+      setErrorMessage('No se pudo determinar el campeon');
+      setShowError(true);
+      return;
+    }
+
+    const result = await createResult({
+      meetupId,
+      gameType: 'league',
+      winnerName: champion,
+      participants: tableStats.map((team) => ({
+        name: team.teamName,
+        score: team.points,
+        metadata: {
+          played: team.played,
+          won: team.won,
+          drawn: team.drawn,
+          lost: team.lost,
+          goalDifference: team.goalDifference,
+        },
+      })),
+      scoreSummary: {
+        finalScore: `Campeon: ${champion}`,
+        champion,
+        table: tableStats,
+      },
+      metadata: {
+        matches: matches
+          .filter((match) => !match.isFreeDay)
+          .map((match) => ({
+            round: match.round,
+            homeTeam: match.homeTeam,
+            awayTeam: match.awayTeam,
+            homeScore: match.homeScore,
+            awayScore: match.awayScore,
+          })),
+      },
+    });
+
+    if (result.error) {
+      setErrorMessage(result.error);
+      setShowError(true);
+      return;
+    }
+
+    setShowSuccess(true);
+  };
+
+  const navigateAfterSavedResult = () => {
+    if (!meetupId) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.reset({
+      index: 1,
+      routes: [
+        { name: Routes.MeetupHome },
+        { name: Routes.MeetupDetail, params: { meetupId } },
+      ],
+    });
   };
 
   return (
@@ -229,7 +296,12 @@ export const LeagueGameScreen = () => {
         <View style={styles.winnerBanner}>
           <Text style={styles.winnerTitle}>¡Torneo Finalizado!</Text>
           <Text style={styles.winnerSubtitle}>Campeón: {tableStats[0]?.teamName}</Text>
-          <AppButton label="Finalizar y Salir" onPress={handleFinish} />
+          <AppButton
+            label={meetupId ? 'Guardar resultado y salir' : 'Finalizar y Salir'}
+            onPress={() => void handleFinish()}
+            isLoading={isCreating}
+            disabled={isCreating}
+          />
         </View>
       )}
 
@@ -319,8 +391,13 @@ export const LeagueGameScreen = () => {
         message="Torneo registrado con éxito"
         onHide={() => {
           setShowSuccess(false);
-          navigation.goBack();
+          navigateAfterSavedResult();
         }}
+      />
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </SafeAreaView>
   );

@@ -19,7 +19,9 @@ import { useTrucoGame } from '../hooks/useTrucoGame';
 import { TrucoFosforera } from '../components/TrucoFosforera';
 import { AppButton } from '@/shared/components/AppButton';
 import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
+import { useGameResults } from '@/features/gameResults/hooks/useGameResults';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'TrucoGame'>;
 type RouteProps = RouteProp<MainStackParamList, 'TrucoGame'>;
@@ -51,6 +53,9 @@ export const TrucoGameScreen = () => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const { createResult, isCreating } = useGameResults(meetupId);
 
   // Divide los puntos para renderizarlos de a 5
   const getFosforitosArray = (score: number) => {
@@ -105,13 +110,63 @@ export const TrucoGameScreen = () => {
     );
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     void triggerSelectionHaptic();
-    if (meetupId) {
-      setShowSuccess(true);
-    } else {
+    if (!meetupId) {
       navigation.goBack();
+      return;
     }
+
+    if (!state.winnerName) {
+      setErrorMessage('No se pudo determinar el ganador');
+      setShowError(true);
+      return;
+    }
+
+    const result = await createResult({
+      meetupId,
+      gameType: 'truco',
+      winnerName: state.winnerName,
+      participants: [
+        { name: teamAName, score: state.scoreA },
+        { name: teamBName, score: state.scoreB },
+      ],
+      scoreSummary: {
+        finalScore: `${teamAName} ${state.scoreA} - ${state.scoreB} ${teamBName}`,
+        teamAName,
+        teamBName,
+        scoreA: state.scoreA,
+        scoreB: state.scoreB,
+        targetPoints,
+      },
+      metadata: {
+        targetPoints,
+        mode: targetPoints === 30 ? 'malas_y_buenas' : 'simple',
+      },
+    });
+
+    if (result.error) {
+      setErrorMessage(result.error);
+      setShowError(true);
+      return;
+    }
+
+    setShowSuccess(true);
+  };
+
+  const navigateAfterSavedResult = () => {
+    if (!meetupId) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.reset({
+      index: 1,
+      routes: [
+        { name: Routes.MeetupHome },
+        { name: Routes.MeetupDetail, params: { meetupId } },
+      ],
+    });
   };
 
   return (
@@ -201,7 +256,12 @@ export const TrucoGameScreen = () => {
       {state.isFinished && (
         <View style={styles.winnerBanner}>
           <Text style={styles.winnerTitle}>¡Ganador: {state.winnerName}!</Text>
-          <AppButton label="Finalizar y Salir" onPress={handleFinish} />
+          <AppButton
+            label={meetupId ? 'Guardar resultado y salir' : 'Finalizar y Salir'}
+            onPress={() => void handleFinish()}
+            isLoading={isCreating}
+            disabled={isCreating}
+          />
         </View>
       )}
 
@@ -258,8 +318,13 @@ export const TrucoGameScreen = () => {
         message="Partida registrada con éxito"
         onHide={() => {
           setShowSuccess(false);
-          navigation.goBack();
+          navigateAfterSavedResult();
         }}
+      />
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </SafeAreaView>
   );

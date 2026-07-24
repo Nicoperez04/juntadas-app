@@ -19,7 +19,9 @@ import type { GeneralaCategory } from '../types/generala';
 import { useGeneralaGame, BASE_SCORES, calculateTotalScore } from '../hooks/useGeneralaGame';
 import { AppButton } from '@/shared/components/AppButton';
 import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
+import { useGameResults } from '@/features/gameResults/hooks/useGameResults';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'GeneralaGame'>;
 type RouteProps = RouteProp<MainStackParamList, 'GeneralaGame'>;
@@ -51,6 +53,9 @@ export const GeneralaGameScreen = () => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const { createResult, isCreating } = useGameResults(meetupId);
 
   const handleSelectScore = (value: number | null, isServido: boolean) => {
     if (!selectedCategory) return;
@@ -58,13 +63,70 @@ export const GeneralaGameScreen = () => {
     setSelectedCategory(null);
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     void triggerSelectionHaptic();
-    if (meetupId) {
-      setShowSuccess(true);
-    } else {
+    if (!meetupId) {
       navigation.goBack();
+      return;
     }
+
+    if (!state.winnerName) {
+      setErrorMessage('No se pudo determinar el ganador');
+      setShowError(true);
+      return;
+    }
+
+    const totals = Object.fromEntries(
+      state.players.map((player) => [
+        player.playerName,
+        calculateTotalScore(player),
+      ]),
+    );
+
+    const result = await createResult({
+      meetupId,
+      gameType: 'generala',
+      winnerName: state.winnerName,
+      participants: state.players.map((player) => ({
+        name: player.playerName,
+        score: calculateTotalScore(player),
+      })),
+      scoreSummary: {
+        finalScore: `${state.winnerName} ${totals[state.winnerName] ?? 0} pts`,
+        totals,
+      },
+      metadata: {
+        sheets: state.players.map((player) => ({
+          playerName: player.playerName,
+          total: calculateTotalScore(player),
+          scores: player.scores,
+          isServido: player.isServido,
+        })),
+      },
+    });
+
+    if (result.error) {
+      setErrorMessage(result.error);
+      setShowError(true);
+      return;
+    }
+
+    setShowSuccess(true);
+  };
+
+  const navigateAfterSavedResult = () => {
+    if (!meetupId) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.reset({
+      index: 1,
+      routes: [
+        { name: Routes.MeetupHome },
+        { name: Routes.MeetupDetail, params: { meetupId } },
+      ],
+    });
   };
 
   return (
@@ -160,7 +222,12 @@ export const GeneralaGameScreen = () => {
       {state.isFinished && (
         <View style={styles.winnerBanner}>
           <Text style={styles.winnerTitle}>¡Ganador: {state.winnerName}!</Text>
-          <AppButton label="Finalizar y Salir" onPress={handleFinish} />
+          <AppButton
+            label={meetupId ? 'Guardar resultado y salir' : 'Finalizar y Salir'}
+            onPress={() => void handleFinish()}
+            isLoading={isCreating}
+            disabled={isCreating}
+          />
         </View>
       )}
 
@@ -271,8 +338,13 @@ export const GeneralaGameScreen = () => {
         message="Partida registrada con éxito"
         onHide={() => {
           setShowSuccess(false);
-          navigation.goBack();
+          navigateAfterSavedResult();
         }}
+      />
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </SafeAreaView>
   );

@@ -21,6 +21,10 @@ import { MeetupHomeScreen } from '@/features/meetups/screens/MeetupHomeScreen';
 import { CreateMeetupScreen } from '@/features/meetups/screens/CreateMeetupScreen';
 import { JoinMeetupScreen } from '@/features/meetups/screens/JoinMeetupScreen';
 import { MeetupDetailScreen } from '@/features/meetups/screens/MeetupDetailScreen';
+import { MeetupStatsScreen } from '@/features/gameResults/screens/MeetupStatsScreen';
+import { MeetupResultsHistoryScreen } from '@/features/gameResults/screens/MeetupResultsHistoryScreen';
+import { GroupStatsScreen } from '@/features/gameResults/screens/GroupStatsScreen';
+import { GroupResultsHistoryScreen } from '@/features/gameResults/screens/GroupResultsHistoryScreen';
 import { EditMeetupScreen } from '@/features/meetups/screens/EditMeetupScreen';
 import { MeetupHistoryScreen } from '@/features/meetups/screens/MeetupHistoryScreen';
 import { ParticipantListScreen } from '@/features/participants/screens/ParticipantListScreen';
@@ -100,6 +104,11 @@ export const MainNavigator = ({
       <Stack.Screen name={Routes.CreateMeetup} component={CreateMeetupScreen} />
       <Stack.Screen name={Routes.JoinMeetup} component={JoinMeetupScreen} />
       <Stack.Screen name={Routes.MeetupDetail} component={MeetupDetailScreen} />
+      <Stack.Screen name={Routes.MeetupStats} component={MeetupStatsScreen} />
+      <Stack.Screen
+        name={Routes.MeetupResultsHistory}
+        component={MeetupResultsHistoryScreen}
+      />
 
       {/* Bloque 3 — edición, participantes e historial */}
       <Stack.Screen name={Routes.EditMeetup} component={EditMeetupScreen} />
@@ -152,6 +161,11 @@ export const MainNavigator = ({
       {/* Bloque 4.3 — grupos: detalle y miembros */}
       <Stack.Screen name={Routes.GroupDetail} component={GroupDetailScreen} />
       <Stack.Screen name={Routes.GroupMembers} component={GroupMembersScreen} />
+      <Stack.Screen name={Routes.GroupStats} component={GroupStatsScreen} />
+      <Stack.Screen
+        name={Routes.GroupResultsHistory}
+        component={GroupResultsHistoryScreen}
+      />
 
       {/* Bloque 4.4b — grupos: listado real de juntadas del grupo */}
       <Stack.Screen name={Routes.GroupMeetups} component={GroupMeetupsScreen} />
