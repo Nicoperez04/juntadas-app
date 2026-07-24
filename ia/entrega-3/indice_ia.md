@@ -64,7 +64,6 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 
 ### Bloque 6 - Estadisticas (23/07/2026)
 
-- **01** - Analisis de dependencias: estadisticas de juntadas vs estadisticas de grupos -> [`prompts/bloque-6/01_analisis_dependencias_estadisticas_grupos.md`](prompts/bloque-6/01_analisis_dependencias_estadisticas_grupos.md)
-- **02** - Alcance, flujo IA, Figma y APK: adaptacion ChatGPT/Codex y fuentes de verdad del Bloque 6 -> [`prompts/bloque-6/02_alcance_flujo_figma_apk.md`](prompts/bloque-6/02_alcance_flujo_figma_apk.md)
-- **03** - Referencias visuales y diseno funcional: hub real, cierres de juegos, historial y contrato futuro de grupos -> [`prompts/bloque-6/03_referencias_visuales_diseno_estadisticas.md`](prompts/bloque-6/03_referencias_visuales_diseno_estadisticas.md)
-- **04** - Decisiones preimplementacion: nombre visible, navegacion, persistencia, juegos incluidos y limites -> [`prompts/bloque-6/04_decisiones_preimplementacion_estadisticas.md`](prompts/bloque-6/04_decisiones_preimplementacion_estadisticas.md)
+- **Fase 1 cerrada** - Estadisticas de juntadas independientes: registro de resultados, pantalla de resumen, historial completo, correcciones de testing y cierre documental -> [`conversaciones/bloque-6/codex-bloque-6-fase-1-estadisticas-juntadas.md`](conversaciones/bloque-6/codex-bloque-6-fase-1-estadisticas-juntadas.md)
+- **Soporte granular 01-13** - Prompts, analisis y correcciones de la fase 1 -> [`prompts/bloque-6/`](prompts/bloque-6/)
+- **Proxima fase** - Estadisticas por grupo: pendiente de analisis previo sobre modelo real de grupos, permisos y necesidad de RPC/migracion -> ver seccion final del cierre de fase 1.
