@@ -29,7 +29,12 @@ type NotificationType =
   | 'reminder'
   | 'cancelled'
   | 'finished'
-  | 'left';
+  | 'left'
+  | 'group_member_joined'
+  | 'group_member_expelled'
+  | 'group_admin_transferred'
+  | 'group_member_left'
+  | 'group_meetup_invite';
 
 /** Cuerpo esperado del POST */
 interface NotificationRequestBody {
@@ -38,6 +43,7 @@ interface NotificationRequestBody {
   title: string;
   body: string;
   meetupId?: string;
+  groupId?: string;
 }
 
 /** Cabeceras CORS para permitir llamadas desde la app móvil */
@@ -107,7 +113,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const { recipientUserId, type, title, body: notifBody, meetupId } = body;
+    const { recipientUserId, type, title, body: notifBody, meetupId, groupId } = body;
 
     // Campos obligatorios
     if (!recipientUserId || !type || !title || !notifBody) {
@@ -128,6 +134,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
       'cancelled',
       'finished',
       'left',
+      'group_member_joined',
+      'group_member_expelled',
+      'group_admin_transferred',
+      'group_member_left',
+      'group_meetup_invite',
     ];
     if (!tiposValidos.includes(type)) {
       return new Response(
@@ -153,6 +164,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         title,
         body: notifBody,
         meetup_id: meetupId ?? null,
+        group_id: groupId ?? null,
         read: false,
       });
 
@@ -201,6 +213,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
             data: {
               type,
               meetupId: meetupId ?? null,
+              groupId: groupId ?? null,
             },
           }),
         });

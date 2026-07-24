@@ -45,6 +45,10 @@ export const colors = {
   warning: '#F59E0B',
   /** Fondo suave de advertencia — banners de perfil incompleto */
   warningLight: '#FEF3C7',
+  /** Azul informativo — usado en Figma para diferenciar acciones de "Grupo" de las de "Juntada" (violeta) */
+  info: '#155DFC',
+  /** Fondo suave del azul informativo */
+  infoLight: '#EFF6FF',
 } as const;
 
 /**

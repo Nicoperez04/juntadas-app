@@ -39,7 +39,7 @@ import {
 } from '@/features/reviews/hooks/usePendingReviews';
 import { PendingReviewCard } from '@/features/reviews/components/PendingReviewCard';
 import { MeetupCardSkeleton } from '../components/MeetupCardSkeleton';
-import { isPastMeetup } from '../utils/meetupDateTime';
+import { MeetupCard } from '../components/MeetupCard';
 import type { MeetupWithRole } from '../types';
 import type { MainStackParamList } from '@/navigation/types';
 
@@ -84,148 +84,6 @@ const getInitials = (name: string): string => {
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
-
-/**
- * Formatea una fecha almacenada como string para mostrar al usuario.
- * Soporta tanto el formato ISO (YYYY-MM-DD) como DD/MM/YYYY.
- *
- * @param dateStr - Fecha como string
- * @returns Fecha en formato DD/MM/YYYY
- */
-const formatDate = (dateStr: string): string => {
-  if (dateStr.includes('/')) return dateStr;
-  const parts = dateStr.split('-');
-  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  return dateStr;
-};
-
-/** Props de la card de juntada individual */
-interface MeetupCardProps {
-  meetup: MeetupWithRole;
-  onPress: () => void;
-}
-
-/**
- * Card que muestra el resumen de una juntada en la lista principal.
- * Incluye badge de rol, fecha, ubicación y avatares apilados de participantes.
- *
- * @param meetup - Datos de la juntada con rol del usuario
- * @param onPress - Callback al presionar la card
- */
-const MeetupCard = ({ meetup, onPress }: MeetupCardProps) => {
-  const isOrganizer = meetup.userRole === 'organizer';
-  const visibleAvatars = Math.min(meetup.participantCount, 3);
-  const overflow = meetup.participantCount - 3;
-
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        pressed && styles.cardPressed,
-      ]}
-      onPress={onPress}
-    >
-      {/* Fila superior: thumbnail de portada (si existe) + datos de la juntada */}
-      <View style={styles.cardTopRow}>
-        {meetup.cover_url && (
-          <Image
-            source={{ uri: meetup.cover_url }}
-            style={styles.cardThumbnail}
-            resizeMode="cover"
-            accessibilityRole="image"
-            accessibilityLabel={`Portada de ${meetup.title}`}
-          />
-        )}
-
-        <View style={styles.cardBody}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle} numberOfLines={1}>
-              {meetup.title}
-            </Text>
-            <View
-              style={[
-                styles.roleBadge,
-                isOrganizer ? styles.badgeOrganizer : styles.badgeParticipant,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.roleBadgeText,
-                  isOrganizer
-                    ? styles.badgeTextOrganizer
-                    : styles.badgeTextParticipant,
-                ]}
-              >
-                {isOrganizer ? 'Organizador' : 'Invitado'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.cardInfoRow}>
-            <Ionicons
-              name="calendar-outline"
-              size={13}
-              color={theme.colors.textSecondary}
-            />
-            <View style={styles.cardDateBlock}>
-              <Text style={styles.cardInfoText}>
-                {formatDate(meetup.date)} · {meetup.time}
-              </Text>
-              {meetup.status === 'active' &&
-                isPastMeetup(meetup.date, meetup.time) && (
-                  <Text style={styles.pastMeetupHint}>
-                    Esta juntada ya ocurrió
-                  </Text>
-                )}
-            </View>
-          </View>
-
-          <View style={styles.cardInfoRow}>
-            <Ionicons
-              name="location-outline"
-              size={13}
-              color={theme.colors.textSecondary}
-            />
-            <Text style={styles.cardInfoText} numberOfLines={1}>
-              {meetup.location}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.cardFooter}>
-        {/* Avatares apilados — placeholders con color determinístico */}
-        <View style={styles.avatarStack}>
-          {Array.from({ length: visibleAvatars }).map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.avatarSmall,
-                {
-                  backgroundColor: AVATAR_PALETTE[i % AVATAR_PALETTE.length],
-                  marginLeft: i > 0 ? -8 : 0,
-                },
-              ]}
-            />
-          ))}
-          {overflow > 0 && (
-            <View
-              style={[styles.avatarSmall, styles.avatarOverflow, { marginLeft: -8 }]}
-            >
-              <Text style={styles.avatarOverflowText}>
-                +{overflow}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        <Text style={styles.countText}>
-          {meetup.confirmedCount}/{meetup.participantCount} confirmados
-        </Text>
-      </View>
-    </Pressable>
-  );
 };
 
 /** Definición de cada tab del menú inferior */
@@ -347,7 +205,7 @@ export const MeetupHomeScreen = () => {
   const handleTabPress = useCallback(
     (tabId: string) => {
       if (tabId === 'create') navigation.navigate(Routes.CreateMeetup);
-      if (tabId === 'join') navigation.navigate(Routes.JoinMeetup);
+      if (tabId === 'join') navigation.navigate(Routes.ChooseJoinType);
       if (tabId === 'games') navigation.navigate(Routes.Games, {});
       if (tabId === 'profile') navigation.navigate(Routes.Profile);
     },
@@ -536,6 +394,30 @@ export const MeetupHomeScreen = () => {
             <Text style={styles.quickLabel}>{'Unirse a\njuntada'}</Text>
           </Pressable>
         </View>
+
+        {/* Acceso a grupos — bloque 4.2 */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.groupsCard,
+            pressed && styles.groupsCardPressed,
+          ]}
+          onPress={() => navigation.navigate(Routes.GroupHome)}
+        >
+          <View style={styles.groupsIconBox}>
+            <Ionicons name="people" size={22} color={theme.colors.info} />
+          </View>
+          <View style={styles.groupsTextBlock}>
+            <Text style={styles.groupsTitle}>Tus grupos</Text>
+            <Text style={styles.groupsSubtitle}>
+              Organizá juntadas con la gente de siempre
+            </Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={theme.colors.textSecondary}
+          />
+        </Pressable>
 
         {/* Cards de reseñas pendientes — encima de la lista de juntadas activas */}
         {pendingReviews.length > 0 &&
@@ -776,6 +658,41 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
+  groupsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.md,
+  },
+  groupsCardPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.99 }],
+  },
+  groupsIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.infoLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupsTextBlock: {
+    flex: 1,
+  },
+  groupsTitle: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textPrimary,
+  },
+  groupsSubtitle: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -797,117 +714,6 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.xs,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.primary,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    ...theme.shadows.md,
-  },
-  cardPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.985 }],
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-  },
-  cardThumbnail: {
-    width: 60,
-    height: 60,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.border,
-  },
-  cardBody: {
-    flex: 1,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  cardTitle: {
-    flex: 1,
-    fontSize: theme.typography.sizes.md,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.textPrimary,
-  },
-  roleBadge: {
-    borderRadius: theme.radius.full,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 3,
-  },
-  badgeOrganizer: {
-    backgroundColor: '#FEF3C7',
-  },
-  badgeParticipant: {
-    backgroundColor: theme.colors.primaryLight,
-  },
-  roleBadgeText: {
-    fontSize: theme.typography.sizes.xs,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  badgeTextOrganizer: {
-    color: '#92400E',
-  },
-  badgeTextParticipant: {
-    color: theme.colors.primary,
-  },
-  cardInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.xs,
-  },
-  cardInfoText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textSecondary,
-  },
-  cardDateBlock: {
-    flex: 1,
-  },
-  pastMeetupHint: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  avatarStack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarSmall: {
-    width: 26,
-    height: 26,
-    borderRadius: theme.radius.full,
-    borderWidth: 2,
-    borderColor: theme.colors.surface,
-  },
-  avatarOverflow: {
-    backgroundColor: theme.colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarOverflowText: {
-    fontSize: 9,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.textSecondary,
-  },
-  countText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.typography.weights.medium,
   },
   emptyState: {
     alignItems: 'center',

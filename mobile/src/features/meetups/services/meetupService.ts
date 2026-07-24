@@ -209,13 +209,21 @@ export const meetupService = {
    * se elimina la juntada recién creada para no dejar juntadas sin organizador.
    * El join_code se genera automáticamente verificando unicidad.
    *
+   * Si se pasa `groupId`, además invita a todos los miembros activos del
+   * grupo (vía RPC `invite_group_to_meetup`) con `attendance_status: 'pending'`,
+   * el mismo criterio que unirse manual. Un fallo en esa invitación no
+   * revierte la juntada: a diferencia de la auto-inscripción del
+   * organizador, la juntada ya es válida sin invitados extra.
+   *
    * @param userId - UUID del usuario autenticado que crea la juntada
    * @param formData - Datos del formulario de creación
+   * @param groupId - UUID opcional del grupo a invitar a la juntada
    * @returns La juntada creada o un mensaje de error en español
    */
   async createMeetup(
     userId: string,
     formData: CreateMeetupFormData,
+    groupId?: string,
   ): Promise<ServiceResult<Meetup>> {
     try {
       const joinCode = await generateJoinCode();
@@ -236,6 +244,7 @@ export const meetupService = {
           status: 'active',
           join_code: joinCode,
           created_by: userId,
+          group_id: groupId ?? null,
         })
         .select()
         .single();
@@ -257,6 +266,42 @@ export const meetupService = {
       if (participantError) {
         await supabase.from('meetups').delete().eq('id', newMeetup.id);
         throw participantError;
+      }
+
+      // Invitar a todo el grupo (best-effort: un fallo acá no invalida la juntada)
+      if (groupId) {
+        const { data: invitedRows, error: inviteError } = await supabase.rpc(
+          'invite_group_to_meetup',
+          { p_meetup_id: newMeetup.id },
+        );
+        if (inviteError) {
+          console.warn('No se pudo invitar a todo el grupo:', inviteError);
+        } else {
+          // Notificar a cada miembro agregado como participante (fire-and-forget)
+          const invitedUserIds = ((invitedRows ?? []) as { invited_user_id: string }[]).map(
+            (row) => row.invited_user_id,
+          );
+
+          if (invitedUserIds.length > 0) {
+            void (async () => {
+              try {
+                await Promise.allSettled(
+                  invitedUserIds.map((invitedUserId) =>
+                    notificationService.sendNotification({
+                      recipientUserId: invitedUserId,
+                      type: NotificationType.GroupMeetupInvite,
+                      title: 'Nueva juntada de grupo 📅',
+                      body: `Te agregaron a ${formData.title}`,
+                      meetupId: newMeetup.id,
+                    }),
+                  ),
+                );
+              } catch {
+                // Error en las notificaciones: no afecta la creación de la juntada
+              }
+            })();
+          }
+        }
       }
 
       return { data: mapMeetupRow(newMeetup as MeetupRow), error: null };

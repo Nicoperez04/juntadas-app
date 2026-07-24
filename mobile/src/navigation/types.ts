@@ -30,7 +30,7 @@ export type AuthStackParamList = {
  */
 export type MainStackParamList = {
   MeetupHome: undefined;
-  CreateMeetup: undefined;
+  CreateMeetup: { groupId?: string; groupName?: string } | undefined;
   JoinMeetup: undefined;
   MeetupDetail: { meetupId: string };
   EditMeetup: { meetupId: string };
@@ -79,4 +79,11 @@ export type MainStackParamList = {
   CompleteProfile: undefined;
   Profile: undefined;
   ChangePassword: undefined;
+  ChooseJoinType: undefined;
+  GroupHome: undefined;
+  CreateGroup: undefined;
+  JoinGroup: undefined;
+  GroupDetail: { groupId: string };
+  GroupMembers: { groupId: string; groupName: string; joinCode: string };
+  GroupMeetups: { groupId: string; groupName: string };
 };

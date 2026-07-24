@@ -261,6 +261,23 @@ export const NotificationPanel = ({ visible, onClose, userId }: NotificationPane
 
   const handlePressNotification = useCallback(
     (notification: Notification) => {
+      // Grupo puro (sin juntada asociada) tiene prioridad sobre meetupId:
+      // hoy ningún evento manda ambos a la vez, pero si en el futuro
+      // coexistieran, el deep-link de grupo es el más específico.
+      // Excepción: GroupMemberExpelled no navega — el destinatario ya no
+      // es miembro del grupo, así que GroupDetailScreen quedaría rota
+      // (0 miembros, "Salir del grupo" de un grupo ajeno, etc.).
+      if (notification.groupId && notification.type !== NotificationType.GroupMemberExpelled) {
+        if (!notification.read) {
+          void markAsReadMutation.mutateAsync(notification.id).catch(() => undefined);
+        }
+        onClose();
+        navigation.navigate(Routes.GroupDetail, {
+          groupId: notification.groupId,
+        });
+        return;
+      }
+
       if (notification.meetupId) {
         if (!notification.read) {
           void markAsReadMutation.mutateAsync(notification.id).catch(() => undefined);
