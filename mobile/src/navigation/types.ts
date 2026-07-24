@@ -33,6 +33,8 @@ export type MainStackParamList = {
   CreateMeetup: { groupId?: string; groupName?: string } | undefined;
   JoinMeetup: undefined;
   MeetupDetail: { meetupId: string };
+  MeetupStats: { meetupId: string; meetupTitle?: string; isActive?: boolean };
+  MeetupResultsHistory: { meetupId: string; meetupTitle?: string };
   EditMeetup: { meetupId: string };
   ParticipantList: { meetupId: string };
   Games: { meetupId?: string };

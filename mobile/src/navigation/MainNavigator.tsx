@@ -21,6 +21,8 @@ import { MeetupHomeScreen } from '@/features/meetups/screens/MeetupHomeScreen';
 import { CreateMeetupScreen } from '@/features/meetups/screens/CreateMeetupScreen';
 import { JoinMeetupScreen } from '@/features/meetups/screens/JoinMeetupScreen';
 import { MeetupDetailScreen } from '@/features/meetups/screens/MeetupDetailScreen';
+import { MeetupStatsScreen } from '@/features/gameResults/screens/MeetupStatsScreen';
+import { MeetupResultsHistoryScreen } from '@/features/gameResults/screens/MeetupResultsHistoryScreen';
 import { EditMeetupScreen } from '@/features/meetups/screens/EditMeetupScreen';
 import { MeetupHistoryScreen } from '@/features/meetups/screens/MeetupHistoryScreen';
 import { ParticipantListScreen } from '@/features/participants/screens/ParticipantListScreen';
@@ -100,6 +102,11 @@ export const MainNavigator = ({
       <Stack.Screen name={Routes.CreateMeetup} component={CreateMeetupScreen} />
       <Stack.Screen name={Routes.JoinMeetup} component={JoinMeetupScreen} />
       <Stack.Screen name={Routes.MeetupDetail} component={MeetupDetailScreen} />
+      <Stack.Screen name={Routes.MeetupStats} component={MeetupStatsScreen} />
+      <Stack.Screen
+        name={Routes.MeetupResultsHistory}
+        component={MeetupResultsHistoryScreen}
+      />
 
       {/* Bloque 3 — edición, participantes e historial */}
       <Stack.Screen name={Routes.EditMeetup} component={EditMeetupScreen} />

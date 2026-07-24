@@ -11,6 +11,8 @@ export const Routes = {
     CreateMeetup: 'CreateMeetup',
     JoinMeetup: 'JoinMeetup',
     MeetupDetail: 'MeetupDetail',
+    MeetupStats: 'MeetupStats',
+    MeetupResultsHistory: 'MeetupResultsHistory',
     EditMeetup: 'EditMeetup',
     ParticipantList: 'ParticipantList',
     Games: 'Games',

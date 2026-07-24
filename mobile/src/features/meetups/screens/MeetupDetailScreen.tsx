@@ -417,6 +417,20 @@ export const MeetupDetailScreen = () => {
                 }
               />
             )}
+            {(isActive || isFinished) && (
+              <ActionCard
+                icon="stats-chart"
+                label="Estadisticas"
+                color="#E17100"
+                onPress={() =>
+                  navigation.navigate(Routes.MeetupStats, {
+                    meetupId,
+                    meetupTitle: meetup.title,
+                    isActive,
+                  })
+                }
+              />
+            )}
             <ActionCard
               icon="images"
               label="Recuerdos"
