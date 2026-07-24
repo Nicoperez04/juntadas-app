@@ -9,7 +9,7 @@
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
-import { groupService } from '../services/groupService';
+import { groupService, notifyGroupMemberJoined } from '../services/groupService';
 import type { GroupWithRole, CreateGroupFormData, Group } from '../types';
 
 /** Contrato de retorno de las operaciones expuestas por el hook */
@@ -62,15 +62,16 @@ export const useGroups = () => {
 
   /** Mutación para unirse a un grupo por código — refresca la lista si fue exitosa */
   const joinGroupMutation = useMutation({
-    mutationFn: async (joinCode: string): Promise<OperationResult<Group>> => {
-      if (!userId) {
-        return { data: null, error: 'No hay usuario autenticado' };
-      }
-      return groupService.joinGroupByCode(userId, joinCode);
-    },
+    mutationFn: async (
+      joinCode: string,
+    ): Promise<OperationResult<{ groupId: string; isReactivation: boolean }>> =>
+      groupService.joinGroupByCode(joinCode),
     onSuccess: async (result) => {
       if (!result.error) {
         await invalidateGroups();
+        if (result.data && !result.data.isReactivation && userId) {
+          await notifyGroupMemberJoined(result.data.groupId, userId);
+        }
       }
     },
   });
@@ -91,10 +92,12 @@ export const useGroups = () => {
    * Une al usuario a un grupo mediante su código de ingreso y recarga la lista.
    *
    * @param joinCode - Código de 6 caracteres del grupo
-   * @returns El grupo al que se unió o un mensaje de error
+   * @returns El id del grupo al que se unió (y si fue una reactivación) o un mensaje de error
    */
   const joinGroup = useCallback(
-    (joinCode: string): Promise<OperationResult<Group>> =>
+    (
+      joinCode: string,
+    ): Promise<OperationResult<{ groupId: string; isReactivation: boolean }>> =>
       joinGroupMutation.mutateAsync(joinCode),
     [joinGroupMutation.mutateAsync],
   );

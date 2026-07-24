@@ -267,7 +267,7 @@ const getOtherActiveMemberIds = async (
  * @param groupId - UUID del grupo
  * @param joinedUserId - UUID de quien se acaba de unir
  */
-const notifyGroupMemberJoined = async (
+export const notifyGroupMemberJoined = async (
   groupId: string,
   joinedUserId: string,
 ): Promise<void> => {
@@ -406,62 +406,34 @@ export const groupService = {
    * 016_rejoin_group.sql). Si rejoin_group() devuelve false (nunca fue
    * miembro), se sigue con el INSERT normal como 'member'.
    *
-   * @param userId - UUID del usuario que quiere unirse
    * @param joinCode - Código del grupo
-   * @returns El grupo al que se unió o mensaje de error específico
+   * @returns UUID del grupo y si fue una reactivación, o mensaje de error específico
    */
   async joinGroupByCode(
-    userId: string,
     joinCode: string,
-  ): Promise<ServiceResult<Group>> {
+  ): Promise<ServiceResult<{ groupId: string; isReactivation: boolean }>> {
     try {
-      const { data: group, error: groupError } = await supabase
-        .from('groups')
-        .select('*')
-        .eq('join_code', joinCode)
-        .maybeSingle();
+      // Única forma de unirse: validación en el servidor via RPC
+      const { data, error } = await supabase.rpc('join_group_by_code', {
+        p_join_code: joinCode,
+      });
 
-      if (groupError) throw groupError;
-      if (!group) {
-        return { data: null, error: 'Grupo no encontrado o código inválido' };
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('No se pudo procesar la unión al grupo');
       }
 
-      const { data: existing, error: existingError } = await supabase
-        .from('group_members')
-        .select('id')
-        .eq('group_id', group.id)
-        .eq('user_id', userId)
-        .is('left_at', null)
-        .maybeSingle();
-
-      if (existingError) throw existingError;
-      if (existing) {
-        return { data: null, error: 'Ya sos miembro de este grupo' };
-      }
-
-      const { data: rejoined, error: rejoinError } = await supabase.rpc(
-        'rejoin_group',
-        { p_group_id: group.id },
-      );
-
-      if (rejoinError) throw rejoinError;
-
-      if (!rejoined) {
-        const { error: insertError } = await supabase.from('group_members').insert({
-          group_id: group.id,
-          user_id: userId,
-          role: 'member',
-        });
-
-        if (insertError) throw insertError;
-      }
-
-      // Notificar al resto de los miembros activos (fire-and-forget)
-      void notifyGroupMemberJoined(group.id, userId);
-
-      return { data: mapGroupRow(group as GroupRow), error: null };
-    } catch {
-      return { data: null, error: 'Error al unirse al grupo' };
+      const result = data[0];
+      return {
+        data: {
+          groupId: result.group_id,
+          isReactivation: result.is_reactivation,
+        },
+        error: null,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return { data: null, error: message || 'Error al unirse al grupo' };
     }
   },
 
