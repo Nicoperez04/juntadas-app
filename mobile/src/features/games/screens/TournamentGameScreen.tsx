@@ -19,7 +19,9 @@ import type { TournamentMatch } from '../types/tournament';
 import { useTournamentGame } from '../hooks/useTournamentGame';
 import { AppButton } from '@/shared/components/AppButton';
 import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
+import { useGameResults } from '@/features/gameResults/hooks/useGameResults';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'TournamentGame'>;
 type RouteProps = RouteProp<MainStackParamList, 'TournamentGame'>;
@@ -37,6 +39,9 @@ export const TournamentGameScreen = () => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const { createResult, isCreating } = useGameResults(meetupId);
 
   const activeRound = useMemo(() => {
     return state.rounds.find((r) => r.roundNumber === activeRoundNumber);
@@ -48,13 +53,64 @@ export const TournamentGameScreen = () => {
     setSelectedMatch(null);
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     void triggerSelectionHaptic();
-    if (meetupId) {
-      setShowSuccess(true);
-    } else {
+    if (!meetupId) {
       navigation.goBack();
+      return;
     }
+
+    if (!state.winnerName) {
+      setErrorMessage('No se pudo determinar el campeon');
+      setShowError(true);
+      return;
+    }
+
+    const result = await createResult({
+      meetupId,
+      gameType: 'tournament',
+      winnerName: state.winnerName,
+      participants: players.map((player) => ({ name: player })),
+      scoreSummary: {
+        finalScore: `Campeon: ${state.winnerName}`,
+        champion: state.winnerName,
+      },
+      metadata: {
+        rounds: state.rounds.map((round) => ({
+          roundNumber: round.roundNumber,
+          name: round.name,
+          matches: round.matches.map((match) => ({
+            round: match.round,
+            homePlayer: match.homePlayer,
+            awayPlayer: match.awayPlayer,
+            winner: match.winner,
+          })),
+        })),
+      },
+    });
+
+    if (result.error) {
+      setErrorMessage(result.error);
+      setShowError(true);
+      return;
+    }
+
+    setShowSuccess(true);
+  };
+
+  const navigateAfterSavedResult = () => {
+    if (!meetupId) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.reset({
+      index: 1,
+      routes: [
+        { name: Routes.MeetupHome },
+        { name: Routes.MeetupDetail, params: { meetupId } },
+      ],
+    });
   };
 
   return (
@@ -157,7 +213,12 @@ export const TournamentGameScreen = () => {
         <View style={styles.winnerBanner}>
           <Text style={styles.winnerTitle}>¡CAMPEÓN DEL TORNEO!</Text>
           <Text style={styles.winnerSubtitle}>🏆 {state.winnerName} 🏆</Text>
-          <AppButton label="Finalizar y Salir" onPress={handleFinish} />
+          <AppButton
+            label={meetupId ? 'Guardar resultado y salir' : 'Finalizar y Salir'}
+            onPress={() => void handleFinish()}
+            isLoading={isCreating}
+            disabled={isCreating}
+          />
         </View>
       )}
 
@@ -222,8 +283,13 @@ export const TournamentGameScreen = () => {
         message="Torneo registrado con éxito"
         onHide={() => {
           setShowSuccess(false);
-          navigation.goBack();
+          navigateAfterSavedResult();
         }}
+      />
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </SafeAreaView>
   );
