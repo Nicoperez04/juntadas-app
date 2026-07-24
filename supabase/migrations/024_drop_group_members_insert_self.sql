@@ -1,0 +1,21 @@
+-- ============================================================
+-- 024_drop_group_members_insert_self.sql
+-- Bloque 4 — Fix crítico de seguridad (2/2, review de Santi)
+--
+-- BUG: group_members_insert_self permitía que cualquier usuario
+-- autenticado insertara una fila en group_members con user_id =
+-- auth.uid() y role = 'member', sin validar join_code, siempre que
+-- conociera un group_id (por deep-link, notificación, etc. — el fix
+-- anterior de 015 ya cerró la vía de LISTAR group_id, pero no impedía
+-- usarlo si se conseguía de otra forma).
+--
+-- Confirmado que ningún flujo legítimo depende de esta policy:
+-- createGroup usa un trigger (assign_group_creator_as_admin,
+-- SECURITY DEFINER), y unirse a un grupo usa join_group_by_code
+-- (SECURITY DEFINER). Ambos bypasean RLS por diseño, no por esta
+-- policy. Se elimina sin reemplazo: la única forma de insertarse en
+-- group_members pasa a ser vía funciones SECURITY DEFINER que
+-- validan permisos internamente.
+-- ============================================================
+
+DROP POLICY IF EXISTS "group_members_insert_self" ON group_members;

@@ -57,6 +57,19 @@ import { ChangePasswordScreen } from '@/features/auth/screens/ChangePasswordScre
 // Pantallas implementadas — bloque 2 E2 (reseñas post-juntada)
 import { ReviewFormScreen } from '@/features/reviews/screens/ReviewFormScreen';
 
+// Pantallas implementadas — bloque 4.2 E3 (grupos: crear, unirse, listar)
+import { ChooseJoinTypeScreen } from '@/features/groups/screens/ChooseJoinTypeScreen';
+import { GroupHomeScreen } from '@/features/groups/screens/GroupHomeScreen';
+import { CreateGroupScreen } from '@/features/groups/screens/CreateGroupScreen';
+import { JoinGroupScreen } from '@/features/groups/screens/JoinGroupScreen';
+
+// Pantallas implementadas — bloque 4.3 E3 (grupos: detalle y miembros)
+import { GroupDetailScreen } from '@/features/groups/screens/GroupDetailScreen';
+import { GroupMembersScreen } from '@/features/groups/screens/GroupMembersScreen';
+
+// Pantallas implementadas — bloque 4.4b E3 (grupos: listado de juntadas)
+import { GroupMeetupsScreen } from '@/features/groups/screens/GroupMeetupsScreen';
+
 // El genérico habilita el chequeo de nombres de ruta y parámetros en compilación
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -129,6 +142,19 @@ export const MainNavigator = ({
 
       {/* Bloque 1 — completar perfil post-registro */}
       <Stack.Screen name={Routes.CompleteProfile} component={CompleteProfileScreen} />
+
+      {/* Bloque 4.2 — grupos: elegir tipo de unión, crear, unirse, listar */}
+      <Stack.Screen name={Routes.ChooseJoinType} component={ChooseJoinTypeScreen} />
+      <Stack.Screen name={Routes.GroupHome} component={GroupHomeScreen} />
+      <Stack.Screen name={Routes.CreateGroup} component={CreateGroupScreen} />
+      <Stack.Screen name={Routes.JoinGroup} component={JoinGroupScreen} />
+
+      {/* Bloque 4.3 — grupos: detalle y miembros */}
+      <Stack.Screen name={Routes.GroupDetail} component={GroupDetailScreen} />
+      <Stack.Screen name={Routes.GroupMembers} component={GroupMembersScreen} />
+
+      {/* Bloque 4.4b — grupos: listado real de juntadas del grupo */}
+      <Stack.Screen name={Routes.GroupMeetups} component={GroupMeetupsScreen} />
     </Stack.Navigator>
   );
 };
