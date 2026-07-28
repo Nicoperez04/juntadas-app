@@ -300,7 +300,7 @@ const formatTimeForForm = (time: string): string => {
 export const EditMeetupScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
-  const { meetupId } = route.params;
+  const { meetupId } = route.params ?? {};
 
   const { getMeetupById, editMeetup } = useMeetups();
   const uploadCoverMutation = useUploadMeetupCover();

@@ -41,6 +41,7 @@ import {
   useDeleteMeetupForAll,
 } from '../hooks/useMeetups';
 import { MeetupDetailHeader } from '../components/MeetupDetailHeader';
+import { MeetupDetailSkeleton } from '../components/MeetupDetailSkeleton';
 import { MeetupParticipantsSummary } from '../components/MeetupParticipantsSummary';
 import { MeetupOrganizerActions } from '../components/MeetupOrganizerActions';
 import { MeetupShareButton } from '../components/MeetupShareButton';
@@ -76,7 +77,14 @@ const ActionCard = ({ icon, label, color, onPress }: ActionCardProps) => (
     <View style={[styles.actionIconBox, { backgroundColor: `${color}20` }]}>
       <Ionicons name={icon} size={28} color={color} />
     </View>
-    <Text style={[styles.actionLabel, { color }]}>{label}</Text>
+    <Text
+      style={[styles.actionLabel, { color }]}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.75}
+    >
+      {label}
+    </Text>
   </Pressable>
 );
 
@@ -84,7 +92,7 @@ export const MeetupDetailScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
   const queryClient = useQueryClient();
-  const { meetupId } = route.params;
+  const { meetupId } = route.params ?? {};
 
   const {
     meetup,
@@ -192,12 +200,7 @@ export const MeetupDetailScreen = () => {
   }, [refreshAll]);
 
   if (isLoading || (isLoadingParticipants && participants.length === 0)) {
-    return (
-      <SafeAreaView style={styles.loadingContainer} edges={['top', 'bottom']}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Cargando juntada...</Text>
-      </SafeAreaView>
-    );
+    return <MeetupDetailSkeleton />;
   }
 
   if (error || !meetup) {
@@ -998,7 +1001,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.sm,
     alignItems: 'center',
     gap: theme.spacing.sm,
     ...theme.shadows.sm,

@@ -138,7 +138,7 @@ const PhotoSlide = ({ memory, onDismiss }: PhotoSlideProps) => {
 export const MemoryViewerScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
-  const { memories, initialIndex, meetupId, isOrganizer } = route.params;
+  const { memories = [], initialIndex = 0, meetupId, isOrganizer } = route.params ?? {};
 
   // Usuario autenticado resuelto desde la caché compartida de sesión
   const { userId: currentUserId } = useCurrentUser();

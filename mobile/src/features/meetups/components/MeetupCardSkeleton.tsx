@@ -31,7 +31,7 @@ interface ShimmerPlaceholderProps {
  *
  * @param style - Dimensiones y forma del bloque (línea, círculo, thumbnail, etc.)
  */
-const ShimmerPlaceholder = ({ style }: ShimmerPlaceholderProps) => {
+export const ShimmerPlaceholder = ({ style }: ShimmerPlaceholderProps) => {
   const { width: screenWidth } = useWindowDimensions();
   const shimmerProgress = useRef(new Animated.Value(0)).current;
 
