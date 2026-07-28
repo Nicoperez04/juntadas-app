@@ -25,6 +25,11 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": ["NOTIFICATIONS", "VIBRATE", "RECEIVE_BOOT_COMPLETED"],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAO6cFGOFWi7DUFPxaDboQFPJlmmrzaYIA"
+        }
+      },
       "intentFilters": [
         {
           "action": "VIEW",
@@ -52,6 +57,12 @@
           "icon": "./assets/icon.png",
           "color": "#7C3AED",
           "sounds": []
+        }
+      ],
+      [
+        "react-native-maps",
+        {
+          "androidApiKey": "AIzaSyAO6cFGOFWi7DUFPxaDboQFPJlmmrzaYIA"
         }
       ]
     ],
