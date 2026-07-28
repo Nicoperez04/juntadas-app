@@ -92,7 +92,7 @@ const formatCreatedDate = (isoDate: string): string => {
 export const GroupDetailScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
-  const { groupId } = route.params;
+  const { groupId } = route.params ?? {};
 
   const {
     group,

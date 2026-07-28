@@ -148,7 +148,7 @@ const MemberRow = ({ member, canManage, onOpenMenu }: MemberRowProps) => {
 export const GroupMembersScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
-  const { groupId } = route.params;
+  const { groupId } = route.params ?? {};
   const { userId: currentUserId } = useCurrentUser();
 
   const {

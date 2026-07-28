@@ -264,7 +264,7 @@ const HistoryStatusBadge = ({ status }: { status: HistoryStatus }) => {
 export const GroupMeetupsScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
-  const { groupId, groupName } = route.params;
+  const { groupId, groupName } = route.params ?? {};
 
   const { meetups, isLoading, error, refresh } = useGroupMeetups(groupId);
   const [isRefreshing, setIsRefreshing] = useState(false);
