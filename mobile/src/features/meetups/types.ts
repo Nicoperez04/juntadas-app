@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Tipos del módulo de juntadas.
  *
  * Define las entidades, roles y estados que circulan entre pantallas,
@@ -44,6 +44,10 @@ export interface Meetup {
   cover_url?: string | null;
   /** true si el organizador habilitó reseñas al finalizar; no se puede deshabilitar */
   reviews_enabled?: boolean;
+  /** Latitud GPS de la ubicación; null si no fue definida por el organizador */
+  latitude?: number | null;
+  /** Longitud GPS de la ubicación; null si no fue definida por el organizador */
+  longitude?: number | null;
 }
 
 /**
