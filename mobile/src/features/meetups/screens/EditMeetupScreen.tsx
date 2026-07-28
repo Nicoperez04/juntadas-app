@@ -40,6 +40,7 @@ import {
 } from '../hooks/useMeetups';
 import { createMeetupSchema } from '../schemas/meetupSchemas';
 import { formatDateForDisplay } from '../services/meetupService';
+import { LocationPicker } from '../components/LocationPicker';
 import type { CreateMeetupFormData } from '../types';
 import type { MainStackParamList } from '@/navigation/types';
 
@@ -342,6 +343,8 @@ export const EditMeetupScreen = () => {
       time: '',
       location: '',
       estimatedCost: '',
+      latitude: null,
+      longitude: null,
     },
   });
 
@@ -377,6 +380,9 @@ export const EditMeetupScreen = () => {
       location: data.location,
       estimatedCost:
         data.estimatedCost !== null ? String(data.estimatedCost) : '',
+      // Pre-cargar coordenadas GPS si la juntada ya las tiene guardadas
+      latitude: data.latitude ?? null,
+      longitude: data.longitude ?? null,
     });
 
     setSelectedDate(parseDateString(displayDate));
@@ -693,6 +699,31 @@ export const EditMeetupScreen = () => {
                 onBlur={onBlur}
                 error={errors.location?.message}
                 leftIcon="location-outline"
+              />
+            )}
+          />
+
+          {/* Selector de coordenadas GPS en mapa (opcional) — RF-40 */}
+          <Controller
+            control={control}
+            name="latitude"
+            render={({ field: { value: lat } }) => (
+              <Controller
+                control={control}
+                name="longitude"
+                render={({ field: { value: lng } }) => (
+                  <LocationPicker
+                    latitudActual={lat}
+                    longitudActual={lng}
+                    locationText={watch('location')}
+                    onChangeLatitude={(val) =>
+                      setValue('latitude', val, { shouldValidate: true })
+                    }
+                    onChangeLongitude={(val) =>
+                      setValue('longitude', val, { shouldValidate: true })
+                    }
+                  />
+                )}
               />
             )}
           />

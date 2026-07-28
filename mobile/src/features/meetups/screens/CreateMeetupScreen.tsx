@@ -37,6 +37,7 @@ import { AppTabBar } from '@/shared/components/AppTabBar';
 import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { useMeetups, useUploadMeetupCover } from '../hooks/useMeetups';
 import { createMeetupSchema } from '../schemas/meetupSchemas';
+import { LocationPicker } from '../components/LocationPicker';
 import type { CreateMeetupFormData } from '../types';
 import type { MainStackParamList } from '@/navigation/types';
 
@@ -278,6 +279,8 @@ export const CreateMeetupScreen = () => {
       time: '',
       location: '',
       estimatedCost: '',
+      latitude: null,
+      longitude: null,
     },
   });
 
@@ -522,7 +525,7 @@ export const CreateMeetupScreen = () => {
             </View>
           </View>
 
-          {/* Campo: ubicación */}
+          {/* Campo: ubicación (texto libre obligatorio) */}
           <Controller
             control={control}
             name="location"
@@ -535,6 +538,31 @@ export const CreateMeetupScreen = () => {
                 onBlur={onBlur}
                 error={errors.location?.message}
                 leftIcon="location-outline"
+              />
+            )}
+          />
+
+          {/* Selector de coordenadas GPS en mapa (opcional) — RF-40 */}
+          <Controller
+            control={control}
+            name="latitude"
+            render={({ field: { value: lat } }) => (
+              <Controller
+                control={control}
+                name="longitude"
+                render={({ field: { value: lng } }) => (
+                  <LocationPicker
+                    latitudActual={lat}
+                    longitudActual={lng}
+                    locationText={watch('location')}
+                    onChangeLatitude={(val) =>
+                      setValue('latitude', val, { shouldValidate: true })
+                    }
+                    onChangeLongitude={(val) =>
+                      setValue('longitude', val, { shouldValidate: true })
+                    }
+                  />
+                )}
               />
             )}
           />

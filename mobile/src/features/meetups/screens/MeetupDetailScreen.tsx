@@ -44,6 +44,7 @@ import { MeetupDetailHeader } from '../components/MeetupDetailHeader';
 import { MeetupParticipantsSummary } from '../components/MeetupParticipantsSummary';
 import { MeetupOrganizerActions } from '../components/MeetupOrganizerActions';
 import { MeetupShareButton } from '../components/MeetupShareButton';
+import { LocationCard } from '../components/LocationCard';
 import { ReviewsSection } from '@/features/reviews/components/ReviewsSection';
 import type { MeetupParticipant, AttendanceStatus } from '../types';
 import type { MainStackParamList } from '@/navigation/types';
@@ -398,6 +399,13 @@ export const MeetupDetailScreen = () => {
           hasAbandoned={hasAbandoned}
           participantCount={participants.length}
           confirmedCount={confirmedCount}
+        />
+
+        {/* RF-40: Mapa interactivo de la ubicación exacta de la juntada */}
+        <LocationCard
+          locationText={meetup.location}
+          latitude={meetup.latitude}
+          longitude={meetup.longitude}
         />
 
         {isActive && isPastMeetup(meetup.date, meetup.time) && (
