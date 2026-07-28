@@ -67,3 +67,12 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **Fase 1 cerrada** - Estadisticas de juntadas independientes: registro de resultados, pantalla de resumen, historial completo, correcciones de testing y cierre documental -> [`conversaciones/bloque-6/codex-bloque-6-fase-1-estadisticas-juntadas.md`](conversaciones/bloque-6/codex-bloque-6-fase-1-estadisticas-juntadas.md)
 - **Soporte granular 01-13** - Prompts, analisis y correcciones de la fase 1 -> [`prompts/bloque-6/`](prompts/bloque-6/)
 - **Fase 2 cerrada** - Estadisticas por grupo: RPC `get_group_game_results`, pantallas `GroupStats`/`GroupResultsHistory`, entrada desde Detalle de Grupo, fallback local `__DEV__` para probar sin migracion aplicada y cierre documental -> [`prompts/bloque-6/14_implementacion_estadisticas_grupo.md`](prompts/bloque-6/14_implementacion_estadisticas_grupo.md) · [`conversaciones/bloque-6/codex-bloque-6-fase-2-estadisticas-grupo.md`](conversaciones/bloque-6/codex-bloque-6-fase-2-estadisticas-grupo.md)
+
+## Antigravity
+
+### Bloque 7 — Testing (28/07/2026)
+
+- **01** · Configuración de testing y mock de Supabase client en authService → [`prompts/bloque-7/01_setup_tests_auth_service.md`](prompts/bloque-7/01_setup_tests_auth_service.md)
+- **02** · Tests unitarios para meetupService → [`prompts/bloque-7/02_tests_meetup_service.md`](prompts/bloque-7/02_tests_meetup_service.md)
+- **03** · Revisión de casos borde y robustecimiento de navegación (UI) → [`prompts/bloque-7/03_revision_casos_borde_ui.md`](prompts/bloque-7/03_revision_casos_borde_ui.md) · [`conversaciones/bloque-7/cursor-bloque-7-completo.md`](conversaciones/bloque-7/cursor-bloque-7-completo.md)
+
