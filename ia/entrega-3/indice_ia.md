@@ -31,6 +31,13 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **02** · Navegación desde panel y banner a MeetupDetail → [`prompts/bloque-2/02_navegacion_panel_banner.md`](prompts/bloque-2/02_navegacion_panel_banner.md)
 - **03** · Documentación y cierre del Bloque 2 → [`prompts/bloque-2/03_documentacion_cierre_bloque2.md`](prompts/bloque-2/03_documentacion_cierre_bloque2.md) · [`conversaciones/bloque-2/cursor-bloque-2-completo.md`](conversaciones/bloque-2/cursor-bloque-2-completo.md)
 
+### Bloque 3 — Mapas (25/07/2026)
+
+- **01** · RF-40: Mapa interactivo en el detalle de juntada: instalación de react-native-maps (SDK 55), plugin en app.json con API key via variable de entorno, nuevo componente LocationCard.tsx con MapView + Marker + shimmer + empty state, integración no destructiva en MeetupDetailScreen → [`prompts/bloque-3/01_maps_implementacion.md`](prompts/bloque-3/01_maps_implementacion.md)
+- **02** · RF-40 (ciclo completo): Selección de coordenadas GPS en Create/EditMeetupScreen: extensión del schema Zod, nuevo componente LocationPicker.tsx (Modal + MapView arrastrable + minipreview), integración con RHF via Controller anidado, persistencia de latitude/longitude en Supabase → [`prompts/bloque-3/02_maps_creacion_edicion.md`](prompts/bloque-3/02_maps_creacion_edicion.md)
+- **03** · Corrección de deuda técnica: migración 029 (columnas latitude/longitude en meetups), eliminación del payload condicional en meetupService.ts, reescritura limpia de LocationPicker.tsx sin parches de Expo Go → [`prompts/bloque-3/03_correccion_maps_migracion.md`](prompts/bloque-3/03_correccion_maps_migracion.md)
+- **04** · Fix crash mapa Android: reemplazo de la referencia literal `$EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` por la API key real en el plugin react-native-maps de app.json (la interpolación de variables no funciona en plugins de app.json, solo en eas.json); verificación de ausencia de showsUserLocation en todos los MapView → [`prompts/bloque-3/04_fix_crash_mapa_android.md`](prompts/bloque-3/04_fix_crash_mapa_android.md)
+
 ## Claude Code CLI
 
 ### Bloque 4 — Grupos (21/07/2026)
