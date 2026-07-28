@@ -697,18 +697,32 @@ export const groupService = {
   },
 
   /**
-   * Obtiene las juntadas activas asociadas a un grupo, con el rol del
-   * usuario autenticado y los conteos de participantes de cada una —
-   * mismo criterio de 3 pasos que meetupService.getUserMeetups, pero
-   * filtrando por group_id en vez de por las participaciones propias.
+   * Obtiene TODAS las juntadas asociadas a un grupo (cualquier status),
+   * con el rol del usuario autenticado y los conteos de participantes
+   * de cada una — mismo criterio de 3 pasos que
+   * meetupService.getUserMeetups, pero filtrando por group_id en vez
+   * de por las participaciones propias.
    *
-   * Solo trae juntadas con status = 'active': la policy "meetups: select
-   * by join_code" (002_fix_rls_circular.sql) permite leer cualquier
-   * juntada activa a cualquier usuario autenticado, así que no hace
-   * falta RLS nueva para este filtro. Las juntadas canceladas o
-   * finalizadas de un grupo no son visibles acá para miembros que se
-   * unieron después de que ocurrieron — caso reportado y confirmado en
-   * el análisis previo, fuera de alcance de este prompt.
+   * Hasta 4.9 solo traía status = 'active' — RF-41 exige que cada
+   * grupo tenga su propio historial, y GroupMeetupsScreen no distinguía
+   * "próximas" de "historial". Se confirmó (ver
+   * 4.9-historial-juntadas-grupo.md) que la policy "meetups: select as
+   * member or organizer" (002_fix_rls_circular.sql) no filtra por
+   * status — solo exige ser organizador o participante activo de esa
+   * juntada puntual — así que sacar el filtro de status acá es
+   * puramente un cambio de código, sin RLS nueva.
+   *
+   * Ordena por fecha descendente (más reciente primero): útil para
+   * ver el historial de un vistazo. GroupMeetupsScreen reordena a
+   * ascendente client-side para el tab "Próximas" (la más próxima
+   * primero tiene más sentido ahí) y mantiene descendente para
+   * "Historial".
+   *
+   * Las juntadas de un grupo (de cualquier status) no son visibles acá
+   * para miembros que se unieron después de que ocurrieron, ni para
+   * quien abandonó individualmente esa juntada puntual (sin dejar el
+   * grupo) — ambos son comportamiento heredado de la RLS de
+   * meetup_participants/is_active_meetup_member, no algo nuevo de 4.9.
    *
    * @param groupId - UUID del grupo
    * @param userId - UUID del usuario autenticado
@@ -723,8 +737,7 @@ export const groupService = {
         .from('meetups')
         .select('*')
         .eq('group_id', groupId)
-        .eq('status', 'active')
-        .order('date', { ascending: true });
+        .order('date', { ascending: false });
 
       if (meetupsError) throw meetupsError;
       if (!meetupsData || meetupsData.length === 0) {
