@@ -80,3 +80,8 @@ sus prompts en `prompts/bloque-N/` y sus conversaciones exportadas en
 - **02** · Tests unitarios para meetupService → [`prompts/bloque-7/02_tests_meetup_service.md`](prompts/bloque-7/02_tests_meetup_service.md)
 - **03** · Revisión de casos borde y robustecimiento de navegación (UI) → [`prompts/bloque-7/03_revision_casos_borde_ui.md`](prompts/bloque-7/03_revision_casos_borde_ui.md) · [`conversaciones/bloque-7/cursor-bloque-7-completo.md`](conversaciones/bloque-7/cursor-bloque-7-completo.md)
 
+### Bloque 8 — Pulido Visual (28/07/2026)
+
+- [x] **01** · Skeleton y ajustes visuales de layout → [`prompts/bloque-8/01_skeleton_y_ajustes_visuales.md`](prompts/bloque-8/01_skeleton_y_ajustes_visuales.md)
+- [x] **02** · Animaciones de micro-interacción en listados y tarjetas → [`prompts/bloque-8/02_animaciones_cards.md`](prompts/bloque-8/02_animaciones_cards.md) · [`conversaciones/bloque-8/cursor-bloque-8-completo.md`](conversaciones/bloque-8/cursor-bloque-8-completo.md)
+
