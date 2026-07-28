@@ -640,13 +640,14 @@ export const GroupMeetupsScreen = () => {
             </Text>
           </View>
         ) : (
-          filteredMeetups.map((meetup) => (
+          filteredMeetups.map((meetup, index) => (
             <View key={meetup.id}>
               {activeTab === 'history' && (
                 <HistoryStatusBadge status={meetup.status as HistoryStatus} />
               )}
               <MeetupCard
                 meetup={meetup}
+                index={index}
                 onPress={() => {
                   blurSearch();
                   navigation.navigate(Routes.MeetupDetail, { meetupId: meetup.id });

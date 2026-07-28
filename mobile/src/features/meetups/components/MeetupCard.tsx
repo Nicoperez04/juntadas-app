@@ -6,8 +6,8 @@
  * reusarlo tal cual en GroupMeetupsScreen — mismo criterio visual en
  * ambos listados de juntadas.
  */
-import React from 'react';
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Image, Pressable, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/shared/constants/theme';
 import { isPastMeetup } from '../utils/meetupDateTime';
@@ -39,25 +39,68 @@ const formatDate = (dateStr: string): string => {
 interface MeetupCardProps {
   meetup: MeetupWithRole;
   onPress: () => void;
+  index?: number;
 }
 
 /**
  * @param meetup - Datos de la juntada con rol del usuario
  * @param onPress - Callback al presionar la card
  */
-export const MeetupCard = ({ meetup, onPress }: MeetupCardProps) => {
+export const MeetupCard = ({ meetup, onPress, index }: MeetupCardProps) => {
   const isOrganizer = meetup.userRole === 'organizer';
   const visibleAvatars = Math.min(meetup.participantCount, 3);
   const overflow = meetup.participantCount - 3;
 
+  // Animaciones de entrada en cascada (staggered)
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(8)).current;
+
+  // Animación de feedback táctil al presionar
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 150,
+        delay: (index ?? 0) * 30,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 150,
+        delay: (index ?? 0) * 30,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [index]);
+
+  const handlePressIn = () => {
+    Animated.spring(scale, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 0,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 40,
+      bounciness: 3,
+    }).start();
+  };
+
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        pressed && styles.cardPressed,
-      ]}
-      onPress={onPress}
-    >
+    <Animated.View style={{ opacity, transform: [{ translateY }, { scale }] }}>
+      <Pressable
+        style={styles.card}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
       {/* Fila superior: thumbnail de portada (si existe) + datos de la juntada */}
       <View style={styles.cardTopRow}>
         {meetup.cover_url && (
@@ -156,7 +199,8 @@ export const MeetupCard = ({ meetup, onPress }: MeetupCardProps) => {
           {meetup.confirmedCount}/{meetup.participantCount} confirmados
         </Text>
       </View>
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
 };
 
