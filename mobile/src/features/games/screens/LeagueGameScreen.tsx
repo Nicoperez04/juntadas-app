@@ -264,7 +264,7 @@ export const LeagueGameScreen = () => {
         /* Tabla de posiciones */
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={[styles.card, { paddingHorizontal: 0 }]}>
-            <Text style={[styles.cardTitle, { paddingHorizontal: theme.spacing.md }]}>Tabla de Posiciones</Text>
+            <Text style={styles.cardTitle}>Tabla de Posiciones</Text>
 
             {/* Encabezados de tabla */}
             <View style={styles.tableHeader}>
@@ -490,6 +490,7 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
   },
   matchList: {
     gap: theme.spacing.sm,

@@ -454,10 +454,11 @@ export const MeetupHomeScreen = () => {
           renderEmptyState()
         ) : (
           <>
-            {meetups.map((meetup) => (
+            {meetups.map((meetup, index) => (
               <MeetupCard
                 key={meetup.id}
                 meetup={meetup}
+                index={index}
                 onPress={() => handleMeetupPress(meetup.id)}
               />
             ))}
