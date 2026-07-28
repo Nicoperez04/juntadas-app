@@ -83,7 +83,7 @@ export const MeetupDetailScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
   const queryClient = useQueryClient();
-  const { meetupId } = route.params;
+  const { meetupId } = route.params ?? {};
 
   const {
     meetup,

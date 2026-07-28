@@ -225,7 +225,7 @@ const MemoryGridItem = ({
 export const MemoriesGalleryScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
-  const { meetupId, isActive } = route.params;
+  const { meetupId, isActive } = route.params ?? {};
 
   // Usuario autenticado resuelto desde la caché compartida de sesión
   const { userId: currentUserId } = useCurrentUser();
