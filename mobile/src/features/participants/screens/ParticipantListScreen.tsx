@@ -189,7 +189,7 @@ const ParticipantRow = ({
 export const ParticipantListScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
-  const { meetupId } = route.params;
+  const { meetupId } = route.params ?? {};
 
   // Usuario autenticado resuelto desde la caché compartida de sesión
   const { userId: currentUserId } = useCurrentUser();
