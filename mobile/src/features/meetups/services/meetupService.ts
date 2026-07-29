@@ -51,6 +51,10 @@ interface MeetupRow {
   cover_url: string | null;
   /** true si el organizador habilitó reseñas al finalizar la juntada */
   reviews_enabled: boolean;
+  /** Latitud GPS de la ubicación; null si no fue definida */
+  latitude: number | null;
+  /** Longitud GPS de la ubicación; null si no fue definida */
+  longitude: number | null;
 }
 
 /** Estructura de una fila de meetup_participants tal como la retorna Supabase */
@@ -151,6 +155,9 @@ const mapMeetupRow = (row: MeetupRow): Meetup => ({
   // Se mantiene snake_case según el contrato definido para este campo
   cover_url: row.cover_url ?? null,
   reviews_enabled: row.reviews_enabled ?? false,
+  // Coordenadas GPS opcionales — null si el organizador no las definió
+  latitude: row.latitude ?? null,
+  longitude: row.longitude ?? null,
 });
 
 /**
@@ -245,6 +252,9 @@ export const meetupService = {
           join_code: joinCode,
           created_by: userId,
           group_id: groupId ?? null,
+          // Coordenadas GPS del selector de mapa (migración 029)
+          latitude: formData.latitude ?? null,
+          longitude: formData.longitude ?? null,
         })
         .select()
         .single();
@@ -920,6 +930,10 @@ export const meetupService = {
             formData.estimatedCost && formData.estimatedCost.trim() !== ''
               ? parseFloat(formData.estimatedCost)
               : null,
+          // Coordenadas GPS del selector de mapa (migración 029)
+          // null limpia explícitamente el valor si el usuario quitó el pin
+          latitude: formData.latitude ?? null,
+          longitude: formData.longitude ?? null,
         })
         .eq('id', meetupId)
         .select()
