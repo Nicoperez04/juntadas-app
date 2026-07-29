@@ -223,17 +223,17 @@ const pickCoverFromSource = async (
   const result =
     source === 'camera'
       ? await ImagePicker.launchCameraAsync({
-          mediaTypes: ['images'],
-          allowsEditing: true,
-          aspect: [16, 9],
-          quality: 0.8,
-        })
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      })
       : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          allowsEditing: true,
-          aspect: [16, 9],
-          quality: 0.8,
-        });
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
 
   if (result.canceled || result.assets.length === 0) {
     return null;
@@ -492,6 +492,8 @@ export const EditMeetupScreen = () => {
       time: data.time,
       location: data.location,
       estimatedCost: data.estimatedCost ?? '',
+      latitude: data.latitude,
+      longitude: data.longitude,
     });
 
     if (result.error) {
