@@ -26,7 +26,7 @@ function withGoogleMapsApiKey(config, apiKey) {
   });
 }
 
-const apiKey = "AIzaSyAO6cFGOFWi7DUFPxaDboQFPJlmmrzaYIA";
+const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 module.exports = ({ config }) => {
   // Mantenemos estrictamente la configuración original intacta
