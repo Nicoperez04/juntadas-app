@@ -2,7 +2,7 @@
  * Vista ampliada de una foto de recuerdo (modal).
  *
  * Permite navegar horizontalmente entre fotos de la galería, cerrar con
- * swipe down o botón X, y eliminar fotos propias.
+ * swipe down o botón X, y eliminar fotos propias o ajenas si es organizador.
  */
 import React, { useCallback, useRef, useState } from 'react';
 import {
@@ -25,10 +25,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { supabase } from '@/lib/supabase/client';
 import { theme } from '@/shared/constants/theme';
-import { Toast } from '@/shared/components/Toast';
-import type { MainStackParamList } from '@/features/meetups/types';
+import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
+import type { MainStackParamList } from '@/navigation/types';
 import { memoriesService } from '../services/memoriesService';
 import { notifyMemoryDeleted } from '../utils/memoryGallerySync';
 import type { Memory } from '../types';
@@ -137,25 +138,21 @@ const PhotoSlide = ({ memory, onDismiss }: PhotoSlideProps) => {
 export const MemoryViewerScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
-  const { memories, initialIndex } = route.params;
+  const { memories = [], initialIndex = 0, meetupId, isOrganizer } = route.params ?? {};
+
+  // Usuario autenticado resuelto desde la caché compartida de sesión
+  const { userId: currentUserId } = useCurrentUser();
 
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [localMemories, setLocalMemories] = useState(memories);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const flatListRef = useRef<FlatList<Memory>>(null);
-
-  React.useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setCurrentUserId(session?.user?.id ?? null);
-    });
-  }, []);
 
   React.useEffect(() => {
     if (initialIndex > 0) {
@@ -170,6 +167,7 @@ export const MemoryViewerScreen = () => {
 
   const currentMemory = localMemories[currentIndex];
   const isOwn = currentMemory?.uploadedBy === currentUserId;
+  const canDelete = isOwn || isOrganizer;
 
   const handleClose = useCallback(() => {
     navigation.goBack();
@@ -196,16 +194,19 @@ export const MemoryViewerScreen = () => {
       currentMemory.id,
       currentUserId,
       currentMemory.filePath,
+      { meetupId, isOrganizer },
     );
     setIsDeleting(false);
     setShowDeleteModal(false);
 
     if (result.error) {
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
       return;
     }
 
-    setToast({ message: '✓ Foto eliminada', type: 'success' });
+    setSuccessMessage('✓ Foto eliminada');
+    setShowSuccess(true);
 
     // Notifica a la galería montada sin pasar callbacks por navigation state
     notifyMemoryDeleted(currentMemory.id);
@@ -303,7 +304,7 @@ export const MemoryViewerScreen = () => {
             </View>
           </View>
 
-          {isOwn && (
+          {canDelete && (
             <TouchableOpacity
               style={styles.deleteBtn}
               onPress={() => setShowDeleteModal(true)}
@@ -353,11 +354,16 @@ export const MemoryViewerScreen = () => {
         </View>
       </Modal>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );

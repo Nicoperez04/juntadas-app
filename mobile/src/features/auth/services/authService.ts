@@ -71,6 +71,9 @@ const mapAuthError = (message: string): string => {
   if (message.includes('Email not confirmed')) return 'Confirmá tu email antes de iniciar sesión';
   if (message.includes('User already registered')) return 'Ya existe una cuenta con ese email';
   if (message.includes('Password should be at least')) return 'La contraseña debe tener al menos 6 caracteres';
+  if (message.includes('New password should be different from the old password')) {
+    return 'La nueva contraseña debe ser diferente a la actual.';
+  }
   if (message.includes('security purposes')) return 'Por seguridad, esperá unos segundos antes de intentarlo nuevamente.';
   if (message.includes('duplicate key') && message.includes('username')) return 'Ese nombre de usuario ya está en uso';
   // Si no matchea ningún caso conocido, devuelve el mensaje original para no perder contexto
@@ -163,11 +166,175 @@ export const authService = {
    */
   async resetPassword(email: string): Promise<ServiceResult<null>> {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'rondaapp://reset-password',
+      });
       if (error) return { data: null, error: mapAuthError(error.message) };
       return { data: null, error: null };
     } catch {
       return { data: null, error: 'Error inesperado al enviar el email' };
+    }
+  },
+
+  /**
+   * Actualiza la contraseña del usuario con sesión de recuperación activa.
+   * Se invoca desde ResetPasswordScreen tras abrir el deep link del email.
+   *
+   * @param password - Nueva contraseña elegida por el usuario
+   */
+  async updatePassword(password: string): Promise<ServiceResult<null>> {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) return { data: null, error: mapAuthError(error.message) };
+      return { data: null, error: null };
+    } catch {
+      return { data: null, error: 'Error inesperado al actualizar la contraseña' };
+    }
+  },
+
+  /**
+   * Cambia la contraseña verificando primero la contraseña actual.
+   * Reutiliza signInWithPassword solo como verificación — la sesión ya está activa.
+   *
+   * @param email - Email del usuario autenticado
+   * @param currentPassword - Contraseña actual para validar identidad
+   * @param newPassword - Nueva contraseña a persistir
+   */
+  async changePassword(
+    email: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<ServiceResult<null>> {
+    try {
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      });
+
+      if (verifyError) {
+        return { data: null, error: 'Contraseña actual incorrecta' };
+      }
+
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { data: null, error: mapAuthError(error.message) };
+      return { data: null, error: null };
+    } catch {
+      return { data: null, error: 'Error inesperado al cambiar la contraseña' };
+    }
+  },
+
+  /**
+   * Elimina permanentemente la cuenta del usuario autenticado.
+   *
+   * Delega la eliminación en la Edge Function delete-account (service_role).
+   * Solo cierra sesión local si la función confirma éxito, para permitir
+   * reintentar si falla algún paso intermedio.
+   *
+   * @param userId - UUID del usuario autenticado (debe coincidir con la sesión)
+   */
+  async deleteAccount(userId: string): Promise<ServiceResult<null>> {
+    try {
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+
+      if (sessionError || !sessionData.session) {
+        return { data: null, error: 'No hay sesión activa para eliminar la cuenta' };
+      }
+
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        'delete-account',
+        {
+          headers: {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          },
+        },
+      );
+
+      if (invokeError) {
+        return {
+          data: null,
+          error: invokeError.message || 'No se pudo eliminar la cuenta',
+        };
+      }
+
+      const payload = data as { success?: boolean; error?: string } | null;
+      if (payload?.error) {
+        return { data: null, error: payload.error };
+      }
+
+      if (!payload?.success) {
+        return { data: null, error: 'No se pudo eliminar la cuenta' };
+      }
+
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) {
+        return { data: null, error: mapAuthError(signOutError.message) };
+      }
+
+      return { data: null, error: null };
+    } catch {
+      return { data: null, error: 'Error inesperado al eliminar la cuenta' };
+    }
+  },
+
+  /**
+   * Procesa la URL del deep link de recuperación de contraseña.
+   * Como detectSessionInUrl está desactivado en el cliente, hay que
+   * extraer los tokens manualmente y establecer la sesión de recovery.
+   *
+   * @param url - URL completa recibida por Linking (ej: rondaapp://reset-password#...)
+   */
+  async setSessionFromRecoveryUrl(url: string): Promise<ServiceResult<null>> {
+    try {
+      if (!url.includes('reset-password')) {
+        return { data: null, error: null };
+      }
+
+      const hashIndex = url.indexOf('#');
+      const queryIndex = url.indexOf('?');
+      const paramString =
+        hashIndex !== -1
+          ? url.substring(hashIndex + 1)
+          : queryIndex !== -1
+            ? url.substring(queryIndex + 1)
+            : '';
+
+      if (!paramString) {
+        return { data: null, error: 'Enlace de recuperación inválido' };
+      }
+
+      const params = new URLSearchParams(paramString);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const recoveryType = params.get('type');
+
+      if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (error) return { data: null, error: mapAuthError(error.message) };
+        return { data: null, error: null };
+      }
+
+      // Fallback: algunos links de Supabase traen solo access_token con type=recovery
+      if (accessToken && recoveryType === 'recovery') {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken ?? '',
+        });
+
+        if (error) {
+          return { data: null, error: mapAuthError(error.message) };
+        }
+
+        return { data: null, error: null };
+      }
+
+      return { data: null, error: 'Enlace de recuperación inválido' };
+    } catch {
+      return { data: null, error: 'Error al procesar el enlace de recuperación' };
     }
   },
 

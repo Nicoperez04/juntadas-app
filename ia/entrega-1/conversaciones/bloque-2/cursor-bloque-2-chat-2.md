@@ -1018,9 +1018,6 @@ Implementación completa del módulo de juntadas.
 - Pantalla en blanco en home — corregido arrancando isLoading en true
 - Juntadas no aparecían al volver — resuelto con useFocusEffect + clear de caché de Metro
 
-## Conversación completa
-
-[Pegar acá la conversación exportada del Chat 1 de Cursor]
 3. Creá conversaciones/bloque-2/cursor-bloque-2-chat-2.md
 markdown# Conversación Bloque 2 — Juntadas (Chat 2: DateTime Picker)
 
@@ -1037,9 +1034,6 @@ Fix del selector de fecha y hora en CreateMeetupScreen.
 - Integración con React Hook Form via setValue
 - Comportamiento diferenciado Android/iOS
 
-## Conversación completa
-
-[Pegar acá la conversación exportada del Chat 2 de Cursor]
 4. Actualizá ia/entrega-1/indice_ia.md
 Agregá bajo la sección Cursor las entradas del Bloque 2:
 13 - Implementación del módulo de juntadas (meetups)

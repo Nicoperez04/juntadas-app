@@ -63,6 +63,8 @@ const timeField = z
  * El costo estimado es opcional; si se ingresa, debe ser
  * un número no negativo (acepta 0 para indicar sin costo).
  * La descripción es completamente opcional.
+ * latitude y longitude son opcionales: se completan solo si el usuario
+ * selecciona una ubicación en el mapa con LocationPicker.
  */
 export const createMeetupSchema = z.object({
   title: z
@@ -82,6 +84,10 @@ export const createMeetupSchema = z.object({
       const num = parseFloat(val);
       return !isNaN(num) && num >= 0;
     }, 'El costo debe ser un número positivo'),
+  /** Latitud GPS seleccionada en el mapa; null si no se definió */
+  latitude: z.number().nullable().optional(),
+  /** Longitud GPS seleccionada en el mapa; null si no se definió */
+  longitude: z.number().nullable().optional(),
 });
 
 export type CreateMeetupSchema = z.infer<typeof createMeetupSchema>;

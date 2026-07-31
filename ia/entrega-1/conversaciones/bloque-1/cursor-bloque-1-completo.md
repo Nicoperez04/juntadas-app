@@ -1078,10 +1078,6 @@ En este bloque se implementó el módulo completo de autenticación de la app Ju
 - Verificar configuración de URL en Supabase Authentication > URL Configuration para forgot password
 - Evaluar verificación de username duplicado en tiempo real con debounce
 
-## Conversación completa
-
-[Pegar acá la conversación exportada de Cursor]
-
 4. Actualizá ia/entrega-1/indice_ia.md agregando las entradas correspondientes al Bloque 1 bajo la sección de Cursor.
 
 Restricciones
@@ -1146,10 +1142,6 @@ En este bloque se implementó el módulo completo de autenticación de la app Ju
 - Error "Invalid path specified in request URL" al intentar registrarse o iniciar sesión — en investigación
 - Verificar configuración de URL en Supabase Authentication > URL Configuration para forgot password
 - Evaluar verificación de username duplicado en tiempo real con debounce
-
-## Conversación completa
-
-[Pegar acá la conversación exportada de Cursor]
 
 Actualizá ia/entrega-1/indice_ia.md agregando las entradas correspondientes al Bloque 1 bajo la sección de Cursor.
 

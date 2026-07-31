@@ -21,17 +21,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { supabase } from '@/lib/supabase/client';
 import { theme } from '@/shared/constants/theme';
+import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { Routes } from '@/navigation/routes';
 import { ModifyAttendanceLink } from '@/shared/components/ModifyAttendanceLink';
-import { Toast } from '@/shared/components/Toast';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
 import { useParticipants } from '../hooks/useParticipants';
 import { ModifyAttendanceScreen } from './ModifyAttendanceScreen';
 import { getParticipantDisplayName } from '../utils/participantDisplay';
 import { meetupService } from '@/features/meetups/services/meetupService';
 import type { MeetupParticipant, AttendanceStatus } from '../types';
-import type { MainStackParamList, MeetupStatus } from '@/features/meetups/types';
+import type { MeetupStatus } from '@/features/meetups/types';
+import type { MainStackParamList } from '@/navigation/types';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'ParticipantList'>;
 type RoutePropType = RouteProp<MainStackParamList, 'ParticipantList'>;
@@ -187,17 +189,19 @@ const ParticipantRow = ({
 export const ParticipantListScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
-  const { meetupId } = route.params;
+  const { meetupId } = route.params ?? {};
 
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // Usuario autenticado resuelto desde la caché compartida de sesión
+  const { userId: currentUserId } = useCurrentUser();
+
   const [meetupStatus, setMeetupStatus] = useState<MeetupStatus | null>(null);
   const [attendanceModalTarget, setAttendanceModalTarget] =
     useState<AttendanceModalTarget | null>(null);
   const [isLeaving, setIsLeaving] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   /**
    * Transporta el mensaje de Toast entre onSave y onClose del modal de
@@ -215,12 +219,6 @@ export const ParticipantListScreen = () => {
     leaveMeetup,
     refresh,
   } = useParticipants(meetupId, currentUserId);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setCurrentUserId(session?.user?.id ?? null);
-    });
-  }, []);
 
   /**
    * Carga el estado de la juntada para congelar acciones de asistencia
@@ -279,7 +277,8 @@ export const ParticipantListScreen = () => {
             setIsLeaving(false);
 
             if (result.error) {
-              Alert.alert('Error', result.error);
+              setErrorMessage(result.error);
+              setShowError(true);
               return;
             }
 
@@ -412,12 +411,14 @@ export const ParticipantListScreen = () => {
         visible={attendanceModalTarget !== null}
         currentStatus={modalCurrentStatus}
         participantName={modalParticipantName}
-        onClose={() => {
+        onClose={(wasUpdated) => {
           setAttendanceModalTarget(null);
-          // Recargar datos después del cierre para no bloquear la animación
-          void refresh();
+          if (wasUpdated) {
+            void refresh();
+          }
           if (pendingToastRef.current) {
-            setToast({ message: pendingToastRef.current, type: 'success' });
+            setSuccessMessage(pendingToastRef.current);
+            setShowSuccess(true);
             pendingToastRef.current = null;
           }
         }}
@@ -442,11 +443,16 @@ export const ParticipantListScreen = () => {
         }}
       />
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </SafeAreaView>
   );
@@ -479,8 +485,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',

@@ -17,23 +17,32 @@ import {
   KeyboardAvoidingView,
   Platform,
   TextInput,
+  Image,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
 import { AppTabBar } from '@/shared/components/AppTabBar';
-import { useMeetups } from '../hooks/useMeetups';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
+import { useMeetups, useUploadMeetupCover } from '../hooks/useMeetups';
 import { createMeetupSchema } from '../schemas/meetupSchemas';
-import type { CreateMeetupFormData, MainStackParamList } from '../types';
+import { LocationPicker } from '../components/LocationPicker';
+import type { CreateMeetupFormData } from '../types';
+import type { MainStackParamList } from '@/navigation/types';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'CreateMeetup'>;
+type RoutePropType = RouteProp<MainStackParamList, 'CreateMeetup'>;
 
 // ─── FieldInput (campos de texto genéricos) ──────────────────────────────────
 
@@ -107,12 +116,152 @@ const FieldInput = ({
   </View>
 );
 
+// ─── CoverPickerSection (portada opcional de la juntada) ─────────────────────
+
+/**
+ * Sección de selección de foto de portada (opcional).
+ * Sin portada muestra un área punteada que abre la galería; con portada
+ * muestra el preview con overlay y botones para cambiarla o quitarla.
+ * Componente presentacional: la lógica de ImagePicker vive en la pantalla.
+ */
+interface CoverPickerSectionProps {
+  /** URI de la imagen a previsualizar (local o remota); null si no hay portada */
+  coverUri: string | null;
+  /** Abre el selector de imagen de la galería */
+  onPick: () => void;
+  /** Quita la portada seleccionada */
+  onRemove: () => void;
+  /** Mensaje de error de permisos o selección; null si no hay error */
+  error: string | null;
+}
+
+const CoverPickerSection = ({
+  coverUri,
+  onPick,
+  onRemove,
+  error,
+}: CoverPickerSectionProps) => (
+  <View style={coverStyles.wrapper}>
+    {coverUri ? (
+      <View style={coverStyles.previewBox}>
+        <Image
+          source={{ uri: coverUri }}
+          style={coverStyles.previewImage}
+          resizeMode="cover"
+        />
+        {/* Overlay semitransparente para dar contraste a los botones */}
+        <View style={coverStyles.previewOverlay} />
+        <View style={coverStyles.previewActions}>
+          <TouchableOpacity
+            style={coverStyles.previewActionBtn}
+            onPress={onPick}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Cambiar foto de portada"
+          >
+            <Ionicons
+              name="camera-outline"
+              size={18}
+              color={theme.colors.textPrimary}
+            />
+            <Text style={coverStyles.previewActionText}>Cambiar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={coverStyles.previewActionBtn}
+            onPress={onRemove}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Quitar foto de portada"
+          >
+            <Ionicons
+              name="trash-outline"
+              size={18}
+              color={theme.colors.error}
+            />
+            <Text style={[coverStyles.previewActionText, coverStyles.previewActionTextDanger]}>
+              Quitar
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    ) : (
+      <TouchableOpacity
+        style={coverStyles.emptyBox}
+        onPress={onPick}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Agregar foto de portada"
+      >
+        <Ionicons
+          name="camera-outline"
+          size={32}
+          color={theme.colors.textSecondary}
+        />
+        <Text style={coverStyles.emptyText}>Agregar portada (opcional)</Text>
+      </TouchableOpacity>
+    )}
+    {error ? <Text style={coverStyles.errorText}>{error}</Text> : null}
+  </View>
+);
+
+/**
+ * Abre cámara o galería con recorte 16:9 para la portada de la juntada.
+ *
+ * @returns URI local, permiso denegado o null si se canceló
+ */
+const pickCoverFromSource = async (
+  source: 'camera' | 'gallery',
+): Promise<{ uri: string } | { permissionDenied: true } | null> => {
+  const permission =
+    source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+  if (!permission.granted) {
+    return { permissionDenied: true };
+  }
+
+  const result =
+    source === 'camera'
+      ? await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          aspect: [16, 9],
+          quality: 0.8,
+        })
+      : await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          aspect: [16, 9],
+          quality: 0.8,
+        });
+
+  if (result.canceled || result.assets.length === 0) {
+    return null;
+  }
+
+  return { uri: result.assets[0].uri };
+};
+
 // ─── Pantalla principal ───────────────────────────────────────────────────────
 
 export const CreateMeetupScreen = () => {
   const navigation = useNavigation<NavProp>();
+  const route = useRoute<RoutePropType>();
+  const groupId = route.params?.groupId;
+  const groupName = route.params?.groupName;
   const { createMeetup } = useMeetups();
+  const uploadCoverMutation = useUploadMeetupCover();
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Portada opcional: se elige antes de crear y se sube recién cuando
+  // existe el meetupId. No forma parte del schema de Zod a propósito.
+  const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const [showCoverModal, setShowCoverModal] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  /** meetupId pendiente de navegación tras el toast de portada subida */
+  const [pendingMeetupId, setPendingMeetupId] = useState<string | null>(null);
 
   const {
     control,
@@ -130,6 +279,8 @@ export const CreateMeetupScreen = () => {
       time: '',
       location: '',
       estimatedCost: '',
+      latitude: null,
+      longitude: null,
     },
   });
 
@@ -169,17 +320,50 @@ export const CreateMeetupScreen = () => {
   };
 
   /**
+   * Abre cámara o galería según la opción del modal y guarda la URI para el preview.
+   */
+  const handlePickCoverFromSource = async (source: 'camera' | 'gallery') => {
+    setCoverError(null);
+    const result = await pickCoverFromSource(source);
+    if (result === null) return;
+    if ('permissionDenied' in result) {
+      setCoverError(
+        source === 'camera'
+          ? 'Necesitamos permiso para usar la cámara'
+          : 'Necesitamos acceso a tu galería para elegir la portada',
+      );
+      return;
+    }
+    setCoverUri(result.uri);
+  };
+
+  /**
    * Envía el formulario al servicio y navega al detalle si tiene éxito.
+   * Si hay portada seleccionada, se sube con el meetupId recién creado;
+   * un fallo en la subida no bloquea la navegación porque la portada
+   * es opcional y puede agregarse después desde la edición.
    * Los errores de creación se muestran en el banner inferior del formulario.
    */
   const onSubmit = async (data: CreateMeetupFormData) => {
     setSubmitError(null);
-    const result = await createMeetup(data);
+    const result = await createMeetup(data, groupId);
     if (result.error) {
       setSubmitError(result.error);
       return;
     }
     if (result.data) {
+      if (coverUri) {
+        const uploadResult = await uploadCoverMutation.mutateAsync({
+          meetupId: result.data.id,
+          fileUri: coverUri,
+        });
+        if (!uploadResult.error) {
+          setPendingMeetupId(result.data.id);
+          setShowSuccess(true);
+          return;
+        }
+        // La portada es opcional: un fallo en la subida no bloquea la navegación
+      }
       navigation.replace(Routes.MeetupDetail, { meetupId: result.data.id });
     }
   };
@@ -215,6 +399,23 @@ export const CreateMeetupScreen = () => {
           <Text style={styles.intro}>
             Completá los datos de tu juntada. La fecha no puede ser anterior a hoy.
           </Text>
+
+          {groupName && (
+            <View style={styles.groupContextRow}>
+              <Ionicons name="people" size={16} color={theme.colors.primary} />
+              <Text style={styles.groupContextText}>
+                Creando juntada para: {groupName}
+              </Text>
+            </View>
+          )}
+
+          {/* Portada opcional — se sube después de crear la juntada */}
+          <CoverPickerSection
+            coverUri={coverUri}
+            onPick={() => setShowCoverModal(true)}
+            onRemove={() => setCoverUri(null)}
+            error={coverError}
+          />
 
           {/* Campo: título */}
           <Controller
@@ -324,7 +525,7 @@ export const CreateMeetupScreen = () => {
             </View>
           </View>
 
-          {/* Campo: ubicación */}
+          {/* Campo: ubicación (texto libre obligatorio) */}
           <Controller
             control={control}
             name="location"
@@ -337,6 +538,31 @@ export const CreateMeetupScreen = () => {
                 onBlur={onBlur}
                 error={errors.location?.message}
                 leftIcon="location-outline"
+              />
+            )}
+          />
+
+          {/* Selector de coordenadas GPS en mapa (opcional) — RF-40 */}
+          <Controller
+            control={control}
+            name="latitude"
+            render={({ field: { value: lat } }) => (
+              <Controller
+                control={control}
+                name="longitude"
+                render={({ field: { value: lng } }) => (
+                  <LocationPicker
+                    latitudActual={lat}
+                    longitudActual={lng}
+                    locationText={watch('location')}
+                    onChangeLatitude={(val) =>
+                      setValue('latitude', val, { shouldValidate: true })
+                    }
+                    onChangeLongitude={(val) =>
+                      setValue('longitude', val, { shouldValidate: true })
+                    }
+                  />
+                )}
               />
             )}
           />
@@ -379,12 +605,148 @@ export const CreateMeetupScreen = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      <Modal
+        transparent
+        animationType="slide"
+        visible={showCoverModal}
+        onRequestClose={() => setShowCoverModal(false)}
+        statusBarTranslucent
+      >
+        <View style={coverModalStyles.overlay}>
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setShowCoverModal(false)}
+          />
+          <View style={coverModalStyles.sheet}>
+            <View style={coverModalStyles.handle} />
+            <Text style={coverModalStyles.title}>Elegir portada</Text>
+
+            <TouchableOpacity
+              style={coverModalStyles.option}
+              onPress={() => {
+                setShowCoverModal(false);
+                void handlePickCoverFromSource('camera');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={coverModalStyles.optionIcon}>
+                <Ionicons name="camera-outline" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={coverModalStyles.optionLabel}>Tomar foto</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={coverModalStyles.option}
+              onPress={() => {
+                setShowCoverModal(false);
+                void handlePickCoverFromSource('gallery');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={coverModalStyles.optionIcon}>
+                <Ionicons name="images-outline" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={coverModalStyles.optionLabel}>Elegir de galería</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={coverModalStyles.cancel}
+              onPress={() => setShowCoverModal(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={coverModalStyles.cancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <AppTabBar activeTab="create" />
+
+      <SuccessAnimation
+        message="✓ Portada agregada"
+        visible={showSuccess}
+        onHide={() => {
+          setShowSuccess(false);
+          if (pendingMeetupId) {
+            navigation.replace(Routes.MeetupDetail, { meetupId: pendingMeetupId });
+            setPendingMeetupId(null);
+          }
+        }}
+      />
     </View>
   );
 };
 
 // ─── Estilos ──────────────────────────────────────────────────────────────────
+
+const coverStyles = StyleSheet.create({
+  wrapper: {
+    marginBottom: theme.spacing.md,
+  },
+  emptyBox: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: theme.radius.lg,
+    borderWidth: theme.components.inputBorderWidth,
+    borderStyle: 'dashed',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+  },
+  emptyText: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.textSecondary,
+  },
+  previewBox: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: theme.radius.lg,
+    overflow: 'hidden',
+    backgroundColor: theme.colors.border,
+  },
+  previewImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  previewOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+  },
+  previewActions: {
+    position: 'absolute',
+    right: theme.spacing.sm,
+    bottom: theme.spacing.sm,
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  previewActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.full,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    ...theme.shadows.sm,
+  },
+  previewActionText: {
+    fontSize: theme.typography.sizes.xs,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textPrimary,
+  },
+  previewActionTextDanger: {
+    color: theme.colors.error,
+  },
+  errorText: {
+    marginTop: theme.spacing.xs,
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.error,
+  },
+});
 
 const fieldStyles = StyleSheet.create({
   wrapper: {
@@ -464,8 +826,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -494,6 +856,17 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryLight,
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,
+  },
+  groupContextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.lg,
+  },
+  groupContextText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   row: {
     flexDirection: 'row',
@@ -547,5 +920,69 @@ const styles = StyleSheet.create({
   },
   bottomSpace: {
     height: theme.spacing.xl,
+  },
+});
+
+const coverModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    paddingTop: theme.spacing.sm,
+    ...theme.shadows.md,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.radius.full,
+    alignSelf: 'center',
+    marginVertical: theme.spacing.sm,
+  },
+  title: {
+    fontSize: theme.typography.sizes.lg,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+    marginTop: theme.spacing.xs,
+  },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  optionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionLabel: {
+    flex: 1,
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.textPrimary,
+  },
+  cancel: {
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  cancelText: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textSecondary,
   },
 });

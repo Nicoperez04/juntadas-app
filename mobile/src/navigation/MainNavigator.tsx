@@ -2,8 +2,8 @@
  * Navegador principal de la app (usuario autenticado).
  *
  * Gestiona el stack de todas las pantallas disponibles post-login.
- * MeetupHomeScreen es la ruta inicial. Las pantallas de impostor y perfil
- * mantienen placeholders hasta que se implementen en sus bloques.
+ * MeetupHomeScreen es la ruta inicial por defecto; AppNavigator puede
+ * cambiarla a CompleteProfile cuando el usuario debe completar onboarding.
  *
  * El header nativo está oculto en todas las pantallas porque cada una
  * implementa su propio header con diseño consistente al sistema de diseño.
@@ -11,6 +11,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Routes } from './routes';
+import type { MainStackParamList } from './types';
 
 // Pantallas implementadas — bloque 1
 import { CompleteProfileScreen } from '@/features/auth/screens/CompleteProfileScreen';
@@ -20,12 +21,32 @@ import { MeetupHomeScreen } from '@/features/meetups/screens/MeetupHomeScreen';
 import { CreateMeetupScreen } from '@/features/meetups/screens/CreateMeetupScreen';
 import { JoinMeetupScreen } from '@/features/meetups/screens/JoinMeetupScreen';
 import { MeetupDetailScreen } from '@/features/meetups/screens/MeetupDetailScreen';
+import { MeetupStatsScreen } from '@/features/gameResults/screens/MeetupStatsScreen';
+import { MeetupResultsHistoryScreen } from '@/features/gameResults/screens/MeetupResultsHistoryScreen';
+import { GroupStatsScreen } from '@/features/gameResults/screens/GroupStatsScreen';
+import { GroupResultsHistoryScreen } from '@/features/gameResults/screens/GroupResultsHistoryScreen';
 import { EditMeetupScreen } from '@/features/meetups/screens/EditMeetupScreen';
 import { MeetupHistoryScreen } from '@/features/meetups/screens/MeetupHistoryScreen';
 import { ParticipantListScreen } from '@/features/participants/screens/ParticipantListScreen';
 
-// Pantallas implementadas — bloque 4 (impostor)
-import { GamesScreen } from '@/features/impostor/screens/GamesScreen';
+// Pantallas implementadas — bloque 4 (juegos e impostor)
+import { GamesScreen } from '@/features/games/screens/GamesScreen';
+import { TimerScreen } from '@/features/games/screens/TimerScreen';
+import { TeamRandomizerScreen } from '@/features/games/screens/TeamRandomizerScreen';
+import { WhoAmISetupScreen } from '@/features/games/screens/WhoAmISetupScreen';
+import { WhoAmIGameScreen } from '@/features/games/screens/WhoAmIGameScreen';
+import { GroupQuestionsScreen } from '@/features/games/screens/GroupQuestionsScreen';
+import { ScorerSetupScreen } from '@/features/games/screens/ScorerSetupScreen';
+import { ScorerGameScreen } from '@/features/games/screens/ScorerGameScreen';
+import { TrucoSetupScreen } from '@/features/games/screens/TrucoSetupScreen';
+import { TrucoGameScreen } from '@/features/games/screens/TrucoGameScreen';
+import { GeneralaSetupScreen } from '@/features/games/screens/GeneralaSetupScreen';
+import { GeneralaGameScreen } from '@/features/games/screens/GeneralaGameScreen';
+import { RaffleScreen } from '@/features/games/screens/RaffleScreen';
+import { LeagueSetupScreen } from '@/features/games/screens/LeagueSetupScreen';
+import { LeagueGameScreen } from '@/features/games/screens/LeagueGameScreen';
+import { TournamentSetupScreen } from '@/features/games/screens/TournamentSetupScreen';
+import { TournamentGameScreen } from '@/features/games/screens/TournamentGameScreen';
 import { ImpostorStartScreen } from '@/features/impostor/screens/ImpostorStartScreen';
 import { ImpostorRoleScreen } from '@/features/impostor/screens/ImpostorRoleScreen';
 
@@ -35,13 +56,42 @@ import { MemoryViewerScreen } from '@/features/memories/screens/MemoryViewerScre
 
 // Pantallas implementadas — bloque 6 (perfil)
 import { ProfileScreen } from '@/features/auth/screens/ProfileScreen';
+import { ChangePasswordScreen } from '@/features/auth/screens/ChangePasswordScreen';
 
-const Stack = createNativeStackNavigator();
+// Pantallas implementadas — bloque 2 E2 (reseñas post-juntada)
+import { ReviewFormScreen } from '@/features/reviews/screens/ReviewFormScreen';
 
-export const MainNavigator = () => {
+// Pantallas implementadas — bloque 4.2 E3 (grupos: crear, unirse, listar)
+import { ChooseJoinTypeScreen } from '@/features/groups/screens/ChooseJoinTypeScreen';
+import { GroupHomeScreen } from '@/features/groups/screens/GroupHomeScreen';
+import { CreateGroupScreen } from '@/features/groups/screens/CreateGroupScreen';
+import { JoinGroupScreen } from '@/features/groups/screens/JoinGroupScreen';
+
+// Pantallas implementadas — bloque 4.3 E3 (grupos: detalle y miembros)
+import { GroupDetailScreen } from '@/features/groups/screens/GroupDetailScreen';
+import { GroupMembersScreen } from '@/features/groups/screens/GroupMembersScreen';
+
+// Pantallas implementadas — bloque 4.4b E3 (grupos: listado de juntadas)
+import { GroupMeetupsScreen } from '@/features/groups/screens/GroupMeetupsScreen';
+
+// El genérico habilita el chequeo de nombres de ruta y parámetros en compilación
+const Stack = createNativeStackNavigator<MainStackParamList>();
+
+/** Props del navegador principal */
+interface MainNavigatorProps {
+  /**
+   * Ruta inicial del stack. AppNavigator la setea en CompleteProfile
+   * cuando el usuario todavía tiene un username autogenerado.
+   */
+  initialRouteName?: keyof MainStackParamList;
+}
+
+export const MainNavigator = ({
+  initialRouteName = Routes.MeetupHome,
+}: MainNavigatorProps) => {
   return (
     <Stack.Navigator
-      initialRouteName={Routes.MeetupHome}
+      initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,
         // Sin animación de transición: el footer embebido en cada pantalla
@@ -54,14 +104,36 @@ export const MainNavigator = () => {
       <Stack.Screen name={Routes.CreateMeetup} component={CreateMeetupScreen} />
       <Stack.Screen name={Routes.JoinMeetup} component={JoinMeetupScreen} />
       <Stack.Screen name={Routes.MeetupDetail} component={MeetupDetailScreen} />
+      <Stack.Screen name={Routes.MeetupStats} component={MeetupStatsScreen} />
+      <Stack.Screen
+        name={Routes.MeetupResultsHistory}
+        component={MeetupResultsHistoryScreen}
+      />
 
       {/* Bloque 3 — edición, participantes e historial */}
       <Stack.Screen name={Routes.EditMeetup} component={EditMeetupScreen} />
       <Stack.Screen name={Routes.ParticipantList} component={ParticipantListScreen} />
       <Stack.Screen name={Routes.MeetupHistory} component={MeetupHistoryScreen} />
+      <Stack.Screen name={Routes.ReviewForm} component={ReviewFormScreen} />
 
       {/* Bloque 4 — impostor */}
       <Stack.Screen name={Routes.Games} component={GamesScreen} />
+      <Stack.Screen name={Routes.Timer} component={TimerScreen} />
+      <Stack.Screen name={Routes.TeamRandomizer} component={TeamRandomizerScreen} />
+      <Stack.Screen name={Routes.WhoAmISetup} component={WhoAmISetupScreen} />
+      <Stack.Screen name={Routes.WhoAmIGame} component={WhoAmIGameScreen} />
+      <Stack.Screen name={Routes.GroupQuestions} component={GroupQuestionsScreen} />
+      <Stack.Screen name={Routes.ScorerSetup} component={ScorerSetupScreen} />
+      <Stack.Screen name={Routes.ScorerGame} component={ScorerGameScreen} />
+      <Stack.Screen name={Routes.TrucoSetup} component={TrucoSetupScreen} />
+      <Stack.Screen name={Routes.TrucoGame} component={TrucoGameScreen} />
+      <Stack.Screen name={Routes.GeneralaSetup} component={GeneralaSetupScreen} />
+      <Stack.Screen name={Routes.GeneralaGame} component={GeneralaGameScreen} />
+      <Stack.Screen name={Routes.Raffle} component={RaffleScreen} />
+      <Stack.Screen name={Routes.LeagueSetup} component={LeagueSetupScreen} />
+      <Stack.Screen name={Routes.LeagueGame} component={LeagueGameScreen} />
+      <Stack.Screen name={Routes.TournamentSetup} component={TournamentSetupScreen} />
+      <Stack.Screen name={Routes.TournamentGame} component={TournamentGameScreen} />
       <Stack.Screen name={Routes.ImpostorStart} component={ImpostorStartScreen} />
       <Stack.Screen name={Routes.ImpostorRole} component={ImpostorRoleScreen} />
 
@@ -75,9 +147,28 @@ export const MainNavigator = () => {
 
       {/* Bloque 6 — perfil de usuario */}
       <Stack.Screen name={Routes.Profile} component={ProfileScreen} />
+      <Stack.Screen name={Routes.ChangePassword} component={ChangePasswordScreen} />
 
       {/* Bloque 1 — completar perfil post-registro */}
       <Stack.Screen name={Routes.CompleteProfile} component={CompleteProfileScreen} />
+
+      {/* Bloque 4.2 — grupos: elegir tipo de unión, crear, unirse, listar */}
+      <Stack.Screen name={Routes.ChooseJoinType} component={ChooseJoinTypeScreen} />
+      <Stack.Screen name={Routes.GroupHome} component={GroupHomeScreen} />
+      <Stack.Screen name={Routes.CreateGroup} component={CreateGroupScreen} />
+      <Stack.Screen name={Routes.JoinGroup} component={JoinGroupScreen} />
+
+      {/* Bloque 4.3 — grupos: detalle y miembros */}
+      <Stack.Screen name={Routes.GroupDetail} component={GroupDetailScreen} />
+      <Stack.Screen name={Routes.GroupMembers} component={GroupMembersScreen} />
+      <Stack.Screen name={Routes.GroupStats} component={GroupStatsScreen} />
+      <Stack.Screen
+        name={Routes.GroupResultsHistory}
+        component={GroupResultsHistoryScreen}
+      />
+
+      {/* Bloque 4.4b — grupos: listado real de juntadas del grupo */}
+      <Stack.Screen name={Routes.GroupMeetups} component={GroupMeetupsScreen} />
     </Stack.Navigator>
   );
 };

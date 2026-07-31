@@ -1,0 +1,15 @@
+# Reflexión Individual sobre el Uso de Inteligencia Artificial - Agustina Agüen
+  
+**Proyecto:** Ronda App — Entrega 3 (Desarrollo de Aplicaciones Móviles 2026)  
+
+---
+
+Esta entrega fue distinta a las anteriores en cómo trabajé con la IA. Me tocó el bloque más grande y con más vueltas de todo el proyecto (Grupos), y terminé usando dos herramientas que se complementaban: una para pensar antes de programar, y otra que ejecutaba directo sobre el código real. Esa separación me obligó a explicar en palabras qué quería lograr antes de que se hiciera, en vez de solo reaccionar a lo que iba saliendo.
+
+Lo que más me sirvió fue agarrar la costumbre de frenar y preguntar "¿esto puede traer algún problema?" antes de tocar algo. Más de una vez esa pausa evitó un quilombo grande — una vez estuvimos a punto de sacar algo viejo de la base de datos, y justo antes de borrarlo nos dimos cuenta de que un montón de otras cosas dependían de eso sin que yo lo supiera. También dejé de conformarme con un "listo, ya funciona": encontramos un bug de seguridad serio (cualquiera podía ver los grupos de otras personas sin el código de invitación), y no nos quedamos con que el código se viera bien, sino que lo probamos como si fuéramos alguien tratando de aprovecharse, para confirmar de verdad que ya no se podía.
+
+Por otro lado, tuve que corregir bastante. Un mismo tipo de error se repitió tres veces en distintas partes del proyecto hasta que aprendimos a reconocerlo antes de que volviera a pasar. También metí la pata pidiendo cosas mal explicadas alguna vez, y tuve que pedir que se revierta y pensarlo de nuevo. Un caso que me quedó grabado: armando unas pantallas de diseño, la IA asumió por su cuenta un detalle que no era real en la app, y tuve que mostrarle capturas para que se corrigiera. Me quedó la idea de que a veces completa cosas que le parecen lógicas pero no son ciertas, y que lo único que confirma algo de verdad es mirar la realidad, no confiar en que "tiene sentido".
+
+También hubo un día particularmente pesado donde arreglaba un problema y aparecía otro, y me frustré bastante. Con el tiempo entendí que no era que la herramienta fallara, sino que estábamos tocando partes del sistema donde un cambio chico podía afectar un montón de cosas conectadas entre sí, y que ese ida y vuelta es parte normal del proceso, no un fracaso mío. Algo que valoro especialmente: en un momento ayudé a destrabar el bloque de una compañera que llevaba días sin poder hacer funcionar el mapa en un build real. No era mi bloque, pero con un enfoque metódico (comparar certificados, ir descartando causas una por una en vez de probar a los tirones) encontramos la causa en poco tiempo.
+
+Si tengo que resumir qué cambió respecto a cómo trabajaba antes: dejé de pedir soluciones grandes de una sola vez y aprendí a ir de a pasos chicos, con un poco de desconfianza sana en el medio — pensar antes, probar con algo concreto después, y recién ahí dar algo por terminado. Es más lento momento a momento, pero se pierde mucho menos tiempo en total, porque cuando algo sale mal es mucho más fácil entender dónde pasó.

@@ -1,5 +1,3 @@
-﻿import type { Memory } from '@/features/memories/types';
-
 /**
  * Tipos del módulo de juntadas.
  *
@@ -42,6 +40,14 @@ export interface Meetup {
   updatedAt: string;
   /** Fecha de cancelación; null si la juntada está activa o terminó normalmente */
   cancelledAt: string | null;
+  /** URL pública de la foto de portada; null o undefined si no tiene portada */
+  cover_url?: string | null;
+  /** true si el organizador habilitó reseñas al finalizar; no se puede deshabilitar */
+  reviews_enabled?: boolean;
+  /** Latitud GPS de la ubicación; null si no fue definida por el organizador */
+  latitude?: number | null;
+  /** Longitud GPS de la ubicación; null si no fue definida por el organizador */
+  longitude?: number | null;
 }
 
 /**
@@ -95,25 +101,3 @@ export interface MeetupParticipant {
     avatarUrl: string | null;
   };
 }
-
-/**
- * Tipado de los parámetros de cada ruta del navegador principal.
- * Permite que useNavigation y useRoute estén completamente tipados
- * en las pantallas de este módulo.
- */
-export type MainStackParamList = {
-  MeetupHome: undefined;
-  CreateMeetup: undefined;
-  JoinMeetup: undefined;
-  MeetupDetail: { meetupId: string };
-  EditMeetup: { meetupId: string };
-  ParticipantList: { meetupId: string };
-  Games: undefined;
-  ImpostorStart: { meetupId?: string };
-  ImpostorRole: { meetupId?: string };
-  MemoriesGallery: { meetupId: string; isActive: boolean };
-  MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string };
-  MeetupHistory: undefined;
-  CompleteProfile: undefined;
-  Profile: undefined;
-};

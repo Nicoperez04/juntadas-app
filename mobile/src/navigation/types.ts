@@ -1,0 +1,93 @@
+/**
+ * Tipado centralizado de la navegación de la app.
+ *
+ * Antes MainStackParamList vivía en el feature meetups, lo que acoplaba
+ * memories, impostor, auth y shared a ese módulo. Al vivir acá, cada
+ * feature depende solo de la capa de navegación, que es transversal.
+ *
+ * Los nombres de las rutas deben mantenerse consistentes con las
+ * constantes de `./routes` — son la fuente de verdad de los strings.
+ */
+import type { Memory } from '@/features/memories/types';
+import type { WhoAmICategorySelection } from '@/features/games/data/whoAmIData';
+
+/**
+ * Parámetros de cada ruta del flujo de autenticación.
+ * Ninguna pantalla del flujo recibe parámetros actualmente.
+ */
+export type AuthStackParamList = {
+  Welcome: undefined;
+  Login: undefined;
+  Register: undefined;
+  ForgotPassword: undefined;
+  ResetPassword: undefined;
+};
+
+/**
+ * Parámetros de cada ruta del navegador principal (usuario autenticado).
+ * Permite que useNavigation y useRoute estén completamente tipados
+ * en todas las pantallas de la app.
+ */
+export type MainStackParamList = {
+  MeetupHome: undefined;
+  CreateMeetup: { groupId?: string; groupName?: string } | undefined;
+  JoinMeetup: undefined;
+  MeetupDetail: { meetupId: string };
+  MeetupStats: { meetupId: string; meetupTitle?: string; isActive?: boolean };
+  MeetupResultsHistory: { meetupId: string; meetupTitle?: string };
+  EditMeetup: { meetupId: string };
+  ParticipantList: { meetupId: string };
+  Games: { meetupId?: string };
+  Timer: undefined;
+  TeamRandomizer: { meetupId?: string };
+  ImpostorStart: { meetupId?: string };
+  ImpostorRole: { meetupId?: string };
+  WhoAmISetup: undefined;
+  WhoAmIGame: { category: WhoAmICategorySelection };
+  GroupQuestions: undefined;
+  ScorerSetup: { meetupId?: string };
+  ScorerGame: {
+    players: string[];
+    targetScore?: number;
+    targetType?: 'win' | 'lose';
+  };
+  TrucoSetup: { meetupId?: string };
+  TrucoGame: {
+    teamAName: string;
+    teamBName: string;
+    targetPoints: 15 | 30;
+    meetupId?: string;
+  };
+  GeneralaSetup: { meetupId?: string };
+  GeneralaGame: {
+    players: string[];
+    meetupId?: string;
+  };
+  Raffle: { meetupId?: string };
+  LeagueSetup: { meetupId?: string };
+  LeagueGame: {
+    teams: string[];
+    meetupId?: string;
+  };
+  TournamentSetup: { meetupId?: string };
+  TournamentGame: {
+    players: string[];
+    meetupId?: string;
+  };
+  MemoriesGallery: { meetupId: string; isActive: boolean };
+  MemoryViewer: { memories: Memory[]; initialIndex: number; meetupId: string; isOrganizer: boolean };
+  MeetupHistory: undefined;
+  ReviewForm: { meetupId: string; meetupTitle: string };
+  CompleteProfile: undefined;
+  Profile: undefined;
+  ChangePassword: undefined;
+  ChooseJoinType: undefined;
+  GroupHome: undefined;
+  CreateGroup: undefined;
+  JoinGroup: undefined;
+  GroupDetail: { groupId: string };
+  GroupMembers: { groupId: string; groupName: string; joinCode: string };
+  GroupStats: { groupId: string; groupName?: string };
+  GroupResultsHistory: { groupId: string; groupName?: string };
+  GroupMeetups: { groupId: string; groupName: string };
+};

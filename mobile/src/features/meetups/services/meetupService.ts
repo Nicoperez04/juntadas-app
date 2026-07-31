@@ -11,6 +11,8 @@
  * Supabase JS v2 no soporta transacciones desde el cliente.
  */
 import { supabase } from '@/lib/supabase/client';
+import { notificationService } from '@/features/notifications/services/notificationService';
+import { NotificationType } from '@/features/notifications/types';
 import type {
   Meetup,
   MeetupWithRole,
@@ -45,6 +47,14 @@ interface MeetupRow {
   created_at: string;
   updated_at: string;
   cancelled_at: string | null;
+  /** URL pública de la portada; null si la juntada no tiene foto */
+  cover_url: string | null;
+  /** true si el organizador habilitó reseñas al finalizar la juntada */
+  reviews_enabled: boolean;
+  /** Latitud GPS de la ubicación; null si no fue definida */
+  latitude: number | null;
+  /** Longitud GPS de la ubicación; null si no fue definida */
+  longitude: number | null;
 }
 
 /** Estructura de una fila de meetup_participants tal como la retorna Supabase */
@@ -83,6 +93,9 @@ interface AttendanceCountRow {
   meetup_id: string;
   attendance_status: string;
 }
+
+/** Nombre del bucket de Storage donde se guardan las portadas de juntadas */
+const COVERS_BUCKET = 'meetup-covers';
 
 /** Caracteres válidos para generar el código de juntada */
 const JOIN_CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -139,6 +152,12 @@ const mapMeetupRow = (row: MeetupRow): Meetup => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   cancelledAt: row.cancelled_at,
+  // Se mantiene snake_case según el contrato definido para este campo
+  cover_url: row.cover_url ?? null,
+  reviews_enabled: row.reviews_enabled ?? false,
+  // Coordenadas GPS opcionales — null si el organizador no las definió
+  latitude: row.latitude ?? null,
+  longitude: row.longitude ?? null,
 });
 
 /**
@@ -197,13 +216,21 @@ export const meetupService = {
    * se elimina la juntada recién creada para no dejar juntadas sin organizador.
    * El join_code se genera automáticamente verificando unicidad.
    *
+   * Si se pasa `groupId`, además invita a todos los miembros activos del
+   * grupo (vía RPC `invite_group_to_meetup`) con `attendance_status: 'pending'`,
+   * el mismo criterio que unirse manual. Un fallo en esa invitación no
+   * revierte la juntada: a diferencia de la auto-inscripción del
+   * organizador, la juntada ya es válida sin invitados extra.
+   *
    * @param userId - UUID del usuario autenticado que crea la juntada
    * @param formData - Datos del formulario de creación
+   * @param groupId - UUID opcional del grupo a invitar a la juntada
    * @returns La juntada creada o un mensaje de error en español
    */
   async createMeetup(
     userId: string,
     formData: CreateMeetupFormData,
+    groupId?: string,
   ): Promise<ServiceResult<Meetup>> {
     try {
       const joinCode = await generateJoinCode();
@@ -224,6 +251,10 @@ export const meetupService = {
           status: 'active',
           join_code: joinCode,
           created_by: userId,
+          group_id: groupId ?? null,
+          // Coordenadas GPS del selector de mapa (migración 029)
+          latitude: formData.latitude ?? null,
+          longitude: formData.longitude ?? null,
         })
         .select()
         .single();
@@ -245,6 +276,42 @@ export const meetupService = {
       if (participantError) {
         await supabase.from('meetups').delete().eq('id', newMeetup.id);
         throw participantError;
+      }
+
+      // Invitar a todo el grupo (best-effort: un fallo acá no invalida la juntada)
+      if (groupId) {
+        const { data: invitedRows, error: inviteError } = await supabase.rpc(
+          'invite_group_to_meetup',
+          { p_meetup_id: newMeetup.id },
+        );
+        if (inviteError) {
+          console.warn('No se pudo invitar a todo el grupo:', inviteError);
+        } else {
+          // Notificar a cada miembro agregado como participante (fire-and-forget)
+          const invitedUserIds = ((invitedRows ?? []) as { invited_user_id: string }[]).map(
+            (row) => row.invited_user_id,
+          );
+
+          if (invitedUserIds.length > 0) {
+            void (async () => {
+              try {
+                await Promise.allSettled(
+                  invitedUserIds.map((invitedUserId) =>
+                    notificationService.sendNotification({
+                      recipientUserId: invitedUserId,
+                      type: NotificationType.GroupMeetupInvite,
+                      title: 'Nueva juntada de grupo 📅',
+                      body: `Te agregaron a ${formData.title}`,
+                      meetupId: newMeetup.id,
+                    }),
+                  ),
+                );
+              } catch {
+                // Error en las notificaciones: no afecta la creación de la juntada
+              }
+            })();
+          }
+        }
       }
 
       return { data: mapMeetupRow(newMeetup as MeetupRow), error: null };
@@ -450,6 +517,30 @@ export const meetupService = {
           return { data: null, error: 'No se pudo volver a unirte' };
         }
 
+        // Notificar al organizador (fire-and-forget)
+        void (async () => {
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('id', userId)
+              .single();
+
+            const username = profile?.username ?? 'Alguien';
+            const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
+
+            await notificationService.sendNotification({
+              recipientUserId: meetup.created_by,
+              type: NotificationType.Joined,
+              title: 'Nueva confirmación 🎉',
+              body: `${username} se unió a ${mappedMeetup.title}`,
+              meetupId: mappedMeetup.id,
+            });
+          } catch {
+            // Error en la notificación: no afecta el flujo principal
+          }
+        })();
+
         return { data: mapMeetupRow(meetup as MeetupRow), error: null };
       }
 
@@ -464,6 +555,31 @@ export const meetupService = {
         });
 
       if (insertError) throw insertError;
+
+      // Notificar al organizador que alguien se unió (fire-and-forget)
+      void (async () => {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', userId)
+            .single();
+
+          const username = profile?.username ?? 'Alguien';
+          const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
+
+          await notificationService.sendNotification({
+            recipientUserId: meetup.created_by,
+            type: NotificationType.Joined,
+            title: 'Nueva confirmación 🎉',
+            body: `${username} se unió a ${mappedMeetup.title}`,
+            meetupId: mappedMeetup.id,
+          });
+        } catch {
+          // Error en la notificación: no afecta el flujo principal
+        }
+      })();
+
       return { data: mapMeetupRow(meetup as MeetupRow), error: null };
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
@@ -596,6 +712,36 @@ export const meetupService = {
 
       if (updateError) throw updateError;
 
+      // Notificar a participantes activos excepto al organizador (fire-and-forget)
+      void (async () => {
+        try {
+          const { data: participants } = await supabase.rpc(
+            'get_meetup_participant_ids',
+            {
+              p_meetup_id: meetupId,
+              p_excluded_user_id: userId,
+            },
+          );
+
+          const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
+          const recipients = (participants ?? []) as { user_id: string }[];
+
+          await Promise.allSettled(
+            recipients.map((p) =>
+              notificationService.sendNotification({
+                recipientUserId: p.user_id,
+                type: NotificationType.Cancelled,
+                title: 'Juntada cancelada 😔',
+                body: `${mappedMeetup.title} fue cancelada`,
+                meetupId: mappedMeetup.id,
+              }),
+            ),
+          );
+        } catch {
+          // Error en las notificaciones: no afecta el resultado de la cancelación
+        }
+      })();
+
       return { data: mapMeetupRow(updated as MeetupRow), error: null };
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
@@ -608,16 +754,19 @@ export const meetupService = {
 
   /**
    * Finaliza una juntada activa. Solo el organizador puede ejecutar esta acción.
-   * Setea status = 'finished' para moverla al historial sin marcarla como cancelada.
+   * Setea status = 'finished' y opcionalmente reviews_enabled según la elección
+   * del organizador al confirmar la finalización.
    *
    * @param meetupId - UUID de la juntada
    * @param userId - UUID del usuario que intenta finalizar
-   * @returns La juntada finalizada o mensaje de error
+   * @param reviewsEnabled - true si los participantes podrán dejar reseñas
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
    */
   async finishMeetup(
     meetupId: string,
     userId: string,
-  ): Promise<ServiceResult<Meetup>> {
+    reviewsEnabled: boolean,
+  ): Promise<ServiceResult<null>> {
     try {
       const { data: meetup, error: fetchError } = await supabase
         .from('meetups')
@@ -642,16 +791,80 @@ export const meetupService = {
         return { data: null, error: 'La juntada ya está finalizada' };
       }
 
-      const { data: updated, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('meetups')
-        .update({ status: 'finished' })
-        .eq('id', meetupId)
-        .select()
-        .single();
+        .update({
+          status: 'finished',
+          reviews_enabled: reviewsEnabled,
+        })
+        .eq('id', meetupId);
 
       if (updateError) throw updateError;
 
-      return { data: mapMeetupRow(updated as MeetupRow), error: null };
+      // Notificar finalización a participantes activos excepto al organizador (fire-and-forget)
+      void (async () => {
+        try {
+          const { data: participants } = await supabase.rpc(
+            'get_meetup_participant_ids',
+            {
+              p_meetup_id: meetupId,
+              p_excluded_user_id: userId,
+            },
+          );
+
+          const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
+          const recipients = (participants ?? []) as { user_id: string }[];
+
+          await Promise.allSettled(
+            recipients.map((p) =>
+              notificationService.sendNotification({
+                recipientUserId: p.user_id,
+                type: NotificationType.Finished,
+                title: '¡Juntada finalizada! 🎊',
+                body: `${mappedMeetup.title} ha finalizado`,
+                meetupId: mappedMeetup.id,
+              }),
+            ),
+          );
+        } catch {
+          // Error en las notificaciones: no afecta el resultado de la finalización
+        }
+      })();
+
+      // Si se habilitaron reseñas, notificar a todos los participantes excepto al organizador (fire-and-forget)
+      if (reviewsEnabled) {
+        void (async () => {
+          try {
+            const { data: participants } = await supabase.rpc(
+              'get_meetup_participant_ids',
+              {
+                p_meetup_id: meetupId,
+                p_excluded_user_id: userId,
+              },
+            );
+
+            const mappedMeetup = mapMeetupRow(meetup as MeetupRow);
+            const recipients = (participants ?? []) as { user_id: string }[];
+
+            // Enviar una notificación por cada participante
+            await Promise.allSettled(
+              recipients.map((p) =>
+                notificationService.sendNotification({
+                  recipientUserId: p.user_id,
+                  type: NotificationType.ReviewEnabled,
+                  title: '¿Cómo estuvo? ⭐',
+                  body: `Dejá tu reseña de ${mappedMeetup.title}`,
+                  meetupId: mappedMeetup.id,
+                }),
+              ),
+            );
+          } catch {
+            // Error en las notificaciones: no afecta el resultado de la finalización
+          }
+        })();
+      }
+
+      return { data: null, error: null };
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
       return {
@@ -717,6 +930,10 @@ export const meetupService = {
             formData.estimatedCost && formData.estimatedCost.trim() !== ''
               ? parseFloat(formData.estimatedCost)
               : null,
+          // Coordenadas GPS del selector de mapa (migración 029)
+          // null limpia explícitamente el valor si el usuario quitó el pin
+          latitude: formData.latitude ?? null,
+          longitude: formData.longitude ?? null,
         })
         .eq('id', meetupId)
         .select()
@@ -814,6 +1031,395 @@ export const meetupService = {
       return {
         data: null,
         error: translateError(message) || 'Error al obtener el historial',
+      };
+    }
+  },
+
+  /**
+   * Sube la foto de portada de una juntada al bucket 'meetup-covers' y
+   * actualiza cover_url en la tabla meetups con la URL pública resultante.
+   *
+   * El path sigue la convención {meetupId}/{userId}/{timestamp}.jpg que
+   * esperan las políticas RLS del bucket (solo el organizador puede subir).
+   * Si falla la actualización de la tabla, se elimina el archivo recién
+   * subido para no dejar huérfanos en Storage.
+   *
+   * @param meetupId - UUID de la juntada
+   * @param fileUri - URI local de la imagen seleccionada con ImagePicker
+   * @param userId - UUID del organizador autenticado
+   * @returns La URL pública de la portada o mensaje de error
+   */
+  async uploadMeetupCover(
+    meetupId: string,
+    fileUri: string,
+    userId: string,
+  ): Promise<ServiceResult<string>> {
+    try {
+      // fetch sobre la URI local convierte la imagen en bytes subibles,
+      // mismo patrón que usa memoriesService para los recuerdos
+      const response = await fetch(fileUri);
+      const arrayBuffer = await response.arrayBuffer();
+      const filePath = `${meetupId}/${userId}/${Date.now()}.jpg`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(COVERS_BUCKET)
+        .upload(filePath, arrayBuffer, {
+          contentType: 'image/jpeg',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        return { data: null, error: 'No se pudo subir la portada' };
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from(COVERS_BUCKET)
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('meetups')
+        .update({ cover_url: publicUrlData.publicUrl })
+        .eq('id', meetupId);
+
+      if (updateError) {
+        // Rollback manual: borrar el archivo huérfano si falla el update en DB
+        await supabase.storage.from(COVERS_BUCKET).remove([filePath]);
+        return { data: null, error: 'No se pudo guardar la portada' };
+      }
+
+      return { data: publicUrlData.publicUrl, error: null };
+    } catch {
+      return { data: null, error: 'Error inesperado al subir la portada' };
+    }
+  },
+
+  /**
+   * Elimina la foto de portada de una juntada: borra el archivo del bucket
+   * y setea cover_url = null en la tabla meetups.
+   *
+   * @param meetupId - UUID de la juntada
+   * @param filePath - Ruta del archivo dentro del bucket ({meetupId}/{userId}/{timestamp}.jpg)
+   * @returns null en data; error solo si algún paso falla
+   */
+  async removeMeetupCover(
+    meetupId: string,
+    filePath: string,
+  ): Promise<ServiceResult<null>> {
+    try {
+      const { error: storageError } = await supabase.storage
+        .from(COVERS_BUCKET)
+        .remove([filePath]);
+
+      if (storageError) {
+        return { data: null, error: 'No se pudo eliminar el archivo de portada' };
+      }
+
+      const { error: updateError } = await supabase
+        .from('meetups')
+        .update({ cover_url: null })
+        .eq('id', meetupId);
+
+      if (updateError) {
+        return { data: null, error: 'No se pudo quitar la portada' };
+      }
+
+      return { data: null, error: null };
+    } catch {
+      return { data: null, error: 'Error inesperado al quitar la portada' };
+    }
+  },
+
+  /**
+   * Transfiere la organización de una juntada a otro participante activo.
+   *
+   * Ejecuta tres pasos en secuencia, abortando ante el primer error:
+   *   1. El organizador actual pasa a role = 'participant'
+   *   2. El nuevo organizador pasa a role = 'organizer'
+   *   3. created_by en meetups se actualiza al nuevo organizador
+   *
+   * El orden importa por RLS: los pasos 1 y 2 requieren que el usuario
+   * autenticado siga siendo created_by de la juntada, por eso el update
+   * de meetups va al final. Supabase JS no soporta transacciones desde
+   * el cliente, así que un fallo intermedio puede dejar estado parcial.
+   *
+   * NOTA: el enum participant_role de la DB solo admite 'organizer' y
+   * 'participant'; se usa 'participant' como rol del organizador saliente.
+   *
+   * @param meetupId - UUID de la juntada
+   * @param newOrganizerUserId - UUID del participante que recibe la organización
+   * @param currentOrganizerUserId - UUID del organizador actual autenticado
+   * @returns null en data; error si algún paso de la secuencia falla
+   */
+  /**
+   * Obtiene TODAS las juntadas del usuario (activas, finalizadas y canceladas),
+   * excluyendo las que ocultó de su historial.
+   * Ordenadas por fecha descendente (más recientes primero).
+   *
+   * @param userId - UUID del usuario autenticado
+   * @returns Lista completa con rol del usuario o mensaje de error
+   */
+  async getAllUserMeetups(
+    userId: string,
+  ): Promise<ServiceResult<MeetupWithRole[]>> {
+    try {
+      // Paso 1: IDs de juntadas que el usuario ocultó de su historial
+      const { data: hiddenRows, error: hiddenError } = await supabase
+        .from('meetup_hidden')
+        .select('meetup_id')
+        .eq('user_id', userId);
+
+      if (hiddenError) throw hiddenError;
+
+      const hiddenMeetupIds = new Set(
+        (hiddenRows ?? []).map((row: { meetup_id: string }) => row.meetup_id),
+      );
+
+      // Paso 2: participaciones del usuario (activas e históricas)
+      const { data: myParticipations, error: parError } = await supabase
+        .from('meetup_participants')
+        .select('meetup_id, role, attendance_status, left_at')
+        .eq('user_id', userId);
+
+      if (parError) throw parError;
+      if (!myParticipations || myParticipations.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const meetupIds = (myParticipations as UserParticipationRow[])
+        .map((p) => p.meetup_id)
+        .filter((id) => !hiddenMeetupIds.has(id));
+
+      if (meetupIds.length === 0) {
+        return { data: [], error: null };
+      }
+
+      // Paso 3: todas las juntadas sin filtrar por status
+      const { data: meetupsData, error: meetupsError } = await supabase
+        .from('meetups')
+        .select('*')
+        .in('id', meetupIds)
+        .order('date', { ascending: false });
+
+      if (meetupsError) throw meetupsError;
+      if (!meetupsData || meetupsData.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const visibleMeetupIds = (meetupsData as MeetupRow[]).map((m) => m.id);
+
+      // Paso 4: conteos de participantes activos por juntada
+      const { data: allParticipants, error: countError } = await supabase
+        .from('meetup_participants')
+        .select('meetup_id, attendance_status')
+        .in('meetup_id', visibleMeetupIds)
+        .is('left_at', null);
+
+      if (countError) throw countError;
+
+      const safeParticipants = (allParticipants ?? []) as AttendanceCountRow[];
+      const safeMyParticipations = myParticipations as UserParticipationRow[];
+
+      const result: MeetupWithRole[] = (meetupsData as MeetupRow[]).map(
+        (meetupRow) => {
+          const myParticipation = safeMyParticipations.find(
+            (p) => p.meetup_id === meetupRow.id,
+          );
+          const participantsForMeetup = safeParticipants.filter(
+            (p) => p.meetup_id === meetupRow.id,
+          );
+
+          return {
+            ...mapMeetupRow(meetupRow),
+            userRole: (myParticipation?.role ?? 'participant') as ParticipantRole,
+            attendanceStatus: (myParticipation?.attendance_status ??
+              'pending') as AttendanceStatus,
+            participantCount: participantsForMeetup.length,
+            confirmedCount: participantsForMeetup.filter(
+              (p) => p.attendance_status === 'confirmed',
+            ).length,
+            leftAt: myParticipation?.left_at ?? null,
+          };
+        },
+      );
+
+      return { data: result, error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return {
+        data: null,
+        error: translateError(message) || 'Error al obtener el historial',
+      };
+    }
+  },
+
+  /**
+   * Oculta una juntada del historial del usuario sin afectar a otros.
+   *
+   * @param meetupId - UUID de la juntada a ocultar
+   * @param userId - UUID del usuario autenticado
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
+   */
+  async hideMeetup(
+    meetupId: string,
+    userId: string,
+  ): Promise<ServiceResult<null>> {
+    try {
+      const { error } = await supabase.from('meetup_hidden').insert({
+        meetup_id: meetupId,
+        user_id: userId,
+      });
+
+      if (error) throw error;
+      return { data: null, error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return {
+        data: null,
+        error: translateError(message) || 'No se pudo ocultar la juntada',
+      };
+    }
+  },
+
+  /**
+   * Elimina una juntada para todos los participantes (hard delete).
+   * Solo debe invocarse si el usuario es organizador; la validación
+   * de rol queda en la capa de UI antes de llamar a este método.
+   *
+   * @param meetupId - UUID de la juntada a eliminar
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
+   */
+  async deleteMeetupForAll(meetupId: string): Promise<ServiceResult<null>> {
+    try {
+      const { error } = await supabase
+        .from('meetups')
+        .delete()
+        .eq('id', meetupId);
+
+      if (error) throw error;
+      return { data: null, error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return {
+        data: null,
+        error: translateError(message) || 'No se pudo eliminar la juntada',
+      };
+    }
+  },
+
+  /**
+   * Reactiva una juntada finalizada volviéndola a status 'active'.
+   * Las reseñas existentes se conservan en la base de datos.
+   *
+   * @param meetupId - UUID de la juntada a reactivar
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
+   */
+  async reactivateMeetup(meetupId: string): Promise<ServiceResult<null>> {
+    try {
+      const { data: meetup, error: fetchError } = await supabase
+        .from('meetups')
+        .select('status')
+        .eq('id', meetupId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!meetup) {
+        return { data: null, error: 'Juntada no encontrada' };
+      }
+      if (meetup.status !== 'finished') {
+        return {
+          data: null,
+          error: 'Solo se pueden reactivar juntadas finalizadas',
+        };
+      }
+
+      const { error: updateError } = await supabase
+        .from('meetups')
+        .update({ status: 'active' })
+        .eq('id', meetupId);
+
+      if (updateError) throw updateError;
+      return { data: null, error: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      return {
+        data: null,
+        error: translateError(message) || 'No se pudo reactivar la juntada',
+      };
+    }
+  },
+
+  async transferOrganizer(
+    meetupId: string,
+    newOrganizerUserId: string,
+    currentOrganizerUserId: string,
+  ): Promise<ServiceResult<null>> {
+    try {
+      // Leer el título de la juntada para incluirlo en la notificación
+      const { data: meetupData } = await supabase
+        .from('meetups')
+        .select('title')
+        .eq('id', meetupId)
+        .single();
+
+      // Paso 1: degradar al organizador actual
+      const { error: demoteError } = await supabase
+        .from('meetup_participants')
+        .update({ role: 'participant' })
+        .eq('meetup_id', meetupId)
+        .eq('user_id', currentOrganizerUserId);
+
+      if (demoteError) {
+        return { data: null, error: 'No se pudo actualizar tu rol' };
+      }
+
+      // Paso 2: promover al nuevo organizador
+      const { error: promoteError } = await supabase
+        .from('meetup_participants')
+        .update({ role: 'organizer' })
+        .eq('meetup_id', meetupId)
+        .eq('user_id', newOrganizerUserId);
+
+      if (promoteError) {
+        return {
+          data: null,
+          error: 'No se pudo asignar el nuevo organizador',
+        };
+      }
+
+      // Paso 3: actualizar el creador de la juntada (último por RLS)
+      const { error: meetupError } = await supabase
+        .from('meetups')
+        .update({ created_by: newOrganizerUserId })
+        .eq('id', meetupId);
+
+      if (meetupError) {
+        return {
+          data: null,
+          error: 'No se pudo transferir la organización de la juntada',
+        };
+      }
+
+      // Notificar al nuevo organizador (fire-and-forget)
+      void (async () => {
+        try {
+          const meetupTitle = meetupData?.title ?? 'la juntada';
+          await notificationService.sendNotification({
+            recipientUserId: newOrganizerUserId,
+            type: NotificationType.Transferred,
+            title: 'Ahora sos el organizador 👑',
+            body: `Sos el nuevo organizador de ${meetupTitle}`,
+            meetupId,
+          });
+        } catch {
+          // Error en la notificación: no afecta la transferencia
+        }
+      })();
+
+      return { data: null, error: null };
+    } catch {
+      return {
+        data: null,
+        error: 'Error inesperado al transferir la organización',
       };
     }
   },

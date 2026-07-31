@@ -1,52 +1,54 @@
 /**
- * Pantalla de detalle de una juntada.
+ * Pantalla de detalle de una juntada — orquestadora.
  *
- * Muestra la información completa de la juntada: datos principales,
- * acciones (Jugar / Recuerdos), lista de participantes con sus estados
- * de asistencia, y la sección de código para compartir.
+ * La lógica de datos (meetup, participantes, rol del usuario, acciones)
+ * vive en useMeetupDetail; las secciones visuales principales viven en
+ * MeetupDetailHeader, MeetupParticipantsSummary y MeetupOrganizerActions.
  *
- * El rol del usuario actual se determina buscando su ID dentro de la
- * lista de participantes. El código se copia al clipboard vía expo-clipboard
- * y se comparte vía la API nativa de Share.
+ * Esta pantalla solo coordina: navegación, modales de confirmación,
+ * el modal de asistencia, el toast de feedback y la sección de compartir.
  */
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Share,
   ActivityIndicator,
   Pressable,
   Modal,
-  Image,
+  RefreshControl,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { supabase } from '@/lib/supabase/client';
 import { theme } from '@/shared/constants/theme';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
 import { AppTabBar } from '@/shared/components/AppTabBar';
-import { ModifyAttendanceLink } from '@/shared/components/ModifyAttendanceLink';
-import { Toast } from '@/shared/components/Toast';
-import { useMeetups } from '../hooks/useMeetups';
-import { useParticipants } from '@/features/participants/hooks/useParticipants';
-import { participantService } from '@/features/participants/services/participantService';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { ModifyAttendanceScreen } from '@/features/participants/screens/ModifyAttendanceScreen';
 import { getParticipantDisplayName } from '@/features/participants/utils/participantDisplay';
-import type {
-  Meetup,
-  MeetupParticipant,
-  ParticipantRole,
-  AttendanceStatus,
-  MainStackParamList,
-} from '../types';
+import { useMeetupDetail } from '../hooks/useMeetupDetail';
+import { isPastMeetup } from '../utils/meetupDateTime';
+import {
+  useHideMeetup,
+  useDeleteMeetupForAll,
+} from '../hooks/useMeetups';
+import { MeetupDetailHeader } from '../components/MeetupDetailHeader';
+import { MeetupDetailSkeleton } from '../components/MeetupDetailSkeleton';
+import { MeetupParticipantsSummary } from '../components/MeetupParticipantsSummary';
+import { MeetupOrganizerActions } from '../components/MeetupOrganizerActions';
+import { MeetupShareButton } from '../components/MeetupShareButton';
+import { LocationCard } from '../components/LocationCard';
+import { ReviewsSection } from '@/features/reviews/components/ReviewsSection';
+import type { MeetupParticipant, AttendanceStatus } from '../types';
+import type { MainStackParamList } from '@/navigation/types';
 
 type NavProp = NativeStackNavigationProp<MainStackParamList, 'MeetupDetail'>;
 type RoutePropType = RouteProp<MainStackParamList, 'MeetupDetail'>;
@@ -55,98 +57,6 @@ type RoutePropType = RouteProp<MainStackParamList, 'MeetupDetail'>;
 type AttendanceModalTarget =
   | { mode: 'self' }
   | { mode: 'organizer'; participant: MeetupParticipant };
-
-/**
- * Paleta de colores para avatares de participantes.
- * El índice se calcula hasheando el userId para consistencia visual.
- */
-const AVATAR_PALETTE = [
-  '#7C3AED',
-  '#EC4899',
-  '#0EA5E9',
-  '#059669',
-  '#D97706',
-  '#DC2626',
-  '#7C3AED',
-];
-
-/**
- * Genera un índice de color determinístico a partir de un string.
- *
- * @param str - String a hashear (userId)
- * @returns Índice dentro de AVATAR_PALETTE
- */
-const getAvatarColorIndex = (str: string): number => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return Math.abs(hash) % AVATAR_PALETTE.length;
-};
-
-/**
- * Extrae las iniciales de un nombre completo (máximo 2 caracteres).
- *
- * @param name - Nombre completo
- * @returns Iniciales en mayúsculas
- */
-const getInitials = (name: string): string => {
-  const parts = name.trim().split(' ').filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
-
-/**
- * Formatea una fecha en formato legible para el usuario.
- * Soporta ISO (YYYY-MM-DD) y DD/MM/YYYY.
- *
- * @param dateStr - Fecha como string
- * @returns Fecha formateada
- */
-const formatDate = (dateStr: string): string => {
-  if (dateStr.includes('/')) return dateStr;
-  const parts = dateStr.split('-');
-  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  return dateStr;
-};
-
-/**
- * Determina si la juntada ya comenzó comparando fecha y hora con el momento actual.
- *
- * @param date - Fecha en formato YYYY-MM-DD desde Supabase
- * @param time - Hora en formato HH:MM:SS desde Supabase
- * @returns true si la fecha/hora de inicio ya pasó o es ahora
- */
-const hasMeetupStarted = (date: string, time: string): boolean => {
-  const meetupDateTime = new Date(`${date}T${time}`);
-  return new Date() >= meetupDateTime;
-};
-
-/**
- * Label visual y color para cada estado de asistencia.
- * Centraliza los valores para que sean consistentes en toda la pantalla.
- */
-const ATTENDANCE_CONFIG: Record<
-  string,
-  { label: string; bgColor: string; textColor: string }
-> = {
-  confirmed: {
-    label: 'Confirmado',
-    bgColor: theme.colors.successLight,
-    textColor: theme.colors.success,
-  },
-  pending: {
-    label: 'Pendiente',
-    bgColor: '#FEF3C7',
-    textColor: '#92400E',
-  },
-  declined: {
-    label: 'Decliné',
-    bgColor: theme.colors.errorLight,
-    textColor: theme.colors.error,
-  },
-};
 
 /** Card de acción principal (Jugar / Recuerdos) */
 interface ActionCardProps {
@@ -167,131 +77,91 @@ const ActionCard = ({ icon, label, color, onPress }: ActionCardProps) => (
     <View style={[styles.actionIconBox, { backgroundColor: `${color}20` }]}>
       <Ionicons name={icon} size={28} color={color} />
     </View>
-    <Text style={[styles.actionLabel, { color }]}>{label}</Text>
+    <Text
+      style={[styles.actionLabel, { color }]}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.75}
+    >
+      {label}
+    </Text>
   </Pressable>
 );
-
-/** Fila de un participante en la lista */
-interface ParticipantRowProps {
-  participant: MeetupParticipant;
-  onPress?: () => void;
-  editable?: boolean;
-}
-
-const ParticipantItem = ({
-  participant,
-  onPress,
-  editable = false,
-}: ParticipantRowProps) => {
-  const config =
-    ATTENDANCE_CONFIG[participant.attendanceStatus] ??
-    ATTENDANCE_CONFIG.pending;
-  const avatarColor =
-    AVATAR_PALETTE[getAvatarColorIndex(participant.userId)];
-
-  const displayName = getParticipantDisplayName(participant);
-  const initials = getInitials(displayName);
-
-  // Si tiene avatar en el perfil, mostrar foto; si no, iniciales con color determinístico
-  const avatarUrl = participant.profile.avatarUrl;
-
-  const content = (
-    <>
-      {avatarUrl ? (
-        <Image
-          source={{ uri: avatarUrl }}
-          style={styles.participantAvatar}
-        />
-      ) : (
-        <View style={[styles.participantAvatar, { backgroundColor: avatarColor }]}>
-          <Text style={styles.participantAvatarText}>{initials}</Text>
-        </View>
-      )}
-      <View style={styles.participantInfo}>
-        <Text style={styles.participantName} numberOfLines={1}>
-          {displayName}
-        </Text>
-        <Text style={styles.participantUsername}>
-          @{participant.profile.username}
-        </Text>
-      </View>
-      {participant.role === 'organizer' && (
-        <Ionicons
-          name="star"
-          size={14}
-          color="#D97706"
-          style={styles.organizerStar}
-        />
-      )}
-      <View
-        style={[
-          styles.attendanceBadge,
-          { backgroundColor: config.bgColor },
-        ]}
-      >
-        <Text
-          style={[styles.attendanceBadgeText, { color: config.textColor }]}
-        >
-          {config.label}
-        </Text>
-      </View>
-      {editable && (
-        <Ionicons
-          name="chevron-forward"
-          size={16}
-          color={theme.colors.textDisabled}
-        />
-      )}
-    </>
-  );
-
-  if (onPress) {
-    return (
-      <TouchableOpacity
-        style={[
-          styles.participantRow,
-          editable && styles.participantRowEditable,
-        ]}
-        onPress={onPress}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel={`Editar asistencia de ${displayName}`}
-      >
-        {content}
-      </TouchableOpacity>
-    );
-  }
-
-  return <View style={styles.participantRow}>{content}</View>;
-};
 
 export const MeetupDetailScreen = () => {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RoutePropType>();
-  const { meetupId } = route.params;
+  const queryClient = useQueryClient();
+  const { meetupId } = route.params ?? {};
 
-  const { getMeetupById, cancelMeetup, finishMeetup } = useMeetups();
+  const {
+    meetup,
+    participants,
+    confirmedCount,
+    isLoading,
+    isLoadingParticipants,
+    isErrorParticipants,
+    refetchParticipants,
+    error,
+    currentUserParticipant,
+    userRole,
+    hasAbandoned,
+    isOrganizer,
+    isParticipant,
+    isActive,
+    isCancelled,
+    isFinished,
+    canFinish,
+    currentUserId,
+    cancel,
+    leave,
+    updateAttendance,
+    updateParticipantAttendance,
+    reload,
+    refreshAll,
+  } = useMeetupDetail(meetupId);
 
-  const [meetup, setMeetup] = useState<Meetup | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  /**
+   * Recarga manual del detalle, participantes y participación propia
+   * cuando el usuario desliza hacia abajo en el ScrollView.
+   */
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+        queryClient.invalidateQueries({ queryKey: ['participants', meetupId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['userParticipation', meetupId, currentUserId],
+        }),
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [queryClient, meetupId, currentUserId]);
+
+  // Estados de UI: visibilidad de modales y operaciones en curso
   const [attendanceModalTarget, setAttendanceModalTarget] =
     useState<AttendanceModalTarget | null>(null);
-  const [isFinishing, setIsFinishing] = useState(false);
-  const [showFinishModal, setShowFinishModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
-  const [userParticipation, setUserParticipation] = useState<{
-    role: ParticipantRole;
-    leftAt: string | null;
-  } | null>(null);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [pendingHistoryAction, setPendingHistoryAction] = useState<
+    'hide' | 'delete' | null
+  >(null);
+  /** Navega al historial tras la animación de ocultar/eliminar */
+  const [shouldNavigateBackAfterToast, setShouldNavigateBackAfterToast] =
+    useState(false);
+
+  const hideMutation = useHideMeetup();
+  const deleteMutation = useDeleteMeetupForAll();
 
   /**
    * Transporta el mensaje de Toast entre onSave y onClose del modal de
@@ -300,120 +170,37 @@ export const MeetupDetailScreen = () => {
    */
   const pendingToastRef = useRef<string | null>(null);
 
-  const {
-    participants,
-    isLoading: isLoadingParticipants,
-    updateAttendance,
-    updateParticipantAttendance,
-    leaveMeetup,
-    refresh: refreshParticipants,
-  } = useParticipants(meetupId, currentUserId);
-
-  // Obtener el ID del usuario actual para determinar su rol en la juntada
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setCurrentUserId(session?.user?.id ?? null);
-    });
-  }, []);
-
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    const meetupResult = await getMeetupById(meetupId);
-
-    if (meetupResult.error) {
-      setError(meetupResult.error);
-    } else {
-      setMeetup(meetupResult.data);
-    }
-
-    setIsLoading(false);
-  }, [meetupId, getMeetupById]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
   /**
-   * Carga la participación del usuario aunque haya abandonado la juntada,
-   * porque la lista activa de participantes no incluye registros con left_at.
+   * Muestra feedback de éxito o error delegado desde componentes hijos
+   * (p. ej. MeetupShareButton) sin mezclar ambos tipos en un solo estado.
    */
-  useEffect(() => {
-    if (!currentUserId) {
-      setUserParticipation(null);
+  const handleFeedback = (message: string, type: 'success' | 'error') => {
+    if (type === 'success') {
+      setSuccessMessage(message);
+      setShowSuccess(true);
       return;
     }
-
-    void participantService
-      .getUserParticipation(meetupId, currentUserId)
-      .then(({ data }) => {
-        if (data) {
-          setUserParticipation({ role: data.role, leftAt: data.leftAt });
-        } else {
-          setUserParticipation(null);
-        }
-      });
-  }, [meetupId, currentUserId]);
-
-  /** Rol del usuario actual determinado desde la lista de participantes */
-  const currentUserParticipant = participants.find(
-    (p) => p.userId === currentUserId,
-  );
-  const userRole: ParticipantRole =
-    currentUserParticipant?.role ?? userParticipation?.role ?? 'participant';
-  const hasAbandoned = userParticipation?.leftAt != null;
-
-  const confirmedCount = participants.filter(
-    (p) => p.attendanceStatus === 'confirmed',
-  ).length;
+    setErrorMessage(message);
+    setShowError(true);
+  };
 
   /**
-   * Cierra el modal de asistencia y recarga datos en paralelo para evitar
-   * re-renders intermedios por llamadas secuenciales a loadData y refresh.
+   * Cierra el modal de asistencia y recarga datos solo si hubo cambios guardados.
    */
-  const handleAttendanceClose = useCallback(async () => {
+  const handleAttendanceClose = useCallback(async (wasUpdated = false) => {
     setAttendanceModalTarget(null);
-    await Promise.all([loadData(), refreshParticipants()]);
+    if (wasUpdated) {
+      await refreshAll();
+    }
     if (pendingToastRef.current) {
-      setToast({ message: pendingToastRef.current, type: 'success' });
+      setSuccessMessage(pendingToastRef.current);
+      setShowSuccess(true);
       pendingToastRef.current = null;
     }
-  }, [loadData, refreshParticipants]);
-
-  /**
-   * Comparte el código de la juntada usando la API nativa Share.
-   * Permite al usuario enviarlo por el canal que prefiera (WhatsApp, etc.).
-   */
-  const handleShare = async () => {
-    if (!meetup) return;
-    try {
-      await Share.share({
-        message: `¡Unite a mi juntada "${meetup.title}"! Usá el código: ${meetup.joinCode}`,
-        title: 'Compartir juntada',
-      });
-    } catch {
-      // Error ignorado — el usuario puede haber cancelado el share sheet
-    }
-  };
-
-  /**
-   * Copia el código al clipboard y muestra un toast de confirmación
-   * en lugar de cambiar el ícono del botón.
-   */
-  const handleCopy = async () => {
-    if (!meetup) return;
-    await Clipboard.setStringAsync(meetup.joinCode);
-    setToast({ message: '✓ Código copiado', type: 'success' });
-  };
+  }, [refreshAll]);
 
   if (isLoading || (isLoadingParticipants && participants.length === 0)) {
-    return (
-      <SafeAreaView style={styles.loadingContainer} edges={['top', 'bottom']}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Cargando juntada...</Text>
-      </SafeAreaView>
-    );
+    return <MeetupDetailSkeleton />;
   }
 
   if (error || !meetup) {
@@ -427,20 +214,13 @@ export const MeetupDetailScreen = () => {
         <Text style={styles.errorFullText}>
           {error ?? 'No se pudo cargar la juntada'}
         </Text>
-        <TouchableOpacity onPress={loadData} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => void reload()} activeOpacity={0.7}>
           <Text style={styles.retryText}>Reintentar</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
-  const isOrganizer = userRole === 'organizer';
-  const isParticipant = userRole === 'participant' && !hasAbandoned;
-  const isCancelled = meetup.status === 'cancelled';
-  const isFinished = meetup.status === 'finished';
-  const isActive = meetup.status === 'active';
-  const canFinish =
-    isOrganizer && isActive && hasMeetupStarted(meetup.date, meetup.time);
   const roleLabel = isOrganizer ? 'Organizador' : 'Invitado';
   const currentAttendance: AttendanceStatus =
     currentUserParticipant?.attendanceStatus ?? 'pending';
@@ -460,37 +240,18 @@ export const MeetupDetailScreen = () => {
    */
   const confirmCancelMeetup = async () => {
     setIsCancelling(true);
-    const result = await cancelMeetup(meetupId);
+    const result = await cancel();
     setIsCancelling(false);
     setShowCancelModal(false);
 
     if (result.error) {
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
       return;
     }
 
-    await loadData();
-    await refreshParticipants();
-    setToast({ message: 'Juntada cancelada', type: 'success' });
-  };
-
-  /**
-   * Ejecuta la finalización de la juntada tras confirmación en el modal.
-   */
-  const confirmFinishMeetup = async () => {
-    setIsFinishing(true);
-    const result = await finishMeetup(meetupId);
-    setIsFinishing(false);
-    setShowFinishModal(false);
-
-    if (result.error) {
-      setToast({ message: result.error, type: 'error' });
-      return;
-    }
-
-    await loadData();
-    await refreshParticipants();
-    setToast({ message: 'Juntada finalizada', type: 'success' });
+    setSuccessMessage('✓ Juntada cancelada');
+    setShowSuccess(true);
   };
 
   /**
@@ -498,208 +259,161 @@ export const MeetupDetailScreen = () => {
    */
   const confirmLeaveMeetup = async () => {
     setIsLeaving(true);
-    const result = await leaveMeetup();
+    const result = await leave();
     setIsLeaving(false);
     setShowLeaveModal(false);
 
     if (result.error) {
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
       return;
     }
 
     navigation.navigate(Routes.MeetupHome);
   };
 
+  const isHistoryActionLoading =
+    hideMutation.isPending || deleteMutation.isPending;
+
+  /**
+   * Confirma ocultar o eliminar la juntada desde el detalle.
+   * Reutiliza la misma lógica del historial (swipe) para mantener consistencia.
+   */
+  const confirmHistoryAction = async () => {
+    if (!pendingHistoryAction) return;
+
+    if (pendingHistoryAction === 'hide') {
+      const result = await hideMutation.mutateAsync(meetupId);
+      setPendingHistoryAction(null);
+
+      if (result.error) {
+        setErrorMessage(result.error);
+      setShowError(true);
+        return;
+      }
+
+      setSuccessMessage('✓ Juntada ocultada de tu historial');
+      setShowSuccess(true);
+      setShouldNavigateBackAfterToast(true);
+      return;
+    }
+
+    const result = await deleteMutation.mutateAsync(meetupId);
+    setPendingHistoryAction(null);
+
+    if (result.error) {
+      setErrorMessage(result.error);
+      setShowError(true);
+      return;
+    }
+
+    setSuccessMessage('✓ Juntada eliminada');
+    setShowSuccess(true);
+    setShouldNavigateBackAfterToast(true);
+  };
+
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={22}
-            color={theme.colors.textPrimary}
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detalle</Text>
-        {isOrganizer ? (
+        {/* Barra superior de navegación con acción de editar (organizador) */}
+        <View style={styles.header}>
           <TouchableOpacity
-            onPress={() =>
-              !isCancelled &&
-              !isFinished &&
-              navigation.navigate(Routes.EditMeetup, { meetupId })
-            }
-            style={[
-              styles.editBtn,
-              (isCancelled || isFinished) && styles.editBtnDisabled,
-            ]}
-            activeOpacity={isCancelled || isFinished ? 1 : 0.7}
-            disabled={isCancelled || isFinished}
+            onPress={() => navigation.goBack()}
+            style={styles.backBtn}
+            activeOpacity={0.7}
           >
             <Ionicons
-              name="create-outline"
-              size={20}
-              color={
-                isCancelled || isFinished
-                  ? theme.colors.textDisabled
-                  : theme.colors.primary
-              }
+              name="arrow-back"
+              size={22}
+              color={theme.colors.textPrimary}
             />
-            <Text
-              style={[
-                styles.editBtnText,
-                (isCancelled || isFinished) && styles.editBtnTextDisabled,
-              ]}
-            >
-              Editar
-            </Text>
           </TouchableOpacity>
-        ) : (
-          <View
-            style={[
-              styles.roleBadge,
-              isOrganizer ? styles.badgeOrganizer : styles.badgeParticipant,
-            ]}
-          >
-            <Text
+          <Text style={styles.headerTitle}>Detalle</Text>
+          {isOrganizer ? (
+            <TouchableOpacity
+              onPress={() =>
+                !isCancelled &&
+                !isFinished &&
+                navigation.navigate(Routes.EditMeetup, { meetupId })
+              }
               style={[
-                styles.roleBadgeText,
-                isOrganizer
-                  ? styles.badgeTextOrganizer
-                  : styles.badgeTextParticipant,
+                styles.editBtn,
+                (isCancelled || isFinished) && styles.editBtnDisabled,
+              ]}
+              activeOpacity={isCancelled || isFinished ? 1 : 0.7}
+              disabled={isCancelled || isFinished}
+            >
+              <Ionicons
+                name="create-outline"
+                size={20}
+                color={
+                  isCancelled || isFinished
+                    ? theme.colors.textDisabled
+                    : theme.colors.primary
+                }
+              />
+              <Text
+                style={[
+                  styles.editBtnText,
+                  (isCancelled || isFinished) && styles.editBtnTextDisabled,
+                ]}
+              >
+                Editar
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View
+              style={[
+                styles.roleBadge,
+                isOrganizer ? styles.badgeOrganizer : styles.badgeParticipant,
               ]}
             >
-              {roleLabel}
-            </Text>
-          </View>
-        )}
-      </View>
+              <Text
+                style={[
+                  styles.roleBadgeText,
+                  isOrganizer
+                    ? styles.badgeTextOrganizer
+                    : styles.badgeTextParticipant,
+                ]}
+              >
+                {roleLabel}
+              </Text>
+            </View>
+          )}
+        </View>
       </SafeAreaView>
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
       >
-        {/* Banner de estado para juntadas canceladas o finalizadas */}
-        {(isCancelled || isFinished) && (
-          <View
-            style={[
-              styles.statusBanner,
-              isCancelled ? styles.statusBannerCancelled : styles.statusBannerFinished,
-            ]}
-          >
-            <Ionicons
-              name={isCancelled ? 'close-circle' : 'checkmark-circle'}
-              size={20}
-              color={isCancelled ? theme.colors.error : theme.colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.statusBannerText,
-                isCancelled
-                  ? styles.statusBannerTextCancelled
-                  : styles.statusBannerTextFinished,
-              ]}
-            >
-              {isCancelled
-                ? 'Esta juntada fue cancelada'
-                : 'Esta juntada ya finalizó'}
-            </Text>
-          </View>
+        {/* Banners de estado + card principal con los datos de la juntada */}
+        <MeetupDetailHeader
+          meetup={meetup}
+          hasAbandoned={hasAbandoned}
+          participantCount={participants.length}
+          confirmedCount={confirmedCount}
+        />
+
+        {/* RF-40: Mapa interactivo de la ubicación exacta de la juntada */}
+        <LocationCard
+          locationText={meetup.location}
+          latitude={meetup.latitude}
+          longitude={meetup.longitude}
+        />
+
+        {isActive && isPastMeetup(meetup.date, meetup.time) && (
+          <Text style={styles.pastMeetupHint}>Esta juntada ya ocurrió</Text>
         )}
-
-        {/* Banner para usuarios que abandonaron la juntada */}
-        {hasAbandoned && (
-          <View style={styles.abandonedBanner}>
-            <Ionicons
-              name="exit-outline"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
-            <Text style={styles.abandonedBannerText}>
-              Abandonaste esta juntada. Podés volver a unirte con el código.
-            </Text>
-          </View>
-        )}
-
-        {/* Card principal con datos de la juntada */}
-        <View style={styles.mainCard}>
-          <Text style={styles.meetupTitle}>{meetup.title}</Text>
-          {meetup.description && (
-            <Text style={styles.meetupDescription}>{meetup.description}</Text>
-          )}
-
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconBox}>
-              <Ionicons
-                name="calendar"
-                size={18}
-                color={theme.colors.primary}
-              />
-            </View>
-            <View>
-              <Text style={styles.infoLabel}>Fecha y hora</Text>
-              <Text style={styles.infoValue}>
-                {formatDate(meetup.date)} · {meetup.time}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconBox}>
-              <Ionicons
-                name="location"
-                size={18}
-                color={theme.colors.secondary}
-              />
-            </View>
-            <View style={styles.infoTextFlex}>
-              <Text style={styles.infoLabel}>Ubicación</Text>
-              <Text style={styles.infoValue} numberOfLines={2}>
-                {meetup.location}
-              </Text>
-            </View>
-          </View>
-
-          {meetup.estimatedCost !== null && (
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconBox}>
-                <Ionicons
-                  name="cash"
-                  size={18}
-                  color={theme.colors.success}
-                />
-              </View>
-              <View>
-                <Text style={styles.infoLabel}>Costo estimado</Text>
-                <Text style={styles.infoValue}>
-                  ${meetup.estimatedCost} por persona
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* Contador de participantes — oculto si el usuario abandonó */}
-          {!hasAbandoned && (
-            <View style={styles.participantCounter}>
-              <Ionicons
-                name="people"
-                size={16}
-                color={theme.colors.textSecondary}
-              />
-              <Text style={styles.participantCounterText}>
-                {participants.length} participantes · {confirmedCount}{' '}
-                confirmados
-              </Text>
-            </View>
-          )}
-        </View>
 
         {/* Botones de acción: Jugar y Recuerdos — ocultos si abandonó */}
         {!isCancelled && !hasAbandoned && (
@@ -710,7 +424,21 @@ export const MeetupDetailScreen = () => {
                 label="Jugar"
                 color={theme.colors.primary}
                 onPress={() =>
-                  navigation.navigate(Routes.ImpostorStart, { meetupId })
+                  navigation.navigate(Routes.Games, { meetupId })
+                }
+              />
+            )}
+            {(isActive || isFinished) && (
+              <ActionCard
+                icon="stats-chart"
+                label="Estadisticas"
+                color="#E17100"
+                onPress={() =>
+                  navigation.navigate(Routes.MeetupStats, {
+                    meetupId,
+                    meetupTitle: meetup.title,
+                    isActive,
+                  })
                 }
               />
             )}
@@ -721,7 +449,8 @@ export const MeetupDetailScreen = () => {
               onPress={() =>
                 navigation.navigate(Routes.MemoriesGallery, {
                   meetupId,
-                  isActive: meetup.status === 'active' || meetup.status === 'finished',
+                  isActive:
+                    meetup.status === 'active' || meetup.status === 'finished',
                 })
               }
             />
@@ -729,71 +458,57 @@ export const MeetupDetailScreen = () => {
         )}
 
         {/* Sección de participantes — oculta si el usuario abandonó */}
-        {!hasAbandoned && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              Participantes ({participants.length})
+        {!hasAbandoned && isErrorParticipants && (
+          <View style={styles.participantsErrorSection}>
+            <Ionicons
+              name="alert-circle-outline"
+              size={24}
+              color={theme.colors.error}
+            />
+            <Text style={styles.participantsErrorText}>
+              No se pudieron cargar los participantes
             </Text>
             <TouchableOpacity
-              onPress={() =>
-                navigation.navigate(Routes.ParticipantList, { meetupId })
-              }
+              onPress={() => void refetchParticipants()}
               activeOpacity={0.7}
             >
-              <Text style={styles.seeAllLink}>Ver participantes</Text>
+              <Text style={styles.retryText}>Reintentar</Text>
             </TouchableOpacity>
           </View>
-          {isOrganizer && isActive && (
-            <Text style={styles.organizerHint}>
-              Tocá un participante para modificar su asistencia
-            </Text>
-          )}
-          <View style={styles.participantsList}>
-            {participants.slice(0, 5).map((participant) => {
-              const canEditAsOrganizer =
-                isOrganizer &&
-                isActive &&
-                participant.role !== 'organizer';
+        )}
 
-              return (
-                <ParticipantItem
-                  key={participant.id}
-                  participant={participant}
-                  editable={canEditAsOrganizer}
-                  onPress={
-                    canEditAsOrganizer
-                      ? () =>
-                          setAttendanceModalTarget({
-                            mode: 'organizer',
-                            participant,
-                          })
-                      : undefined
-                  }
-                />
-              );
-            })}
-            {participants.length > 5 && (
-              <TouchableOpacity
-                style={styles.moreParticipants}
-                onPress={() =>
-                  navigation.navigate(Routes.ParticipantList, { meetupId })
-                }
-                activeOpacity={0.7}
-              >
-                <Text style={styles.moreParticipantsText}>
-                  +{participants.length - 5} más
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+        {!hasAbandoned && !isErrorParticipants && (
+          <MeetupParticipantsSummary
+            participants={participants}
+            isOrganizer={isOrganizer}
+            isActive={isActive}
+            isParticipant={isParticipant}
+            onSeeAll={() =>
+              navigation.navigate(Routes.ParticipantList, { meetupId })
+            }
+            onEditParticipant={(participant) =>
+              setAttendanceModalTarget({ mode: 'organizer', participant })
+            }
+            onModifyOwnAttendance={() =>
+              setAttendanceModalTarget({ mode: 'self' })
+            }
+          />
+        )}
 
-          {isParticipant && isActive && (
-            <ModifyAttendanceLink
-              onPress={() => setAttendanceModalTarget({ mode: 'self' })}
-            />
-          )}
-        </View>
+        {/* Reseñas — solo en juntadas finalizadas con reseñas habilitadas */}
+        {isFinished && meetup.reviews_enabled && currentUserId && (
+          <ReviewsSection
+            meetupId={meetupId}
+            currentUserId={currentUserId}
+            reviewsEnabled={meetup.reviews_enabled ?? false}
+            meetupStatus={meetup.status}
+            onAddReview={() =>
+              navigation.navigate(Routes.ReviewForm, {
+                meetupId,
+                meetupTitle: meetup.title,
+              })
+            }
+          />
         )}
 
         {/* Volver a unirse — solo si abandonó y la juntada sigue activa */}
@@ -819,100 +534,32 @@ export const MeetupDetailScreen = () => {
               <Text style={styles.shareHint}>
                 Compartí este código para que otros puedan unirse
               </Text>
-              <View style={styles.shareButtons}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.shareBtn,
-                    styles.shareBtnCopy,
-                    pressed && styles.shareBtnPressed,
-                  ]}
-                  onPress={handleCopy}
-                >
-                  <Ionicons
-                    name="copy-outline"
-                    size={18}
-                    color={theme.colors.primary}
-                  />
-                  <Text style={styles.shareBtnText}>Copiar</Text>
-                </Pressable>
-
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.shareBtn,
-                    styles.shareBtnShare,
-                    pressed && styles.shareBtnPressed,
-                  ]}
-                  onPress={handleShare}
-                >
-                  <Ionicons
-                    name="share-social-outline"
-                    size={18}
-                    color={theme.colors.surface}
-                  />
-                  <Text style={[styles.shareBtnText, styles.shareBtnTextWhite]}>
-                    Compartir
-                  </Text>
-                </Pressable>
+              {/* Botón con bottom sheet: copiar código o compartir por WhatsApp.
+                  Visible para todos los miembros (organizador y participantes). */}
+              <View style={styles.shareButtonWrapper}>
+                <MeetupShareButton
+                  meetupTitle={meetup.title}
+                  joinCode={meetup.joinCode}
+                  onFeedback={handleFeedback}
+                />
               </View>
             </View>
           </View>
         )}
 
-        {/* Finalizar juntada — solo organizador cuando la juntada ya comenzó */}
-        {canFinish && (
-          <View style={styles.cancelSection}>
-            <TouchableOpacity
-              style={[styles.finishBtn, isFinishing && styles.cancelBtnDisabled]}
-              onPress={() => setShowFinishModal(true)}
-              disabled={isFinishing}
-              activeOpacity={0.8}
-            >
-              {isFinishing ? (
-                <ActivityIndicator color={theme.colors.warning} />
-              ) : (
-                <>
-                  <Ionicons
-                    name="checkmark-circle-outline"
-                    size={18}
-                    color={theme.colors.warning}
-                  />
-                  <Text style={styles.finishBtnText}>Finalizar juntada</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Cancelar juntada — solo organizador en juntadas activas */}
-        {isOrganizer && isActive && (
-          <View style={styles.cancelSection}>
-            <TouchableOpacity
-              style={[styles.cancelBtn, isCancelling && styles.cancelBtnDisabled]}
-              onPress={() => setShowCancelModal(true)}
-              disabled={isCancelling}
-              activeOpacity={0.8}
-            >
-              {isCancelling ? (
-                <ActivityIndicator color={theme.colors.error} />
-              ) : (
-                <>
-                  <Ionicons
-                    name="close-circle-outline"
-                    size={18}
-                    color={theme.colors.error}
-                  />
-                  <Text style={styles.cancelBtnText}>Cancelar juntada</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Acciones del organizador: finalizar y cancelar */}
+        <MeetupOrganizerActions
+          canFinish={canFinish}
+          canCancel={isOrganizer && isActive}
+          isCancelling={isCancelling}
+          onCancelPress={() => setShowCancelModal(true)}
+        />
 
         {/* Abandonar juntada — solo participantes activos en juntadas activas */}
         {userRole === 'participant' && isActive && !hasAbandoned && (
-          <View style={styles.cancelSection}>
+          <View style={styles.leaveSection}>
             <TouchableOpacity
-              style={[styles.cancelBtn, isLeaving && styles.cancelBtnDisabled]}
+              style={[styles.leaveBtn, isLeaving && styles.leaveBtnDisabled]}
               onPress={() => setShowLeaveModal(true)}
               disabled={isLeaving}
               activeOpacity={0.8}
@@ -926,10 +573,63 @@ export const MeetupDetailScreen = () => {
                     size={20}
                     color={theme.colors.error}
                   />
-                  <Text style={styles.cancelBtnText}>Abandonar juntada</Text>
+                  <Text style={styles.leaveBtnText}>Abandonar juntada</Text>
                 </>
               )}
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Zona destructiva — visible en juntadas finalizadas o canceladas */}
+        {(isFinished || isCancelled) && (
+          <View style={styles.destructiveSection}>
+            <Text style={styles.destructiveSectionTitle}>
+              Acciones del historial
+            </Text>
+            <Text style={styles.destructiveSectionHint}>
+              {isOrganizer
+                ? 'Podés eliminar la juntada para todos los participantes'
+                : 'Podés ocultar esta juntada solo de tu historial'}
+            </Text>
+            {isOrganizer ? (
+              <TouchableOpacity
+                style={[
+                  styles.destructiveBtn,
+                  isHistoryActionLoading && styles.destructiveBtnDisabled,
+                ]}
+                onPress={() => setPendingHistoryAction('delete')}
+                disabled={isHistoryActionLoading}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={20}
+                  color={theme.colors.error}
+                />
+                <Text style={styles.destructiveBtnText}>
+                  Eliminar juntada para todos
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.destructiveBtn,
+                  isHistoryActionLoading && styles.destructiveBtnDisabled,
+                ]}
+                onPress={() => setPendingHistoryAction('hide')}
+                disabled={isHistoryActionLoading}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="eye-off-outline"
+                  size={20}
+                  color={theme.colors.error}
+                />
+                <Text style={styles.destructiveBtnText}>
+                  Ocultar de mi historial
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -940,8 +640,8 @@ export const MeetupDetailScreen = () => {
         visible={attendanceModalTarget !== null}
         currentStatus={modalCurrentStatus}
         participantName={modalParticipantName}
-        onClose={() => {
-          void handleAttendanceClose();
+        onClose={(wasUpdated) => {
+          void handleAttendanceClose(wasUpdated);
         }}
         onSave={async (status) => {
           if (attendanceModalTarget?.mode === 'organizer') {
@@ -960,56 +660,6 @@ export const MeetupDetailScreen = () => {
         }}
       />
 
-      {/* Modal de confirmación para finalizar juntada */}
-      <Modal
-        transparent
-        animationType="fade"
-        visible={showFinishModal}
-        onRequestClose={() => !isFinishing && setShowFinishModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalIconBox}>
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={32}
-                color={theme.colors.warning}
-              />
-            </View>
-            <Text style={styles.modalTitle}>Finalizar juntada</Text>
-            <Text style={styles.modalSubtitle}>
-              La juntada pasará al historial y ya no se podrán editar sus datos
-              ni modificar acciones de organización.
-            </Text>
-            <View style={styles.modalActions}>
-              <AppButton
-                label="No, volver"
-                variant="ghost"
-                onPress={() => setShowFinishModal(false)}
-                disabled={isFinishing}
-              />
-              <TouchableOpacity
-                style={[
-                  styles.modalWarningBtn,
-                  isFinishing && styles.modalDestructiveBtnDisabled,
-                ]}
-                onPress={confirmFinishMeetup}
-                disabled={isFinishing}
-                activeOpacity={0.8}
-              >
-                {isFinishing ? (
-                  <ActivityIndicator color={theme.colors.surface} />
-                ) : (
-                  <Text style={styles.modalWarningBtnText}>
-                    Sí, finalizar
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
       {/* Modal de confirmación para cancelar juntada */}
       <Modal
         transparent
@@ -1020,11 +670,7 @@ export const MeetupDetailScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalIconBox}>
-              <Ionicons
-                name="warning"
-                size={32}
-                color={theme.colors.error}
-              />
+              <Ionicons name="warning" size={32} color={theme.colors.error} />
             </View>
             <Text style={styles.modalTitle}>Cancelar juntada</Text>
             <Text style={styles.modalSubtitle}>
@@ -1052,6 +698,90 @@ export const MeetupDetailScreen = () => {
                 ) : (
                   <Text style={styles.modalDestructiveBtnText}>
                     Sí, cancelar
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de confirmación para ocultar o eliminar del historial */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={pendingHistoryAction !== null}
+        onRequestClose={() =>
+          !isHistoryActionLoading && setPendingHistoryAction(null)
+        }
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View
+              style={[
+                styles.modalIconBox,
+                pendingHistoryAction === 'delete' &&
+                  styles.modalIconBoxDanger,
+              ]}
+            >
+              <Ionicons
+                name={
+                  pendingHistoryAction === 'delete'
+                    ? 'trash-outline'
+                    : 'eye-off-outline'
+                }
+                size={32}
+                color={
+                  pendingHistoryAction === 'delete'
+                    ? theme.colors.error
+                    : theme.colors.primary
+                }
+              />
+            </View>
+
+            {pendingHistoryAction === 'hide' ? (
+              <>
+                <Text style={styles.modalTitle}>
+                  ¿Querés ocultar esta juntada de tu historial?
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  Solo desaparecerá para vos.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalTitle}>
+                  ¿Eliminar esta juntada para todos los participantes?
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  Esta acción no se puede deshacer.
+                </Text>
+              </>
+            )}
+
+            <View style={styles.modalActions}>
+              <AppButton
+                label="Cancelar"
+                variant="ghost"
+                onPress={() => setPendingHistoryAction(null)}
+                disabled={isHistoryActionLoading}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.modalDestructiveBtn,
+                  isHistoryActionLoading && styles.modalDestructiveBtnDisabled,
+                ]}
+                onPress={() => void confirmHistoryAction()}
+                disabled={isHistoryActionLoading}
+                activeOpacity={0.8}
+              >
+                {isHistoryActionLoading ? (
+                  <ActivityIndicator color={theme.colors.surface} />
+                ) : (
+                  <Text style={styles.modalDestructiveBtnText}>
+                    {pendingHistoryAction === 'hide'
+                      ? 'Sí, ocultar'
+                      : 'Sí, eliminar'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -1112,11 +842,22 @@ export const MeetupDetailScreen = () => {
 
       <AppTabBar activeTab="home" />
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => {
+          setShowSuccess(false);
+          if (shouldNavigateBackAfterToast) {
+            setShouldNavigateBackAfterToast(false);
+            navigation.goBack();
+          }
+        }}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );
@@ -1170,8 +911,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1231,116 +972,25 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.xl * 2,
   },
-  statusBanner: {
-    flexDirection: 'row',
+  pastMeetupHint: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md,
+    marginTop: -theme.spacing.xs,
+  },
+  participantsErrorSection: {
     alignItems: 'center',
     gap: theme.spacing.sm,
-    borderRadius: theme.radius.lg,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  statusBannerCancelled: {
-    backgroundColor: theme.colors.errorLight,
-    borderWidth: 1,
-    borderColor: theme.colors.error,
-  },
-  statusBannerFinished: {
-    backgroundColor: theme.colors.border,
-    borderWidth: 1,
-    borderColor: theme.colors.textDisabled,
-  },
-  statusBannerText: {
-    flex: 1,
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  statusBannerTextCancelled: {
-    color: theme.colors.error,
-  },
-  statusBannerTextFinished: {
-    color: theme.colors.textSecondary,
-  },
-  abandonedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    borderRadius: theme.radius.lg,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    backgroundColor: theme.colors.border,
-    borderWidth: 1,
-    borderColor: theme.colors.textDisabled,
-  },
-  abandonedBannerText: {
-    flex: 1,
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.textSecondary,
-  },
-  mainCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
     padding: theme.spacing.lg,
     marginBottom: theme.spacing.md,
-    ...theme.shadows.md,
+    ...theme.shadows.sm,
   },
-  meetupTitle: {
-    fontSize: theme.typography.sizes.xl,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  meetupDescription: {
+  participantsErrorText: {
     fontSize: theme.typography.sizes.sm,
     color: theme.colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: theme.spacing.md,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.md,
-  },
-  infoIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoTextFlex: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.typography.weights.medium,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  infoValue: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.textPrimary,
-    fontWeight: theme.typography.weights.semibold,
-    marginTop: 2,
-  },
-  participantCounter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  participantCounterText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.typography.weights.medium,
+    textAlign: 'center',
   },
   actionsRow: {
     flexDirection: 'row',
@@ -1351,7 +1001,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.sm,
     alignItems: 'center',
     gap: theme.spacing.sm,
     ...theme.shadows.sm,
@@ -1374,101 +1025,39 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: theme.spacing.md,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
   sectionTitle: {
     fontSize: theme.typography.sizes.lg,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.textPrimary,
   },
-  seeAllLink: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.medium,
-    color: theme.colors.primary,
-  },
-  participantsList: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    overflow: 'hidden',
-    ...theme.shadows.sm,
-  },
-  organizerHint: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-    lineHeight: 20,
-  },
-  participantRowEditable: {
-    backgroundColor: theme.colors.background,
-  },
-  participantRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    gap: theme.spacing.md,
-  },
-  participantAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  participantAvatarText: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.surface,
-  },
-  participantInfo: {
-    flex: 1,
-  },
-  participantName: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.textPrimary,
-  },
-  participantUsername: {
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  organizerStar: {
-    marginRight: theme.spacing.xs,
-  },
-  attendanceBadge: {
-    borderRadius: theme.radius.full,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 3,
-  },
-  attendanceBadgeText: {
-    fontSize: theme.typography.sizes.xs,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  moreParticipants: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  moreParticipantsText: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.medium,
-    color: theme.colors.primary,
-  },
-  cancelSection: {
-    marginBottom: theme.spacing.md,
-  },
   rejoinSection: {
     marginBottom: theme.spacing.md,
   },
-  cancelBtn: {
+  leaveSection: {
+    marginBottom: theme.spacing.md,
+  },
+  destructiveSection: {
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    paddingTop: theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    gap: theme.spacing.sm,
+  },
+  destructiveSectionTitle: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  destructiveSectionHint: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
+    marginBottom: theme.spacing.xs,
+  },
+  destructiveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1479,29 +1068,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.error,
   },
-  finishBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    backgroundColor: theme.colors.warningLight,
-    borderRadius: theme.radius.lg,
-    paddingVertical: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.warning,
-  },
-  cancelBtnDisabled: {
+  destructiveBtnDisabled: {
     opacity: 0.6,
   },
-  cancelBtnText: {
+  destructiveBtnText: {
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.error,
   },
-  finishBtnText: {
+  modalIconBoxDanger: {
+    backgroundColor: theme.colors.errorLight,
+  },
+  leaveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.errorLight,
+    borderRadius: theme.radius.lg,
+    paddingVertical: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.error,
+  },
+  leaveBtnDisabled: {
+    opacity: 0.6,
+  },
+  leaveBtnText: {
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.warning,
+    color: theme.colors.error,
   },
   shareCard: {
     backgroundColor: theme.colors.surface,
@@ -1538,38 +1133,8 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
     textAlign: 'center',
   },
-  shareButtons: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
+  shareButtonWrapper: {
     width: '100%',
-  },
-  shareBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    borderRadius: theme.radius.md,
-    paddingVertical: theme.spacing.md,
-  },
-  shareBtnCopy: {
-    backgroundColor: theme.colors.primaryLight,
-    borderWidth: 1.5,
-    borderColor: theme.colors.primary,
-  },
-  shareBtnShare: {
-    backgroundColor: theme.colors.primary,
-  },
-  shareBtnPressed: {
-    opacity: 0.8,
-  },
-  shareBtnText: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.primary,
-  },
-  shareBtnTextWhite: {
-    color: theme.colors.surface,
   },
   modalOverlay: {
     flex: 1,

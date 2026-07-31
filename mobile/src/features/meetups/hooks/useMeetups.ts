@@ -1,17 +1,17 @@
 /**
- * Hook principal del módulo de juntadas.
+ * Hook principal del módulo de juntadas — migrado a TanStack Query.
  *
- * Centraliza el estado de carga y error para que las pantallas no
- * necesiten manejar lógica asíncrona directamente. Expone funciones
- * para crear juntadas, unirse, obtener detalles y refrescar la lista.
+ * La lista de juntadas del usuario vive en la caché bajo la key
+ * ['meetups', userId]; las mutaciones (crear, unirse, cancelar, finalizar,
+ * editar) invalidan esa key para que la lista se refresque automáticamente
+ * en todas las pantallas que la consumen.
  *
- * El userId se obtiene automáticamente de la sesión activa de Supabase
- * al montar el hook, por lo que las pantallas no necesitan manejarlo.
- * La lista de juntadas se carga automáticamente en cuanto el userId
- * está disponible.
+ * La interfaz pública se mantiene idéntica a la versión anterior basada
+ * en useState/useEffect para que las pantallas no necesiten cambios.
  */
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { meetupService } from '../services/meetupService';
 import type {
   MeetupWithRole,
@@ -19,100 +19,298 @@ import type {
   CreateMeetupFormData,
   Meetup,
 } from '../types';
+
+/** Contrato de retorno de las operaciones expuestas por el hook */
 interface OperationResult<T> {
   data: T | null;
   error: string | null;
 }
 
-export const useMeetups = () => {
-  const [meetups, setMeetups] = useState<MeetupWithRole[]>([]);
-  /**
-   * Arranca en true para que el skeleton se muestre inmediatamente al montar,
-   * evitando el flash de empty state antes de que los datos terminen de cargarse.
-   */
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  /** ID del usuario autenticado; se obtiene de la sesión al montar el hook */
-  const [userId, setUserId] = useState<string | null>(null);
+/** Variables de la mutación de finalización de juntada */
+interface FinishMeetupVariables {
+  meetupId: string;
+  /** true si los participantes podrán dejar reseñas */
+  reviewsEnabled: boolean;
+}
 
-  // Obtener el userId de la sesión activa al montar el hook
-  useEffect(() => {
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
-        if (session?.user?.id) {
-          setUserId(session.user.id);
-        } else {
-          // Sin sesión activa no hay datos que buscar; se oculta el spinner
-          setIsLoading(false);
-        }
-      })
-      .catch(() => {
-        // Error de red o token inválido — evitar que el spinner quede infinito
-        setIsLoading(false);
-      });
-  }, []);
+/** Variables de la mutación de edición: id de la juntada + datos del formulario */
+interface EditMeetupVariables {
+  meetupId: string;
+  formData: CreateMeetupFormData;
+}
 
-  /**
-   * Carga todas las juntadas activas del usuario desde el servicio.
-   * Función interna que se reutiliza en refresh y en los efectos de carga.
-   *
-   * @param uid - UUID del usuario autenticado
-   */
-  const loadMeetups = useCallback(async (uid: string) => {
-    setIsLoading(true);
-    setError(null);
-    const { data, error: err } = await meetupService.getUserMeetups(uid);
-    if (err) {
-      setError(err);
-    } else {
-      setMeetups(data ?? []);
-    }
-    setIsLoading(false);
-  }, []);
+/** Variables de la mutación de creación: datos del formulario + grupo opcional a invitar */
+interface CreateMeetupVariables {
+  formData: CreateMeetupFormData;
+  groupId?: string;
+}
 
-  // Disparar la carga de juntadas en cuanto el userId esté disponible
-  useEffect(() => {
-    if (userId) {
-      loadMeetups(userId);
-    }
-  }, [userId, loadMeetups]);
+/** Variables de la mutación de subida de portada */
+interface UploadCoverVariables {
+  meetupId: string;
+  /** URI local de la imagen seleccionada con ImagePicker */
+  fileUri: string;
+}
 
-  /**
-   * Recarga la lista de juntadas del usuario desde el servidor.
-   * Llamar después de operaciones que modifican el estado de las juntadas.
-   */
-  const refresh = useCallback(() => {
-    if (userId) {
-      loadMeetups(userId);
-    }
-  }, [userId, loadMeetups]);
+/** Variables de la mutación de eliminación de portada */
+interface RemoveCoverVariables {
+  meetupId: string;
+  /** Ruta del archivo dentro del bucket meetup-covers */
+  filePath: string;
+}
 
-  /**
-   * Crea una nueva juntada con los datos del formulario y recarga la lista.
-   *
-   * @param formData - Datos validados del formulario de creación
-   * @returns La juntada creada o un mensaje de error
-   */
-  const createMeetup = useCallback(
-    async (
-      formData: CreateMeetupFormData,
-    ): Promise<OperationResult<Meetup>> => {
+/** Variables de la mutación de transferencia de organización */
+interface TransferOrganizerVariables {
+  meetupId: string;
+  /** UUID del participante que pasa a ser organizador */
+  newOrganizerUserId: string;
+}
+
+/**
+ * Mutación para subir o reemplazar la foto de portada de una juntada.
+ * Solo el organizador puede ejecutarla (lo garantiza la RLS del bucket).
+ * En caso de éxito invalida la lista del usuario y el detalle de la juntada
+ * para que la portada nueva aparezca en todas las pantallas.
+ *
+ * @returns Mutación de TanStack Query; data es la URL pública de la portada
+ */
+export const useUploadMeetupCover = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async ({
+      meetupId,
+      fileUri,
+    }: UploadCoverVariables): Promise<OperationResult<string>> => {
       if (!userId) {
         return { data: null, error: 'No hay usuario autenticado' };
       }
-      setIsLoading(true);
-      setError(null);
-      const result = await meetupService.createMeetup(userId, formData);
-      if (result.error) {
-        setError(result.error);
-      } else {
-        await loadMeetups(userId);
-      }
-      setIsLoading(false);
-      return result;
+      return meetupService.uploadMeetupCover(meetupId, fileUri, userId);
     },
-    [userId, loadMeetups],
+    onSuccess: async (result, { meetupId }) => {
+      if (!result.error) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['meetups', userId] }),
+          queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+        ]);
+      }
+    },
+  });
+};
+
+/**
+ * Mutación para quitar la foto de portada de una juntada.
+ * Elimina el archivo del bucket y deja cover_url en null.
+ * En caso de éxito invalida las mismas queries que la subida.
+ *
+ * @returns Mutación de TanStack Query; data es siempre null
+ */
+export const useRemoveMeetupCover = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async ({
+      meetupId,
+      filePath,
+    }: RemoveCoverVariables): Promise<OperationResult<null>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.removeMeetupCover(meetupId, filePath);
+    },
+    onSuccess: async (result, { meetupId }) => {
+      if (!result.error) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['meetups', userId] }),
+          queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+        ]);
+      }
+    },
+  });
+};
+
+/**
+ * Mutación para transferir la organización de una juntada a otro participante.
+ * El usuario autenticado debe ser el organizador actual. En caso de éxito
+ * invalida lista y detalle para que isOrganizer se recalcule automáticamente.
+ *
+ * @returns Mutación de TanStack Query; data es siempre null
+ */
+export const useTransferOrganizer = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async ({
+      meetupId,
+      newOrganizerUserId,
+    }: TransferOrganizerVariables): Promise<OperationResult<null>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.transferOrganizer(
+        meetupId,
+        newOrganizerUserId,
+        userId,
+      );
+    },
+    onSuccess: async (result, { meetupId }) => {
+      if (!result.error) {
+        // Además de lista y detalle se invalidan participantes y la
+        // participación propia, porque isOrganizer en useMeetupDetail
+        // se deriva de esas queries y debe recalcularse solo.
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['meetups', userId] }),
+          queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+          queryClient.invalidateQueries({
+            queryKey: ['participants', meetupId],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ['userParticipation', meetupId, userId],
+          }),
+        ]);
+      }
+    },
+  });
+};
+
+export const useMeetups = () => {
+  const queryClient = useQueryClient();
+  const { userId, isLoading: isLoadingSession } = useCurrentUser();
+
+  /**
+   * Query de la lista de juntadas activas del usuario.
+   * Se habilita recién cuando la sesión está resuelta y hay usuario,
+   * replicando el comportamiento previo de esperar el userId.
+   */
+  const meetupsQuery = useQuery({
+    queryKey: ['meetups', userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<MeetupWithRole[]> => {
+      // El guard de enabled garantiza userId, pero TypeScript no lo sabe
+      if (!userId) return [];
+      const { data, error } = await meetupService.getUserMeetups(userId);
+      // El servicio nunca lanza; se relanza como excepción para que
+      // TanStack Query gestione retry y estado de error.
+      if (error) throw new Error(error);
+      return data ?? [];
+    },
+  });
+
+  /**
+   * Invalida la lista de juntadas del usuario y espera el refetch,
+   * replicando el "await loadMeetups(userId)" de la versión anterior.
+   */
+  const invalidateMeetups = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['meetups', userId] });
+  }, [queryClient, userId]);
+
+  /** Mutación de creación de juntada — refresca la lista si fue exitosa */
+  const createMeetupMutation = useMutation({
+    mutationFn: async ({
+      formData,
+      groupId,
+    }: CreateMeetupVariables): Promise<OperationResult<Meetup>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.createMeetup(userId, formData, groupId);
+    },
+    onSuccess: async (result) => {
+      if (!result.error) {
+        await invalidateMeetups();
+      }
+    },
+  });
+
+  /** Mutación para unirse a una juntada por código — refresca la lista si fue exitosa */
+  const joinMeetupMutation = useMutation({
+    mutationFn: async (joinCode: string): Promise<OperationResult<Meetup>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.joinMeetup(userId, joinCode);
+    },
+    onSuccess: async (result) => {
+      if (!result.error) {
+        await invalidateMeetups();
+      }
+    },
+  });
+
+  /** Mutación de cancelación — solo el organizador puede ejecutarla */
+  const cancelMeetupMutation = useMutation({
+    mutationFn: async (meetupId: string): Promise<OperationResult<Meetup>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.cancelMeetup(meetupId, userId);
+    },
+    onSuccess: async (result) => {
+      if (!result.error) {
+        await invalidateMeetups();
+      }
+    },
+  });
+
+  /** Mutación de finalización — solo el organizador puede ejecutarla */
+  const finishMeetupMutation = useMutation({
+    mutationFn: async ({
+      meetupId,
+      reviewsEnabled,
+    }: FinishMeetupVariables): Promise<OperationResult<null>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.finishMeetup(meetupId, userId, reviewsEnabled);
+    },
+    onSuccess: async (result, { meetupId }) => {
+      if (!result.error) {
+        await Promise.all([
+          invalidateMeetups(),
+          queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+          queryClient.invalidateQueries({ queryKey: ['pendingReviews'] }),
+        ]);
+      }
+    },
+  });
+
+  /** Mutación de edición — solo el organizador puede ejecutarla */
+  const editMeetupMutation = useMutation({
+    mutationFn: async ({
+      meetupId,
+      formData,
+    }: EditMeetupVariables): Promise<OperationResult<Meetup>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.editMeetup(meetupId, userId, formData);
+    },
+    onSuccess: async (result) => {
+      if (!result.error) {
+        await invalidateMeetups();
+      }
+    },
+  });
+
+  /**
+   * Crea una nueva juntada con los datos del formulario y recarga la lista.
+   * Si se pasa `groupId`, invita automáticamente a todos los miembros
+   * activos del grupo (vía RPC `invite_group_to_meetup`).
+   *
+   * @param formData - Datos validados del formulario de creación
+   * @param groupId - UUID opcional del grupo a invitar
+   * @returns La juntada creada o un mensaje de error
+   */
+  const createMeetup = useCallback(
+    (
+      formData: CreateMeetupFormData,
+      groupId?: string,
+    ): Promise<OperationResult<Meetup>> =>
+      createMeetupMutation.mutateAsync({ formData, groupId }),
+    [createMeetupMutation.mutateAsync],
   );
 
   /**
@@ -122,27 +320,58 @@ export const useMeetups = () => {
    * @returns La juntada a la que se unió o un mensaje de error
    */
   const joinMeetup = useCallback(
-    async (joinCode: string): Promise<OperationResult<Meetup>> => {
-      if (!userId) {
-        return { data: null, error: 'No hay usuario autenticado' };
-      }
-      setIsLoading(true);
-      setError(null);
-      const result = await meetupService.joinMeetup(userId, joinCode);
-      if (result.error) {
-        setError(result.error);
-      } else {
-        await loadMeetups(userId);
-      }
-      setIsLoading(false);
-      return result;
-    },
-    [userId, loadMeetups],
+    (joinCode: string): Promise<OperationResult<Meetup>> =>
+      joinMeetupMutation.mutateAsync(joinCode),
+    [joinMeetupMutation.mutateAsync],
+  );
+
+  /**
+   * Cancela una juntada activa. Solo el organizador puede ejecutar esta acción.
+   *
+   * @param meetupId - UUID de la juntada a cancelar
+   * @returns La juntada cancelada o mensaje de error
+   */
+  const cancelMeetup = useCallback(
+    (meetupId: string): Promise<OperationResult<Meetup>> =>
+      cancelMeetupMutation.mutateAsync(meetupId),
+    [cancelMeetupMutation.mutateAsync],
+  );
+
+  /**
+   * Finaliza una juntada activa. Solo el organizador puede ejecutar esta acción.
+   *
+   * @param meetupId - UUID de la juntada a finalizar
+   * @param reviewsEnabled - true si los participantes podrán dejar reseñas
+   * @returns null en data si fue exitoso; mensaje de error en caso contrario
+   */
+  const finishMeetup = useCallback(
+    (
+      meetupId: string,
+      reviewsEnabled: boolean,
+    ): Promise<OperationResult<null>> =>
+      finishMeetupMutation.mutateAsync({ meetupId, reviewsEnabled }),
+    [finishMeetupMutation.mutateAsync],
+  );
+
+  /**
+   * Edita los campos de una juntada activa. Solo el organizador puede editar.
+   *
+   * @param meetupId - UUID de la juntada
+   * @param formData - Datos validados del formulario
+   * @returns La juntada actualizada o mensaje de error
+   */
+  const editMeetup = useCallback(
+    (
+      meetupId: string,
+      formData: CreateMeetupFormData,
+    ): Promise<OperationResult<Meetup>> =>
+      editMeetupMutation.mutateAsync({ meetupId, formData }),
+    [editMeetupMutation.mutateAsync],
   );
 
   /**
    * Obtiene el detalle completo de una juntada por su ID.
-   * No modifica el estado del hook; la pantalla que llama maneja su propio loading.
+   * No usa la caché de queries; la pantalla que llama maneja su propio loading.
    *
    * @param meetupId - UUID de la juntada
    * @returns La juntada con todos sus campos o un mensaje de error
@@ -156,7 +385,7 @@ export const useMeetups = () => {
 
   /**
    * Obtiene la lista de participantes de una juntada con sus perfiles.
-   * No modifica el estado del hook; la pantalla que llama maneja su propio loading.
+   * No usa la caché de queries; la pantalla que llama maneja su propio loading.
    *
    * @param meetupId - UUID de la juntada
    * @returns Lista de participantes con perfil o un mensaje de error
@@ -171,72 +400,8 @@ export const useMeetups = () => {
   );
 
   /**
-   * Cancela una juntada activa. Solo el organizador puede ejecutar esta acción.
-   *
-   * @param meetupId - UUID de la juntada a cancelar
-   * @returns La juntada cancelada o mensaje de error
-   */
-  const cancelMeetup = useCallback(
-    async (meetupId: string): Promise<OperationResult<Meetup>> => {
-      if (!userId) {
-        return { data: null, error: 'No hay usuario autenticado' };
-      }
-      const result = await meetupService.cancelMeetup(meetupId, userId);
-      if (!result.error) {
-        await loadMeetups(userId);
-      }
-      return result;
-    },
-    [userId, loadMeetups],
-  );
-
-  /**
-   * Finaliza una juntada activa. Solo el organizador puede ejecutar esta acción.
-   *
-   * @param meetupId - UUID de la juntada a finalizar
-   * @returns La juntada finalizada o mensaje de error
-   */
-  const finishMeetup = useCallback(
-    async (meetupId: string): Promise<OperationResult<Meetup>> => {
-      if (!userId) {
-        return { data: null, error: 'No hay usuario autenticado' };
-      }
-      const result = await meetupService.finishMeetup(meetupId, userId);
-      if (!result.error) {
-        await loadMeetups(userId);
-      }
-      return result;
-    },
-    [userId, loadMeetups],
-  );
-
-  /**
-   * Edita los campos de una juntada activa. Solo el organizador puede editar.
-   *
-   * @param meetupId - UUID de la juntada
-   * @param formData - Datos validados del formulario
-   * @returns La juntada actualizada o mensaje de error
-   */
-  const editMeetup = useCallback(
-    async (
-      meetupId: string,
-      formData: CreateMeetupFormData,
-    ): Promise<OperationResult<Meetup>> => {
-      if (!userId) {
-        return { data: null, error: 'No hay usuario autenticado' };
-      }
-      const result = await meetupService.editMeetup(meetupId, userId, formData);
-      if (!result.error) {
-        await loadMeetups(userId);
-      }
-      return result;
-    },
-    [userId, loadMeetups],
-  );
-
-  /**
    * Obtiene juntadas finalizadas o canceladas del historial del usuario.
-   * No modifica el estado del hook; la pantalla de historial maneja su loading.
+   * No usa la caché de queries; la pantalla de historial maneja su loading.
    *
    * @returns Lista de juntadas históricas o mensaje de error
    */
@@ -249,10 +414,24 @@ export const useMeetups = () => {
     return meetupService.getFinishedMeetups(userId);
   }, [userId]);
 
+  /**
+   * Recarga la lista de juntadas del usuario desde el servidor.
+   * Llamar después de operaciones que modifican el estado de las juntadas.
+   */
+  const refresh = useCallback(() => {
+    void meetupsQuery.refetch();
+  }, [meetupsQuery.refetch]);
+
   return {
-    meetups,
-    isLoading,
-    error,
+    meetups: meetupsQuery.data ?? [],
+    /**
+     * isLoading combina la resolución de sesión, la carga inicial y los
+     * refetches para conservar la semántica anterior, donde cada recarga
+     * volvía a encender el spinner de la lista.
+     */
+    isLoading:
+      isLoadingSession || meetupsQuery.isLoading || meetupsQuery.isFetching,
+    error: meetupsQuery.error?.message ?? null,
     createMeetup,
     joinMeetup,
     getMeetupById,
@@ -263,4 +442,109 @@ export const useMeetups = () => {
     getFinishedMeetups,
     refresh,
   };
+};
+
+/**
+ * Query de todas las juntadas del usuario para el historial completo.
+ * Incluye activas, finalizadas y canceladas, excluyendo las ocultas.
+ *
+ * @param userId - UUID del usuario; la query se deshabilita si es null
+ * @returns Query con lista de juntadas con rol del usuario
+ */
+export const useAllUserMeetups = (userId: string | null) => {
+  return useQuery({
+    queryKey: ['allMeetups', userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<MeetupWithRole[]> => {
+      if (!userId) return [];
+      const { data, error } = await meetupService.getAllUserMeetups(userId);
+      if (error) throw new Error(error);
+      return data ?? [];
+    },
+  });
+};
+
+/**
+ * Mutación para ocultar una juntada del historial del usuario.
+ * Invalida el historial completo al tener éxito.
+ *
+ * @returns Mutación de TanStack Query; data es siempre null
+ */
+export const useHideMeetup = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async (meetupId: string): Promise<OperationResult<null>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.hideMeetup(meetupId, userId);
+    },
+    onSuccess: async (result) => {
+      if (!result.error) {
+        await queryClient.invalidateQueries({
+          queryKey: ['allMeetups', userId],
+        });
+      }
+    },
+  });
+};
+
+/**
+ * Mutación para eliminar una juntada para todos los participantes.
+ * Solo debe invocarse si el usuario es organizador.
+ * Invalida historial y lista del home al tener éxito.
+ *
+ * @returns Mutación de TanStack Query; data es siempre null
+ */
+export const useDeleteMeetupForAll = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async (meetupId: string): Promise<OperationResult<null>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.deleteMeetupForAll(meetupId);
+    },
+    onSuccess: async (result) => {
+      if (!result.error) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['allMeetups', userId] }),
+          queryClient.invalidateQueries({ queryKey: ['meetups', userId] }),
+        ]);
+      }
+    },
+  });
+};
+
+/**
+ * Mutación para reactivar una juntada finalizada.
+ * Invalida historial y lista del home al tener éxito.
+ *
+ * @returns Mutación de TanStack Query; data es siempre null
+ */
+export const useReactivateMeetup = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+
+  return useMutation({
+    mutationFn: async (meetupId: string): Promise<OperationResult<null>> => {
+      if (!userId) {
+        return { data: null, error: 'No hay usuario autenticado' };
+      }
+      return meetupService.reactivateMeetup(meetupId);
+    },
+    onSuccess: async (result, meetupId) => {
+      if (!result.error) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['allMeetups', userId] }),
+          queryClient.invalidateQueries({ queryKey: ['meetups', userId] }),
+          queryClient.invalidateQueries({ queryKey: ['meetup', meetupId] }),
+        ]);
+      }
+    },
+  });
 };

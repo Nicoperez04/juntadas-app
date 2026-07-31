@@ -6,9 +6,9 @@
  *
  * @param meetupId - UUID de la juntada cuyas fotos se gestionan
  * @param currentUserId - UUID del usuario autenticado; null mientras carga la sesión
+ * @param isOrganizer - true si el usuario es organizador de la juntada
  */
 import { useState, useEffect, useCallback } from 'react';
-import * as ImagePicker from 'expo-image-picker';
 import { memoriesService } from '../services/memoriesService';
 import type { Memory } from '../types';
 
@@ -18,7 +18,21 @@ export interface UploadProgress {
   total: number;
 }
 
-export const useMemories = (meetupId: string, currentUserId: string | null) => {
+/** Resultado de una subida múltiple para decidir feedback en la UI */
+export interface UploadPhotosResult {
+  uploadedCount: number;
+  total: number;
+  /** success = todas; partial = algunas; failure = ninguna */
+  outcome: 'success' | 'partial' | 'failure';
+  /** Mensaje para toast de error; null cuando outcome es success */
+  message: string | null;
+}
+
+export const useMemories = (
+  meetupId: string,
+  currentUserId: string | null,
+  isOrganizer = false,
+) => {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -62,76 +76,85 @@ export const useMemories = (meetupId: string, currentUserId: string | null) => {
   }, [refresh]);
 
   /**
-   * Abre el selector de galería con selección múltiple, sube las fotos
-   * en paralelo y recarga la lista al finalizar.
+   * Sube las URIs locales seleccionadas (desde cámara o galería) y recarga la lista.
+   * Los fallos de subida no alteran `error` del hook (reservado a la carga inicial);
+   * el resultado estructurado permite a la pantalla elegir toast de éxito o error.
    *
-   * @returns Cantidad de fotos subidas exitosamente o null si se canceló
+   * @param imageUris - URIs locales obtenidas con expo-image-picker
+   * @returns Resultado con outcome y mensaje, o null si no hay URIs o sesión
    */
-  const uploadPhotos = useCallback(async (): Promise<number | null> => {
-    if (!currentUserId) {
-      setError('Tenés que iniciar sesión para subir fotos');
-      return null;
-    }
+  const uploadPhotosFromUris = useCallback(
+    async (imageUris: string[]): Promise<UploadPhotosResult | null> => {
+      if (!currentUserId) {
+        return {
+          uploadedCount: 0,
+          total: imageUris.length,
+          outcome: 'failure',
+          message: 'Tenés que iniciar sesión para subir fotos',
+        };
+      }
 
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError('Necesitamos acceso a tu galería para subir fotos');
-      return null;
-    }
+      if (imageUris.length === 0) {
+        return null;
+      }
 
-    const pickerResult = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      quality: 0.8,
-    });
+      setIsUploading(true);
+      setUploadProgress({ current: 0, total: imageUris.length });
 
-    if (pickerResult.canceled || pickerResult.assets.length === 0) {
-      return null;
-    }
-
-    const imageUris = pickerResult.assets.map((asset) => asset.uri);
-    setIsUploading(true);
-    setUploadProgress({ current: 0, total: imageUris.length });
-    setError(null);
-
-    // Subimos en paralelo pero actualizamos progreso conforme terminan
-    let completed = 0;
-    const uploadTasks = imageUris.map(async (imageUri) => {
-      const result = await memoriesService.uploadMemory({
-        meetupId,
-        imageUri,
-        userId: currentUserId,
+      // Subimos en paralelo pero actualizamos progreso conforme terminan
+      let completed = 0;
+      const uploadTasks = imageUris.map(async (imageUri) => {
+        const result = await memoriesService.uploadMemory({
+          meetupId,
+          imageUri,
+          userId: currentUserId,
+        });
+        completed += 1;
+        setUploadProgress({ current: completed, total: imageUris.length });
+        return result;
       });
-      completed += 1;
-      setUploadProgress({ current: completed, total: imageUris.length });
-      return result;
-    });
 
-    const results = await Promise.all(uploadTasks);
-    setIsUploading(false);
-    setUploadProgress(null);
+      const results = await Promise.all(uploadTasks);
+      setIsUploading(false);
+      setUploadProgress(null);
 
-    const uploaded = results.filter((r) => r.data);
-    const failed = results.filter((r) => r.error);
+      const uploaded = results.filter((r) => r.data);
+      const failed = results.filter((r) => r.error);
 
-    await refresh();
+      await refresh();
 
-    if (uploaded.length === 0) {
-      setError(failed[0]?.error ?? 'No se pudieron subir las fotos');
-      return 0;
-    }
+      if (uploaded.length === 0) {
+        return {
+          uploadedCount: 0,
+          total: imageUris.length,
+          outcome: 'failure',
+          message: failed[0]?.error ?? 'No se pudieron subir las fotos',
+        };
+      }
 
-    if (failed.length > 0) {
-      setError(`Se subieron ${uploaded.length} de ${imageUris.length} fotos`);
-    }
+      if (failed.length > 0) {
+        return {
+          uploadedCount: uploaded.length,
+          total: imageUris.length,
+          outcome: 'partial',
+          message: `Se subieron ${uploaded.length} de ${imageUris.length} fotos`,
+        };
+      }
 
-    return uploaded.length;
-  }, [currentUserId, meetupId, refresh]);
+      return {
+        uploadedCount: uploaded.length,
+        total: imageUris.length,
+        outcome: 'success',
+        message: null,
+      };
+    },
+    [currentUserId, meetupId, refresh],
+  );
 
   /**
-   * Elimina una foto propia y recarga la lista.
+   * Elimina una foto propia o cualquier foto si el usuario es organizador.
    *
-   * @param memory - Memoria a eliminar (debe ser del usuario actual)
+   * @param memory - Memoria a eliminar
    */
   const deletePhoto = useCallback(
     async (memory: Memory): Promise<boolean> => {
@@ -145,6 +168,7 @@ export const useMemories = (meetupId: string, currentUserId: string | null) => {
         memory.id,
         currentUserId,
         memory.filePath,
+        { meetupId, isOrganizer },
       );
 
       if (result.error) {
@@ -155,7 +179,7 @@ export const useMemories = (meetupId: string, currentUserId: string | null) => {
       await refresh();
       return true;
     },
-    [currentUserId, refresh],
+    [currentUserId, isOrganizer, meetupId, refresh],
   );
 
   return {
@@ -164,7 +188,7 @@ export const useMemories = (meetupId: string, currentUserId: string | null) => {
     isUploading,
     uploadProgress,
     error,
-    uploadPhotos,
+    uploadPhotosFromUris,
     deletePhoto,
     refresh,
   };

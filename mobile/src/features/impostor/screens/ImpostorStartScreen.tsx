@@ -23,15 +23,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { supabase } from '@/lib/supabase/client';
 import { theme } from '@/shared/constants/theme';
+import { useCurrentUser } from '@/shared/hooks/useCurrentUser';
 import { appConfig } from '@/config/appConfig';
 import { Routes } from '@/navigation/routes';
 import { AppButton } from '@/shared/components/AppButton';
 import { APP_TAB_BAR_OFFSET } from '@/shared/components/AppTabBar';
-import { Toast } from '@/shared/components/Toast';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
 import { triggerSelectionHaptic } from '@/shared/utils/haptics';
-import type { MainStackParamList } from '@/features/meetups/types';
+import type { MainStackParamList } from '@/navigation/types';
 import { ImpostorTabBar } from '../components/ImpostorTabBar';
 import { impostorColors } from '../constants/impostorTheme';
 import {
@@ -84,7 +84,6 @@ export const ImpostorStartScreen = () => {
 
   const { session, setupGame, updateSessionPlayers } = useImpostor(meetupId);
 
-  const [showSetup, setShowSetup] = useState(false);
   const [showHowToModal, setShowHowToModal] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(false);
@@ -98,8 +97,11 @@ export const ImpostorStartScreen = () => {
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [playersManuallyCleared, setPlayersManuallyCleared] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Usuario autenticado resuelto desde la caché compartida de sesión
+  const { userId: currentUserId } = useCurrentUser();
 
   /** Historial de palabras — referencia estable si no hay sesión */
   const usedWordsPool = session?.usedWords ?? EMPTY_USED_WORDS;
@@ -136,7 +138,6 @@ export const ImpostorStartScreen = () => {
       if (hasActiveSession) {
         if (!playersManuallyCleared) {
           setPlayers(session.players);
-          setShowSetup(true);
           setWordMode(session.wordMode);
           setIncludeImpostorHint(session.includeImpostorHint);
           if (CATEGORIES.includes(session.topic)) {
@@ -148,6 +149,8 @@ export const ImpostorStartScreen = () => {
         return;
       }
 
+      pickPendingWord(wordMode, selectedCategory);
+
       if (!meetupId) {
         setIsLoadingPlayers(false);
         return;
@@ -158,7 +161,8 @@ export const ImpostorStartScreen = () => {
         const { data, error } = await impostorService.getParticipantsForGame(meetupId);
 
         if (error) {
-          setToast({ message: error, type: 'error' });
+          setErrorMessage(error);
+          setShowError(true);
         } else if (data) {
           setPlayers(data);
           setPlayersManuallyCleared(false);
@@ -173,22 +177,10 @@ export const ImpostorStartScreen = () => {
       session,
       playersManuallyCleared,
       pickPendingWord,
+      wordMode,
+      selectedCategory,
     ]),
   );
-
-  useEffect(() => {
-    const loadUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setCurrentUserId(data.user?.id ?? null);
-    };
-    void loadUser();
-  }, []);
-
-  const handleEnterSetup = useCallback(() => {
-    void triggerSelectionHaptic();
-    setShowSetup(true);
-    pickPendingWord(wordMode, selectedCategory);
-  }, [pickPendingWord, wordMode, selectedCategory]);
 
   const handleSelectAllCategories = useCallback(() => {
     void triggerSelectionHaptic();
@@ -231,7 +223,8 @@ export const ImpostorStartScreen = () => {
     );
 
     if (isDuplicate) {
-      setToast({ message: 'Ya existe un jugador con ese nombre', type: 'error' });
+      setErrorMessage('Ya existe un jugador con ese nombre');
+      setShowError(true);
       return;
     }
 
@@ -253,15 +246,14 @@ export const ImpostorStartScreen = () => {
 
   const handleStartGame = useCallback(async () => {
     if (players.length < appConfig.impostor.minPlayers) {
-      setToast({
-        message: `Necesitás al menos ${appConfig.impostor.minPlayers} jugadores`,
-        type: 'error',
-      });
+      setErrorMessage(`Necesitás al menos ${appConfig.impostor.minPlayers} jugadores`);
+      setShowError(true);
       return;
     }
 
     if (!hasWordSelected || !pendingWord) {
-      setToast({ message: 'Esperá a que se seleccione una palabra', type: 'error' });
+      setErrorMessage('Esperá a que se seleccione una palabra');
+      setShowError(true);
       return;
     }
 
@@ -306,38 +298,6 @@ export const ImpostorStartScreen = () => {
     meetupId,
     navigation,
   ]);
-
-  const renderIntro = () => (
-    <View style={styles.introSection}>
-      <View style={styles.heroCardOuter}>
-        <View style={styles.heroCardGradientBase} />
-        <View style={styles.heroCardGradientTop} />
-        <View style={styles.heroCardInner}>
-          <View style={styles.heroBadgeRow}>
-            <View style={styles.popularBadge}>
-              <Text style={styles.popularBadgeText}>POPULAR</Text>
-            </View>
-            <Ionicons name="sparkles" size={18} color={theme.colors.secondary} />
-          </View>
-          <Text style={styles.heroTitle}>Impostor</Text>
-          <Text style={styles.heroDescription}>
-            Un jugador no conoce la palabra secreta. Descubrilo mirando, preguntando
-            y descubriendo quién improvisa.
-          </Text>
-          <TouchableOpacity
-            style={styles.howToButton}
-            onPress={() => setShowHowToModal(true)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="help-circle-outline" size={20} color={theme.colors.surface} />
-            <Text style={styles.howToButtonText}>Cómo se juega</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <AppButton label="Jugar ahora" onPress={handleEnterSetup} />
-    </View>
-  );
 
   const renderWordSection = () => (
     <View style={styles.surfaceCard}>
@@ -548,7 +508,19 @@ export const ImpostorStartScreen = () => {
             <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Impostor</Text>
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity
+            onPress={() => setShowHowToModal(true)}
+            style={styles.howToHeaderBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="¿Cómo se juega?"
+          >
+            <Ionicons
+              name="help-circle-outline"
+              size={24}
+              color={theme.colors.textSecondary}
+            />
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
@@ -562,7 +534,7 @@ export const ImpostorStartScreen = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {!showSetup ? renderIntro() : renderSetup()}
+          {renderSetup()}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -598,11 +570,10 @@ export const ImpostorStartScreen = () => {
         </View>
       </Modal>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'error'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );
@@ -622,13 +593,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
   },
-  backBtn: { padding: theme.spacing.xs },
+  backBtn: { padding: theme.spacing.xs, width: 32 },
   headerTitle: {
+    flex: 1,
+    textAlign: 'center',
     fontSize: theme.typography.sizes.lg,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.textPrimary,
   },
-  headerSpacer: { width: 32 },
+  howToHeaderBtn: {
+    width: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.spacing.xs,
+  },
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: theme.spacing.md,

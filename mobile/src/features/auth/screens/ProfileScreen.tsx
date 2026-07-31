@@ -20,21 +20,34 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  Switch,
+  TextInput,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { theme } from '@/shared/constants/theme';
 import { AppInput } from '@/shared/components/AppInput';
 import { AppButton } from '@/shared/components/AppButton';
-import { Toast } from '@/shared/components/Toast';
+import { ErrorAnimation } from '@/shared/components/ErrorAnimation';
+import { SuccessAnimation } from '@/shared/components/SuccessAnimation';
 import { AppTabBar, APP_TAB_BAR_OFFSET } from '@/shared/components/AppTabBar';
 import { profileEditSchema } from '../schemas/authSchemas';
 import { useAuth } from '../hooks/useAuth';
 import { ProfileEditFormData } from '../types';
+import { notificationService } from '@/features/notifications/services/notificationService';
+import { setNotificationsRealtimeEnabled } from '@/features/notifications/hooks/useNotifications';
+import { useNotificationStore } from '@/features/notifications/store/notificationStore';
+import { Routes } from '@/navigation/routes';
+import type { MainStackParamList } from '@/navigation/types';
+
+/** Key de AsyncStorage para la preferencia local de notificaciones push */
+const NOTIFICATIONS_ENABLED_KEY = 'notifications_enabled';
 
 /** Tamaño del avatar principal según el mockup de Figma */
 const AVATAR_SIZE = 80;
@@ -177,6 +190,7 @@ const statStyles = StyleSheet.create({
 });
 
 export const ProfileScreen = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const {
     profile,
     stats,
@@ -186,16 +200,29 @@ export const ProfileScreen = () => {
     updateProfile,
     uploadAvatar,
     logout,
+    deleteAccount,
   } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  /** Primer paso del flujo de eliminación de cuenta */
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  /** Segundo paso: confirmación escribiendo el email exacto */
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [deleteEmailInput, setDeleteEmailInput] = useState('');
+  const [deleteEmailError, setDeleteEmailError] = useState<string | null>(null);
+  /** URI local de foto elegida en edición; se sube solo al presionar Guardar */
+  const [pendingAvatarUri, setPendingAvatarUri] = useState<string | null>(null);
   /** Controla la visibilidad del modal de selección de fuente de foto */
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [usernameServerError, setUsernameServerError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
-    null,
-  );
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
+  const clearPendingBanner = useNotificationStore((state) => state.clearPendingBanner);
 
   const {
     control,
@@ -212,6 +239,13 @@ export const ProfileScreen = () => {
   useFocusEffect(
     useCallback(() => {
       void loadProfile();
+      void AsyncStorage.getItem(NOTIFICATIONS_ENABLED_KEY).then((value) => {
+        if (value === null) {
+          setNotificationsEnabled(true);
+          return;
+        }
+        setNotificationsEnabled(value === 'true');
+      });
     }, [loadProfile]),
   );
 
@@ -233,6 +267,7 @@ export const ProfileScreen = () => {
    */
   const enterEditMode = () => {
     setUsernameServerError(null);
+    setPendingAvatarUri(null);
     setIsEditing(true);
   };
 
@@ -247,6 +282,7 @@ export const ProfileScreen = () => {
       });
     }
     setUsernameServerError(null);
+    setPendingAvatarUri(null);
     setIsEditing(false);
   };
 
@@ -262,18 +298,29 @@ export const ProfileScreen = () => {
       if (result.error.includes('usuario ya está en uso')) {
         setUsernameServerError(result.error);
       } else {
-        setToast({ message: result.error, type: 'error' });
+        setErrorMessage(result.error);
+        setShowError(true);
       }
       return;
     }
 
+    if (pendingAvatarUri) {
+      const uploadResult = await uploadAvatar(pendingAvatarUri);
+      if (uploadResult.error) {
+        setErrorMessage(uploadResult.error);
+        setShowError(true);
+        return;
+      }
+      setPendingAvatarUri(null);
+    }
+
     setIsEditing(false);
-    setToast({ message: 'Perfil actualizado', type: 'success' });
+    setSuccessMessage('✓ Perfil actualizado');
+    setShowSuccess(true);
   };
 
   /**
-   * Abre la cámara o galería según la opción elegida por el usuario.
-   * Solo disponible en modo edición.
+   * Guarda la URI local como preview; la subida a Storage ocurre al presionar Guardar.
    */
   const handlePickImage = async (source: 'camera' | 'gallery') => {
     const permission =
@@ -282,10 +329,8 @@ export const ProfileScreen = () => {
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      setToast({
-        message: 'Necesitamos permiso para acceder a tus fotos',
-        type: 'error',
-      });
+      setErrorMessage('Necesitamos permiso para acceder a tus fotos');
+      setShowError(true);
       return;
     }
 
@@ -306,13 +351,7 @@ export const ProfileScreen = () => {
 
     if (result.canceled || !result.assets[0]?.uri) return;
 
-    const uploadResult = await uploadAvatar(result.assets[0].uri);
-    if (uploadResult.error) {
-      setToast({ message: uploadResult.error, type: 'error' });
-      return;
-    }
-
-    setToast({ message: 'Foto actualizada', type: 'success' });
+    setPendingAvatarUri(result.assets[0].uri);
   };
 
   /** Abre el modal custom de selección de fuente de foto */
@@ -325,13 +364,96 @@ export const ProfileScreen = () => {
     const result = await logout();
     setShowLogoutModal(false);
     if (result.error) {
-      setToast({ message: result.error, type: 'error' });
+      setErrorMessage(result.error);
+      setShowError(true);
+    }
+  };
+
+  /** Abre el primer modal de confirmación para eliminar la cuenta */
+  const openDeleteAccountFlow = () => {
+    setDeleteEmailInput('');
+    setDeleteEmailError(null);
+    setShowDeleteAccountModal(true);
+  };
+
+  /** Pasa al segundo modal donde el usuario debe escribir su email */
+  const proceedToEmailConfirmation = () => {
+    setShowDeleteAccountModal(false);
+    setDeleteEmailInput('');
+    setDeleteEmailError(null);
+    setShowDeleteConfirmModal(true);
+  };
+
+  /**
+   * Valida que el email escrito coincida exactamente y ejecuta la eliminación.
+   * AppNavigator redirige al flujo de bienvenida al cerrar sesión.
+   */
+  const confirmDeleteAccount = async () => {
+    if (!profile) return;
+
+    if (deleteEmailInput.trim().toLowerCase() !== profile.email.toLowerCase()) {
+      setDeleteEmailError('El email no coincide con tu cuenta');
+      return;
+    }
+
+    const result = await deleteAccount();
+    setShowDeleteConfirmModal(false);
+
+    if (result.error) {
+      setErrorMessage(result.error);
+      setShowError(true);
+      return;
+    }
+
+    setSuccessMessage('✓ Tu cuenta fue eliminada');
+    setShowSuccess(true);
+  };
+
+  /**
+   * Activa o desactiva las notificaciones push e in-app del dispositivo.
+   * Persiste la preferencia localmente, sincroniza push_token en Supabase
+   * y controla la suscripción Realtime en caliente.
+   */
+  const handleToggleNotifications = async (enabled: boolean) => {
+    if (!profile?.id || isUpdatingNotifications) return;
+
+    setIsUpdatingNotifications(true);
+    setNotificationsEnabled(enabled);
+
+    try {
+      if (enabled) {
+        const result = await notificationService.registerPushToken(profile.id);
+        if (result.error) {
+          setNotificationsEnabled(false);
+          setErrorMessage(result.error);
+        setShowError(true);
+          return;
+        }
+        await AsyncStorage.setItem(NOTIFICATIONS_ENABLED_KEY, 'true');
+        setNotificationsRealtimeEnabled(true);
+        return;
+      }
+
+      const result = await notificationService.clearPushToken(profile.id);
+      if (result.error) {
+        setNotificationsEnabled(true);
+        setErrorMessage(result.error);
+        setShowError(true);
+        return;
+      }
+      await AsyncStorage.setItem(NOTIFICATIONS_ENABLED_KEY, 'false');
+      setNotificationsRealtimeEnabled(false);
+      clearPendingBanner();
+    } finally {
+      setIsUpdatingNotifications(false);
     }
   };
 
   const avatarColor = AVATAR_PALETTE[getAvatarColorIndex(profile?.id ?? 'user')];
   const displayName = profile?.fullName?.trim() || 'Usuario';
   const initials = getInitials(displayName);
+  /** Preview en edición: prioriza la foto pendiente sobre la del servidor */
+  const displayAvatarUri = pendingAvatarUri ?? profile?.avatarUrl ?? null;
 
   const renderContent = () => {
     if (isLoadingProfile && !profile) {
@@ -397,8 +519,8 @@ export const ProfileScreen = () => {
               disabled={!isEditing || isLoading}
             >
               <View style={styles.avatarRing}>
-                {profile.avatarUrl ? (
-                  <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+                {displayAvatarUri ? (
+                  <Image source={{ uri: displayAvatarUri }} style={styles.avatarImage} />
                 ) : (
                   <View style={[styles.avatarPlaceholder, { backgroundColor: avatarColor }]}>
                     <Text style={styles.avatarInitials}>{initials}</Text>
@@ -503,15 +625,67 @@ export const ProfileScreen = () => {
             )}
           </View>
 
-          {/* Acciones de cuenta */}
+          {/* Preferencias de notificaciones push */}
+          <View style={styles.infoCard}>
+            <Text style={styles.sectionTitle}>Notificaciones</Text>
+            <View style={styles.notificationRow}>
+              <View style={styles.notificationText}>
+                <Text style={styles.notificationLabel}>Notificaciones</Text>
+                <Text style={styles.notificationHint}>
+                  Recibí alertas de juntadas y confirmaciones
+                </Text>
+              </View>
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={(value) => void handleToggleNotifications(value)}
+                disabled={isUpdatingNotifications || !profile}
+                trackColor={{
+                  false: theme.colors.border,
+                  true: theme.colors.primaryLight,
+                }}
+                thumbColor={
+                  notificationsEnabled ? theme.colors.primary : theme.colors.textDisabled
+                }
+              />
+            </View>
+          </View>
+
+          {/* Seguridad — cambio de contraseña estando logueado */}
+          <View style={styles.infoCard}>
+            <Text style={styles.sectionTitle}>Seguridad</Text>
+            <TouchableOpacity
+              style={styles.securityRow}
+              onPress={() => navigation.navigate(Routes.ChangePassword)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.securityRowIcon}>
+                <Ionicons name="key-outline" size={20} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.securityRowLabel}>Cambiar contraseña</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Acciones de cuenta — cerrar sesión (secundaria) y eliminar (destructiva) */}
           <View style={styles.actionsSection}>
             <TouchableOpacity
               style={styles.logoutBtn}
               onPress={() => setShowLogoutModal(true)}
               activeOpacity={0.8}
             >
-              <Ionicons name="log-out-outline" size={20} color={theme.colors.error} />
+              <Ionicons name="log-out-outline" size={20} color={theme.colors.textSecondary} />
               <Text style={styles.logoutBtnText}>Cerrar sesión</Text>
+            </TouchableOpacity>
+
+            <View style={styles.actionsDivider} />
+
+            <TouchableOpacity
+              style={styles.deleteAccountBtn}
+              onPress={openDeleteAccountFlow}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="trash-outline" size={20} color={theme.colors.surface} />
+              <Text style={styles.deleteAccountBtnText}>Eliminar cuenta</Text>
             </TouchableOpacity>
           </View>
 
@@ -557,9 +731,14 @@ export const ProfileScreen = () => {
               onPress={enterEditMode}
               disabled={!profile || isLoadingProfile}
               activeOpacity={0.7}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              accessibilityLabel="Editar perfil"
             >
-              <Ionicons name="pencil" size={20} color={theme.colors.primary} />
+              <MaterialCommunityIcons
+                name="pencil"
+                size={22}
+                color={theme.colors.primary}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -672,11 +851,114 @@ export const ProfileScreen = () => {
         </View>
       </Modal>
 
-      <Toast
-        message={toast?.message ?? ''}
-        type={toast?.type ?? 'success'}
-        visible={!!toast}
-        onHide={() => setToast(null)}
+      {/* Primer modal: confirmación inicial de eliminación de cuenta */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showDeleteAccountModal}
+        onRequestClose={() => !isLoading && setShowDeleteAccountModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconBox}>
+              <Ionicons name="trash-outline" size={32} color={theme.colors.error} />
+            </View>
+            <Text style={styles.modalTitle}>¿Estás seguro?</Text>
+            <Text style={styles.modalSubtitle}>
+              Esta acción no se puede deshacer.
+            </Text>
+            <View style={styles.modalActions}>
+              <AppButton
+                label="Cancelar"
+                variant="ghost"
+                onPress={() => setShowDeleteAccountModal(false)}
+                disabled={isLoading}
+              />
+              <TouchableOpacity
+                style={styles.modalDestructiveBtn}
+                onPress={proceedToEmailConfirmation}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalDestructiveBtnText}>Continuar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Segundo modal: confirmación escribiendo el email exacto */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showDeleteConfirmModal}
+        onRequestClose={() => !isLoading && setShowDeleteConfirmModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconBox}>
+              <Ionicons name="mail-outline" size={32} color={theme.colors.error} />
+            </View>
+            <Text style={styles.modalTitle}>Escribí tu email para confirmar</Text>
+            <Text style={styles.modalSubtitle}>
+              Ingresá <Text style={styles.modalEmailHighlight}>{profile?.email}</Text> para
+              confirmar la eliminación de tu cuenta.
+            </Text>
+            <View style={styles.deleteEmailFieldWrapper}>
+              <Text style={styles.deleteEmailLabel}>Email</Text>
+              <TextInput
+                style={[
+                  styles.deleteEmailInput,
+                  deleteEmailError ? styles.deleteEmailInputErrorBorder : null,
+                ]}
+                placeholder="tu@email.com"
+                placeholderTextColor={theme.colors.textDisabled}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={deleteEmailInput}
+                onChangeText={(text) => {
+                  setDeleteEmailError(null);
+                  setDeleteEmailInput(text);
+                }}
+              />
+              {deleteEmailError ? (
+                <Text style={styles.deleteEmailErrorText}>{deleteEmailError}</Text>
+              ) : null}
+            </View>
+            <View style={styles.modalActions}>
+              <AppButton
+                label="Cancelar"
+                variant="ghost"
+                onPress={() => setShowDeleteConfirmModal(false)}
+                disabled={isLoading}
+              />
+              <TouchableOpacity
+                style={[styles.modalDestructiveBtn, isLoading && styles.modalDestructiveBtnDisabled]}
+                onPress={() => void confirmDeleteAccount()}
+                disabled={isLoading}
+                activeOpacity={0.8}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color={theme.colors.surface} />
+                ) : (
+                  <Text style={styles.modalDestructiveBtnText}>Eliminar cuenta</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <SuccessAnimation
+        visible={showSuccess}
+        message={successMessage}
+        onHide={() => setShowSuccess(false)}
+      />
+
+      <ErrorAnimation
+        visible={showError}
+        message={errorMessage}
+        onHide={() => setShowError(false)}
       />
     </View>
   );
@@ -710,8 +992,8 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   editBtn: {
-    width: 40,
-    height: 40,
+    minWidth: 44,
+    minHeight: 44,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
@@ -786,9 +1068,9 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   incompleteBannerSubtitle: {
-    fontSize: theme.typography.sizes.xs,
+    fontSize: theme.typography.sizes.sm,
     color: theme.colors.textSecondary,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   incompleteBannerBtn: {
     backgroundColor: theme.colors.warning,
@@ -877,8 +1159,67 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
   },
+  notificationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+  },
+  notificationText: {
+    flex: 1,
+  },
+  notificationLabel: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.textPrimary,
+    marginBottom: 2,
+  },
+  notificationHint: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
+  },
   actionsSection: {
     marginTop: theme.spacing.xs,
+    gap: theme.spacing.lg,
+  },
+  securityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  securityRowIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  securityRowLabel: {
+    flex: 1,
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.textPrimary,
+  },
+  actionsDivider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+  },
+  deleteAccountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    height: theme.components.buttonHeight,
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.error,
+  },
+  deleteAccountBtnText: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.surface,
   },
   logoutBtn: {
     flexDirection: 'row',
@@ -888,13 +1229,13 @@ const styles = StyleSheet.create({
     height: theme.components.buttonHeight,
     borderRadius: theme.radius.lg,
     borderWidth: theme.components.inputBorderWidth,
-    borderColor: theme.colors.error,
+    borderColor: theme.colors.border,
     backgroundColor: 'transparent',
   },
   logoutBtnText: {
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.error,
+    color: theme.colors.textSecondary,
   },
   modalOverlay: {
     flex: 1,
@@ -933,6 +1274,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: theme.spacing.lg,
+  },
+  modalEmailHighlight: {
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textPrimary,
+  },
+  deleteEmailFieldWrapper: {
+    width: '100%',
+    alignSelf: 'stretch',
+    marginBottom: theme.spacing.lg,
+  },
+  deleteEmailLabel: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm - 2,
+  },
+  deleteEmailInput: {
+    width: '100%',
+    minHeight: 48,
+    paddingHorizontal: theme.spacing.md,
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.surface,
+    borderWidth: theme.components.inputBorderWidth,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+  },
+  deleteEmailInputErrorBorder: {
+    borderColor: theme.colors.error,
+  },
+  deleteEmailErrorText: {
+    marginTop: theme.spacing.xs,
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.error,
   },
   modalActions: {
     width: '100%',

@@ -980,8 +980,6 @@ markdown# Conversación Bloque 5 — Recuerdos (Galería de fotos)
 - Refresh al eliminar desde viewer — resuelto con callback onDelete como param de navegación
 - RLS de Storage no configurada — resuelta con migración 004
 
-## Conversación completa
-[Pegar acá la conversación exportada de Cursor]
 2. Verificá estructura de prompts
 ia/entrega-1/prompts/bloque-5/
 ├── cursor-01-recuerdos-implementacion.md ✓

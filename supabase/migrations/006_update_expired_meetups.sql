@@ -1,0 +1,4 @@
+-- Migración 006: descartada
+-- Decisión: la finalización automática de juntadas por hora fue eliminada.
+-- El estado finished/cancelled es exclusivamente manual (acción del organizador).
+-- Razón: una juntada puede estar en curso más allá de su hora estimada.
